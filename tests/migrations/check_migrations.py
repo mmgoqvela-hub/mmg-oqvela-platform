@@ -148,6 +148,18 @@ def main():
     else:
         raise SystemExit("Unsupported storefront template was accepted")
 
+    required_permissions = {
+        "catalog.read", "catalog.manage", "inventory.read",
+        "inventory.manage", "team.manage"
+    }
+    seeded_permissions = {
+        row[0] for row in connection.execute(
+            "SELECT code FROM permissions WHERE code IN ('catalog.read','catalog.manage','inventory.read','inventory.manage','team.manage')"
+        )
+    }
+    if seeded_permissions != required_permissions:
+        raise SystemExit(f"Store team permission catalogue is incomplete: {seeded_permissions}")
+
     # Verify database-level tenant boundaries for catalog, inventory and staff roles.
     connection.executemany(
         "INSERT INTO stores (id, account_id, name, slug) VALUES (?, 'account-1', ?, ?)",
