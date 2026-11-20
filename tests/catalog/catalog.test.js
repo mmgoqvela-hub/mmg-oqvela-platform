@@ -16,7 +16,7 @@ const SESSION = {
   user_status: "active"
 };
 const OWNER = { id:"store-001", store_status:"active", account_status:"active", account_role:"owner" };
-const MEMBER = { ...OWNER, account_role:"member" };
+const MEMBER = { ...OWNER, account_role:"member", store_member_id:"member-001", permissions:"catalog.read,inventory.read" };
 
 function createDb(options = {}) {
   const calls = [];
@@ -213,5 +213,27 @@ test("Variant routes cannot cross product or store boundaries", async () => {
     name:"Variant",price:1
   }),{DB:db});
   assert.equal(response.status,404);
+});
+
+
+test("Store members without catalog permission cannot read catalog data", async () => {
+  const db = createDb({access:{...MEMBER,permissions:"inventory.read"}});
+  const response = await handleCatalog(makeRequest("products"),{DB:db});
+  assert.equal(response.status,403);
+});
+
+test("Store members with inventory read permission can view stock history", async () => {
+  const db = createDb({access:MEMBER,rows:[{id:"movement-1",quantity_change:2}]});
+  const response = await handleCatalog(makeRequest("inventory"),{DB:db});
+  assert.equal(response.status,200);
+});
+
+test("Store members without inventory management permission cannot change stock", async () => {
+  const db = createDb({access:MEMBER,product:{id:"product-1",track_inventory:1,stock_quantity:5}});
+  const response = await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"purchase",quantity_change:1
+  }),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.length,0);
 });
 
