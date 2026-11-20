@@ -64,7 +64,7 @@ test("Public storefront returns its selected template and published catalog only
   assert.ok(db.calls.some(call=>call.sql.includes("p.status = 'active'")));
 });
 
-test("Public storefront exposes only image paths belonging to the current store",async()=>{
+test("Public storefront exposes same-store media and safe HTTPS image URLs only",async()=>{
  const db=createDb({
   store:{id:"store-1",name:"Test Store",slug:"test-store"},
   products:[{id:"product-1",name:"Bag",base_price:20,currency:"USD"}],
