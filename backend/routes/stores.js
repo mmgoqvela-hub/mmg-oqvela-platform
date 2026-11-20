@@ -169,7 +169,7 @@ export async function handleStores(request, env) {
       : typeof body.template_key === "string"
         ? body.template_key.trim()
         : null;
-    const allowedTemplates = ["modern", "classic", "minimal", "boutique", "tech"];
+    const allowedTemplates = ["modern", "classic", "minimal", "boutique", "tech", "market", "restaurant", "fashion", "electronics", "beauty", "luxury"];
     const whatsappRaw = body?.whatsapp_phone == null
       ? (store.whatsapp_phone || "")
       : typeof body.whatsapp_phone === "string"
