@@ -250,6 +250,13 @@ export async function handleOrders(request,env){
     if(nextPayment==="rejected"&&existing.payment_method!=="shamcash")
       return json({error:"Only Sham Cash payments can be rejected"},400);
   }
+  if(nextStatus==="completed"&&nextPayment!=="paid")
+    return json({error:"An order cannot be completed before payment is marked paid"},409);
+  if(existing.payment_method==="shamcash"&&
+    ["confirmed","processing","shipped","completed"].includes(nextStatus)&&nextPayment!=="paid")
+    return json({error:"Verify the Sham Cash payment before processing this order"},409);
+  if(nextPayment==="refunded"&&nextStatus!=="cancelled")
+    return json({error:"A refunded order must be cancelled"},409);
   const result=await env.DB.prepare(`
     UPDATE store_orders SET order_status=?,payment_status=?,updated_at=CURRENT_TIMESTAMP
     WHERE id=? AND store_id=? AND order_status=? AND payment_status=?
