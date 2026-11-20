@@ -26,6 +26,7 @@ function db(options={}) {
             async first() {
               if(sql.includes("FROM store_orders WHERE id=? AND store_id=?")) calls.push({sql,values});
               if(sql.includes("SELECT COUNT(*) AS total_orders")) return options.reportTotals??{total_orders:0,completed_orders:0,open_orders:0,cancelled_orders:0};
+              if(sql.includes("INSERT INTO public_checkout_rate_limits")) return options.rateLimit===undefined?{request_count:1}:options.rateLimit;
               if(sql.includes("store_order_settings")) return options.settings??null;
               if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
               if(sql.includes("GROUP_CONCAT")) return options.access===undefined
@@ -108,6 +109,22 @@ test("Public checkout creates a COD order using server-side prices and atomic D1
  assert.match(database.calls[1].sql,/INSERT INTO store_order_items/);
  assert.equal(database.calls[1].values[8],2);
  assert.equal(database.calls[1].values[9],12.5);
+});
+
+test("Public checkout rate-limits each store and hashed client address",async()=>{
+ const database=db();
+ const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",checkout),{DB:database});
+ assert.equal(response.status,201);
+ const limiter=database.calls.find(call=>call.sql.includes("INSERT INTO public_checkout_rate_limits"));
+ assert.ok(limiter);
+ assert.equal(limiter.values[0],"store-1");
+ assert.match(limiter.sql,/request_count<5/);
+ assert.match(limiter.sql,/datetime\('now','-10 minutes'\)/);
+ assert.equal(limiter.values[1].length,64);
+ const blockedDb=db({rateLimit:null});
+ const blocked=await handleOrders(request("/api/public/stores/test-store/orders","POST",checkout),{DB:blockedDb});
+ assert.equal(blocked.status,429);
+ assert.equal(blockedDb.calls.some(call=>call.sql.includes("INSERT INTO store_orders")),false);
 });
 
 test("Sham Cash checkout requires a configured recipient, sender and transaction reference",async()=>{
