@@ -121,6 +121,7 @@ function makeAdminPathRequest(path,method="GET",body=undefined) {
   return new Request("https://example.com"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
 }
 
+const SUPER_ADMIN = {
   user_id: USER_ID,
   admin_level: "super_admin",
   status: "active"
