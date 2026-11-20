@@ -56,6 +56,10 @@ function createDb(options = {}) {
                 return options.store ?? null;
               }
 
+              if (sql.includes("FROM accounts a")) {
+                return options.account ?? null;
+              }
+
               return null;
             },
 
@@ -265,3 +269,37 @@ test("Failed database update returns conflict", async () => {
 
   assert.equal(response.status, 409);
 });
+
+
+const ACCOUNT = {id:"account-001",role:"owner"};
+
+test("Account owner can create an additional store without receiving another trial", async () => {
+  const db = createDb({session:SESSION,account:ACCOUNT});
+  const response = await handleStores(
+    new Request("https://example.com/api/stores", {
+      method:"POST",
+      headers:{Origin:"https://example.com",Cookie:"mmg_session="+TOKEN,"Content-Type":"application/json"},
+      body:JSON.stringify({account_id:"account-001",name:"Second Store"})
+    }),
+    {DB:db}
+  );
+  const result = await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.store.name,"Second Store");
+  assert.equal(result.store.status,"active");
+  assert.match(result.store.slug,/^store-/);
+});
+
+test("Account members cannot create additional stores", async () => {
+  const db = createDb({session:SESSION,account:{id:"account-001",role:"member"}});
+  const response = await handleStores(
+    new Request("https://example.com/api/stores", {
+      method:"POST",
+      headers:{Origin:"https://example.com",Cookie:"mmg_session="+TOKEN,"Content-Type":"application/json"},
+      body:JSON.stringify({account_id:"account-001",name:"Second Store"})
+    }),
+    {DB:db}
+  );
+  assert.equal(response.status,403);
+});
+
