@@ -110,8 +110,14 @@ export async function handlePublicStorefront(request, env) {
     for (const image of productImages) {
       const list = imagesByProduct.get(image.product_id) || [];
       const expectedPrefix = "/media/" + store.id + "/";
-      if (typeof image.file_key === "string" && image.file_key.startsWith(expectedPrefix) &&
-          /^\/media\/[a-zA-Z0-9_-]+\/[a-f0-9-]+\.(?:jpg|png|webp|gif)$/i.test(image.file_key)) {
+      const isStoreMedia = typeof image.file_key === "string" && image.file_key.startsWith(expectedPrefix) &&
+        /^\/media\/[a-zA-Z0-9_-]+\/[a-f0-9-]+\.(?:jpg|png|webp|gif)$/i.test(image.file_key);
+      let isExternalHttps = false;
+      try {
+        const imageUrl = new URL(image.file_key);
+        isExternalHttps = imageUrl.protocol === "https:" && !imageUrl.username && !imageUrl.password && image.file_key.length <= 2000;
+      } catch {}
+      if (isStoreMedia || isExternalHttps) {
         list.push({ id:image.id, url:image.file_key, alt_text:image.alt_text || "", sort_order:image.sort_order });
       }
       imagesByProduct.set(image.product_id, list);
