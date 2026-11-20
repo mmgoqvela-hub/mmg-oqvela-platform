@@ -52,6 +52,27 @@ async function publicStore(db,slug){
     LIMIT 1
   `).bind(slug).first();
 }
+async function enforcePublicCheckoutLimit(db,request,storeId){
+  // Cloudflare supplies this header at the edge; only its hash is persisted.
+  const address=request.headers.get("CF-Connecting-IP")||"unknown";
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(address));
+  const ipHash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+  const result=await db.prepare(`
+    INSERT INTO public_checkout_rate_limits(store_id,ip_hash,window_started_at,request_count)
+    VALUES(?,?,CURRENT_TIMESTAMP,1)
+    ON CONFLICT(store_id,ip_hash) DO UPDATE SET
+      window_started_at=CASE
+        WHEN window_started_at<=datetime('now','-10 minutes') THEN CURRENT_TIMESTAMP
+        ELSE window_started_at END,
+      request_count=CASE
+        WHEN window_started_at<=datetime('now','-10 minutes') THEN 1
+        ELSE request_count+1 END
+    WHERE window_started_at<=datetime('now','-10 minutes') OR request_count<5
+    RETURNING request_count
+  `).bind(storeId,ipHash).first();
+  return Boolean(result);
+}
+
 async function createPublicOrder(request,env,slug){
   if(request.method!=="POST")return json({error:"Method not allowed"},405);
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
