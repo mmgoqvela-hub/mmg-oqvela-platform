@@ -3272,7 +3272,7 @@ footer{
       const check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
-    [primaryColor,backgroundColor,headingText,subtitleText,productsTitleText,addToCartText,heroImageUrl,logoUrl,announcementText].forEach(input => input.addEventListener("input",updatePreview));
+    [primaryColor,backgroundColor,textColor,surfaceColor,mutedColor,borderColor,headingText,subtitleText,productsTitleText,addToCartText,heroImageUrl,logoUrl,announcementText].forEach(input => input.addEventListener("input",updatePreview));
     fontSelect.addEventListener("change",updatePreview);
     heroAlignment.addEventListener("change",updatePreview);
     for (const check of Object.values(sectionOptions)) check.addEventListener("change",updatePreview);
