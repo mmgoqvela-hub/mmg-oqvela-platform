@@ -440,21 +440,21 @@ async function currentUser(request, env) {
           s.slug,
           s.business_type,
           s.template_key,
-          s.status
+          s.status,
+          COALESCE(GROUP_CONCAT(DISTINCT p.code), '') AS permissions
         FROM stores s
         JOIN account_users au
           ON au.account_id = s.account_id
+        LEFT JOIN store_members sm
+          ON sm.store_id = s.id AND sm.user_id = au.user_id AND sm.status = 'active'
+        LEFT JOIN member_roles mr ON mr.store_member_id = sm.id
+        LEFT JOIN roles r ON r.id = mr.role_id AND r.store_id = s.id
+        LEFT JOIN role_permissions rp ON rp.role_id = r.id
+        LEFT JOIN permissions p ON p.id = rp.permission_id
         WHERE au.user_id = ?
           AND au.status = 'active'
-          AND (
-            au.role IN ('owner','admin')
-            OR EXISTS (
-              SELECT 1 FROM store_members sm
-              WHERE sm.store_id = s.id
-                AND sm.user_id = au.user_id
-                AND sm.status = 'active'
-            )
-          )
+          AND (au.role IN ('owner','admin') OR sm.id IS NOT NULL)
+        GROUP BY s.id
         ORDER BY s.created_at DESC
         LIMIT 100
       `).bind(session.user_id).all()
