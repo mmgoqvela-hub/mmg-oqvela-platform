@@ -4,6 +4,14 @@ import sqlite3
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATIONS = ROOT / "database" / "migrations"
 
+def expect_integrity_error(action, description):
+    try:
+        action()
+    except sqlite3.IntegrityError:
+        return
+    raise SystemExit(f"Tenant isolation guard failed: {description}")
+
+
 def seed_identity(connection):
     connection.execute(
         "INSERT INTO users (id, full_name, email, password_hash) VALUES (?, ?, ?, ?)",
@@ -110,6 +118,82 @@ def main():
     else:
         raise SystemExit("Unsupported language preference was accepted")
 
+    # Verify database-level tenant boundaries for catalog, inventory and staff roles.
+    connection.executemany(
+        "INSERT INTO stores (id, account_id, name, slug) VALUES (?, 'account-1', ?, ?)",
+        [
+            ("tenant-store-a", "Tenant A", "tenant-a"),
+            ("tenant-store-b", "Tenant B", "tenant-b")
+        ]
+    )
+    connection.executemany(
+        "INSERT INTO categories (id, store_id, name, slug) VALUES (?, ?, ?, ?)",
+        [
+            ("tenant-category-a", "tenant-store-a", "Category A", "category-a"),
+            ("tenant-category-b", "tenant-store-b", "Category B", "category-b")
+        ]
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO categories (id, store_id, parent_id, name, slug) VALUES (?, ?, ?, ?, ?)",
+            ("tenant-category-cross", "tenant-store-a", "tenant-category-b", "Cross", "cross")
+        ),
+        "a category cannot use a parent category from another store"
+    )
+
+    connection.executemany(
+        "INSERT INTO products (id, store_id, name, slug, base_price) VALUES (?, ?, ?, ?, 1)",
+        [
+            ("tenant-product-a", "tenant-store-a", "Product A", "product-a"),
+            ("tenant-product-b", "tenant-store-b", "Product B", "product-b")
+        ]
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO products (id, store_id, category_id, name, slug) VALUES (?, ?, ?, ?, ?)",
+            ("tenant-product-cross", "tenant-store-a", "tenant-category-b", "Cross", "cross-product")
+        ),
+        "a product cannot reference another store's category"
+    )
+    connection.executemany(
+        "INSERT INTO product_variants (id, product_id, store_id, name, price) VALUES (?, ?, ?, ?, 1)",
+        [
+            ("tenant-variant-a", "tenant-product-a", "tenant-store-a", "Variant A"),
+            ("tenant-variant-b", "tenant-product-b", "tenant-store-b", "Variant B")
+        ]
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO inventory_movements (id, store_id, product_id, variant_id, movement_type, quantity_change) VALUES (?, ?, ?, ?, 'adjustment', 1)",
+            ("tenant-movement-cross", "tenant-store-a", "tenant-product-a", "tenant-variant-b")
+        ),
+        "an inventory movement cannot use another store's product variant"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO product_images (id, product_id, store_id, file_key) VALUES (?, ?, ?, ?)",
+            ("tenant-image-cross", "tenant-product-a", "tenant-store-b", "cross-store-image")
+        ),
+        "a product image cannot cross store boundaries"
+    )
+
+    connection.execute(
+        "INSERT INTO roles (id, store_id, name) VALUES ('tenant-role-a', 'tenant-store-a', 'Staff A')"
+    )
+    connection.execute(
+        "INSERT INTO roles (id, store_id, name) VALUES ('tenant-role-b', 'tenant-store-b', 'Staff B')"
+    )
+    connection.execute(
+        "INSERT INTO store_members (id, store_id, user_id) VALUES ('tenant-member-a', 'tenant-store-a', 'user-1')"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO member_roles (store_member_id, role_id) VALUES (?, ?)",
+            ("tenant-member-a", "tenant-role-b")
+        ),
+        "a store member cannot receive a role from another store"
+    )
+
     # Verify a complete approval activates the subscription and pays its invoice.
     _, approval_subscription, approval_payment = create_pending_payment(connection, "approve")
     connection.execute(
@@ -156,7 +240,7 @@ def main():
     if rejection_state != ("cancelled",):
         raise SystemExit(f"Rejection trigger flow failed: {rejection_state}")
 
-    print(f"PASS: {len(files)} migrations applied; foreign keys, approval, and rejection flows valid.")
+    print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
 if __name__ == "__main__":
