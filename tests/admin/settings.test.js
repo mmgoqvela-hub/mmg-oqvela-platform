@@ -47,6 +47,8 @@ function createDb(options = {}) {
           return null;
         },
         async all() {
+          calls.push({sql,values:[]});
+          if (sql.includes("FROM platform_announcements")) return {results:options.announcements ?? []};
           if (sql.includes("GROUP BY currency")) return {results:options.revenue ?? []};
           return {results:[]};
         },
