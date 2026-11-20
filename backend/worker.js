@@ -8,6 +8,7 @@ import { handlePublicStorefront } from "./routes/storefront.js";
 import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
+import { handleOrders } from "./routes/orders.js";
 
 export default {
   async scheduled(controller, env, ctx) {
@@ -72,6 +73,9 @@ export default {
         headers: request.headers
       }));
     }
+
+    const ordersResponse = await handleOrders(request, env);
+    if (ordersResponse) return ordersResponse;
 
     const publicStoreResponse = await handlePublicStorefront(request, env);
     if (publicStoreResponse) return publicStoreResponse;
