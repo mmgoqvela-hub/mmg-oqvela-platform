@@ -14,6 +14,18 @@ const worker = await readFile(
   new URL("../../backend/worker.js", import.meta.url),
   "utf8"
 );
+const eventsMigration = await readFile(
+  new URL("../../database/migrations/0019_subscription_notification_events.sql", import.meta.url),
+  "utf8"
+);
+const scheduler = await readFile(
+  new URL("../../backend/notifications/scheduler.js", import.meta.url),
+  "utf8"
+);
+const wrangler = await readFile(
+  new URL("../../wrangler.toml", import.meta.url),
+  "utf8"
+);
 
 test("Persistent notification inbox is scoped to the authenticated user", () => {
   assert.match(route, /getAuthenticatedSession\(request, env\.DB\)/);
@@ -34,4 +46,43 @@ test("Notification storage supports deduplication, unread state and user ownersh
 test("Worker routes notification API requests", () => {
   assert.match(worker, /import \{ handleNotifications \} from "\.\/routes\/notifications\.js"/);
   assert.match(worker, /handleNotifications\(request, env\)/);
+});
+
+
+test("Subscription payment and trial lifecycle events create owner-only inbox notifications transactionally", () => {
+  for (const trigger of [
+    "trg_notify_subscription_request",
+    "trg_notify_subscription_approved",
+    "trg_notify_subscription_rejected",
+    "trg_notify_trial_started"
+  ]) assert.ok(eventsMigration.includes(trigger), "missing trigger " + trigger);
+  assert.match(eventsMigration, /JOIN accounts a ON a\.id = s\.account_id/);
+  assert.match(eventsMigration, /a\.owner_user_id/);
+  assert.match(eventsMigration, /INSERT OR IGNORE INTO user_notifications/);
+  assert.match(eventsMigration, /NEW\.rejection_reason/);
+  assert.match(eventsMigration, /NEW\.status = 'approved'/);
+  assert.match(eventsMigration, /NEW\.status = 'rejected'/);
+});
+
+test("Daily scheduled job creates deduplicated 3-day, 1-day and expiry notifications", () => {
+  assert.match(scheduler, /date\(ss\.expires_at\) = date\('now', '\+3 days'\)/);
+  assert.match(scheduler, /date\(ss\.expires_at\) = date\('now', '\+1 day'\)/);
+  assert.match(scheduler, /ss\.expires_at <= CURRENT_TIMESTAMP/);
+  assert.match(scheduler, /subscription-expiry-3d:/);
+  assert.match(scheduler, /subscription-expiry-1d:/);
+  assert.match(scheduler, /subscription-expired:/);
+  assert.match(scheduler, /INSERT OR IGNORE/);
+  assert.match(worker, /async scheduled\(controller, env, ctx\)/);
+  assert.match(worker, /scheduleSubscriptionNotifications\(env\)/);
+  assert.match(wrangler, /crons = \["0 9 \* \* \*"\]/);
+});
+
+test("Notification messages are safely rendered and localized for Arabic", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /function notificationText\(value\)/);
+  assert.match(html, /currentLanguage !== "ar"/);
+  assert.match(html, /message\.textContent = notificationText\(item\.message\)/);
+  assert.match(html, /title\.textContent = notificationText\(item\.title\)/);
+  assert.match(html, /Your payment request for/);
+  assert.match(html, /انتهت الفترة التجريبية لمتجر/);
 });
