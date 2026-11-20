@@ -63,7 +63,7 @@ This document is the working source of truth for preserving previously agreed re
 - Paid subscriptions use **شام كاش** (display spelling with a space).
 - A store receives one free trial per account; platform administration controls whether trials are enabled and their duration. The platform must notify the account/store owner before the trial expires and when it expires. After expiry, the storefront must be suspended/hidden until a paid subscription is approved; the owner must be prompted to choose and pay for a plan.
 - When a plan is selected, show the exact amount due and the centrally configured Sham Cash recipient/payment instructions.
-- The customer may submit a transfer transaction number, an image of the transfer receipt, or both. A submitted proof is only a pending request and must never activate a paid subscription automatically.
+- The store owner/admin submits the Sham Cash transfer transaction number and the sender name as shown in Sham Cash; these two text fields are sufficient proof for review. A receipt image is optional (not required) and may be attached when secure R2 storage is configured. A submitted proof is only a pending request and must never activate a paid subscription automatically.
 - Platform administration reviews each pending request and explicitly approves or rejects it. Rejection requires a reason; approval activates the subscription and issues/marks its invoice through the existing atomic approval workflow.
 - Payment proof images must be stored securely with restricted access; public storefronts must never expose payment evidence. R2 storage/bucket configuration is not yet available and must be completed before image-proof upload is represented as operational.
 - Store owner/admin can submit a subscription request; ordinary members cannot.
@@ -131,7 +131,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Store detail update and tenant membership checks.
 - One-time account trial settings and activation flow.
 - Subscription plans, store subscriptions, Sham Cash transaction references and review flow.
-- Subscription history and invoices for subscription payments. Subscription payment review supports Sham Cash transaction references and admin approval/rejection; receipt-image evidence, scheduled trial lifecycle notifications and external-channel expiry messaging remain incomplete; visit-triggered in-app trial reminders are implemented. The account subscription history now reports an active record whose expiry timestamp has passed as effectively `expired`, without mutating stored production subscription data.
+- Subscription history and invoices for subscription payments. Subscription payment review supports Sham Cash transaction references, sender names, and admin approval/rejection; receipt-image evidence (optional, pending secure R2 storage), scheduled trial lifecycle notifications and external-channel expiry messaging remain incomplete; visit-triggered in-app trial reminders are implemented. The account subscription history now reports an active record whose expiry timestamp has passed as effectively `expired`, without mutating stored production subscription data.
 - Central Sham Cash settings.
 - Central trial settings.
 - Platform-admin activity-log API and visible admin log.
