@@ -162,7 +162,8 @@ function validProduct(body) {
     (body.compare_at_price == null || (typeof body.compare_at_price === "number" && Number.isFinite(body.compare_at_price) && body.compare_at_price >= 0)) &&
     typeof (body.currency || "USD") === "string" && /^[A-Z]{3}$/.test(body.currency || "USD") &&
     (body.sku == null || (typeof body.sku === "string" && body.sku.trim().length <= 100)) &&
-    (body.track_inventory === undefined || typeof body.track_inventory === "boolean");
+    (body.track_inventory === undefined || typeof body.track_inventory === "boolean") &&
+    (body.is_featured === undefined || typeof body.is_featured === "boolean");
 }
 
 async function handleProducts(request, env, storeId, userId, access, productId) {
@@ -204,6 +205,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
     const body = parsed.body;
     if (!validProduct(body)) return json({ error: "Invalid product data" }, 400);
     const categoryId = body.category_id == null || body.category_id === "" ? null : body.category_id;
+    if (categoryId !== null && typeof categoryId !== "string") return json({ error: "Invalid category ID" }, 400);
     if (categoryId && !(await categoryExists(env.DB, storeId, categoryId))) {
       return json({ error: "Category not found in this store" }, 400);
     }
@@ -277,7 +279,14 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   if (parsed.error) return json({ error: parsed.error }, parsed.status);
   const body = parsed.body;
   if (!validProduct(body)) return json({ error: "Invalid product data" }, 400);
+  if (body.track_inventory === false) {
+    const variantStock = await env.DB.prepare("SELECT COALESCE(SUM(stock_quantity), 0) AS total FROM product_variants WHERE product_id = ? AND store_id = ?").bind(productId, storeId).first();
+    if (product.stock_quantity > 0 || (variantStock?.total || 0) > 0) {
+      return json({ error: "Cannot disable inventory tracking while stock remains" }, 409);
+    }
+  }
   const categoryId = body.category_id == null || body.category_id === "" ? null : body.category_id;
+  if (categoryId !== null && typeof categoryId !== "string") return json({ error: "Invalid category ID" }, 400);
   if (categoryId && !(await categoryExists(env.DB, storeId, categoryId))) {
     return json({ error: "Category not found in this store" }, 400);
   }
