@@ -133,7 +133,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Platform-admin activity-log API and visible admin log.
 - Catalog/inventory tables and tenant-integrity triggers.
 - Tenant-scoped catalog APIs for category listing/creation/update/deletion, product listing/creation/update/archive, product variant creation/update/deactivation, and inventory movement history/stock adjustments. Product and variant creation record initial stock; stock changes are guarded against negative quantities and concurrent updates. Automated API tests cover tenant access, permissions and inventory integrity.
-- Per-store storefront template selection persisted in D1 with five approved presets: modern, classic, minimal, boutique and tech. Owners/admins can choose a template and open the public store preview without changing catalog data.
+- Per-store storefront template selection persisted in D1 with eleven presets: modern, classic, minimal, boutique, tech, market, restaurant, fashion, electronics, beauty and luxury. Each preset has its own responsive styling and selection preview; owners/admins can choose a template and open the public store preview without changing catalog data. The six business-focused presets were added with server-side allowlisting and automated validation tests.
 - Public storefront route `/s/{slug}` with a tenant-safe public API, subscription-active visibility check, category filters, product search, product/variant display, responsive layouts, Arabic/English and RTL/LTR.
 - Optional per-store WhatsApp contact number with server-side international-number validation and a public WhatsApp contact link on the storefront.
 - Role/permission tables, seeded catalog/inventory/team permission codes, store team API and bilingual team-management UI. Store owners/admins can add existing active platform accounts as staff, assign built-in or custom roles, update/suspend access, and create/edit/delete custom roles. Permissions are checked server-side for catalog and inventory endpoints; no employee-count cap is imposed.
@@ -143,7 +143,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff and custom role management are now implemented for existing active platform accounts. Email-based invitation delivery, invitation acceptance, and adding users who do not yet have platform accounts remain incomplete; no email provider has been configured.
 - Product/category/variant/image/inventory management end-to-end: category, product and variant APIs plus stock movements and initial catalog UI now exist; richer variant editing, R2-backed product image upload/management and fuller inventory tools remain incomplete.
-- Storefronts: five selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
+- Storefronts: eleven selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
 - Subscription lifecycle notifications and renewal rules.
 - Platform-wide announcements/ads and mandatory footer.
 - Per-store WhatsApp contact configuration and public contact link are implemented. A separate centrally configured platform support contact remains to be added if required.
@@ -169,7 +169,7 @@ Do not represent these as finished until implemented and tested.
 5. Complete catalog management UI, variant CRUD, media upload/storage and inventory workflows using the existing schema.
 6. Finish storefront template previews, accessibility, product media, and public-store verification at `/s/{slug}`.
 7. Specify and implement customer-facing cart, checkout and order/business workflows only against approved requirements.
-8. Complete central administration, central ads/announcements, mandatory footer and WhatsApp contact.
+8. Central admin overview, user/account/store management, platform-admin management and protected super-admin transfer APIs/UI are implemented with audit logging and CI coverage. Remaining central admin work: announcements/ads, mandatory centrally controlled footer and notification/WhatsApp platform contact workflows.
 9. Complete subscription lifecycle alerts, renewal controls and notification preferences.
 10. Implement R2 file management and quotas.
 11. Complete terms/privacy, risk controls, audit coverage and operational safeguards.
