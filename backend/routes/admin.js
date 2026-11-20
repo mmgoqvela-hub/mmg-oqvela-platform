@@ -121,11 +121,16 @@ export async function handleAdmin(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  if (!["/api/admin/settings", "/api/admin/trial-settings"].includes(path)) {
+  const isActivityLogs = path === "/api/admin/activity-logs";
+  if (!["/api/admin/settings", "/api/admin/trial-settings"].includes(path) && !isActivityLogs) {
     return null;
   }
 
-  if (!["GET", "PUT"].includes(request.method)) {
+  if (isActivityLogs && request.method !== "GET") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  if (!isActivityLogs && !["GET", "PUT"].includes(request.method)) {
     return json({ error: "Method not allowed" }, 405);
   }
 
@@ -140,6 +145,21 @@ export async function handleAdmin(request, env) {
   }
 
   try {
+    if (isActivityLogs) {
+      const requestedLimit = Number(new URL(request.url).searchParams.get("limit") || 50);
+      const limit = Number.isInteger(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 50;
+      const result = await env.DB.prepare(`
+        SELECT
+          al.id, al.action, al.target_type, al.target_id, al.details, al.created_at,
+          u.full_name AS admin_name, u.email AS admin_email
+        FROM admin_activity_logs al
+        LEFT JOIN users u ON u.id = al.admin_user_id
+        ORDER BY al.created_at DESC, al.id DESC
+        LIMIT ?
+      `).bind(limit).all();
+      return json({ status: "ok", logs: result.results || [] });
+    }
+
     if (path === "/api/admin/settings") {
       if (request.method === "GET") {
         return json({
