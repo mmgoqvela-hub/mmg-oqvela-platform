@@ -237,3 +237,28 @@ test("Store members without inventory management permission cannot change stock"
   assert.equal(db.calls.length,0);
 });
 
+
+test("Catalog readers can load product details and tenant-scoped variants",async()=>{
+  const db=createDb({
+    access:MEMBER,
+    product:{id:"product-1",store_id:"store-001",name:"Shirt"},
+    rows:[{id:"variant-1",name:"Large",sku:"SHIRT-L",price:20,stock_quantity:4,attributes_json:'{"size":"L"}',status:"active"}]
+  });
+  const response=await handleCatalog(makeRequest("products/product-1"),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.product.id,"product-1");
+  assert.equal(result.variants.length,1);
+  assert.match(db.calls.find(call=>call.sql.includes("FROM product_variants")).sql,/product_id = \? AND store_id = \?/);
+});
+
+test("Store members without catalog.read cannot inspect product variants",async()=>{
+  const db=createDb({
+    access:{...MEMBER,permissions:"inventory.read"},
+    product:{id:"product-1",store_id:"store-001",name:"Private product"}
+  });
+  const response=await handleCatalog(makeRequest("products/product-1"),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.some(call=>call.sql.includes("FROM product_variants")),false);
+});
+
