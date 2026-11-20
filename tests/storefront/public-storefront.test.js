@@ -89,8 +89,8 @@ test("Public storefront exposes only currently active platform announcements",as
  assert.equal(result.announcements.length,1);
  const query=db.calls.find(call=>call.sql.includes("FROM platform_announcements"));
  assert.ok(query.sql.includes("is_active=1"));
- assert.ok(query.sql.includes("starts_at<=CURRENT_TIMESTAMP"));
- assert.ok(query.sql.includes("ends_at>CURRENT_TIMESTAMP"));
+ assert.ok(query.sql.includes("datetime(starts_at)<=CURRENT_TIMESTAMP"));
+ assert.ok(query.sql.includes("datetime(ends_at)>CURRENT_TIMESTAMP"));
 });
 
 test("Invalid slugs are rejected before database access",async()=>{
