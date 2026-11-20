@@ -290,6 +290,20 @@ test("Account owner can create an additional store without receiving another tri
   assert.match(result.store.slug,/^store-/);
 });
 
+test("Users cannot create a store by substituting another account ID", async () => {
+  const db = createDb({session:SESSION,account:null});
+  const response = await handleStores(
+    new Request("https://example.com/api/stores", {
+      method:"POST",
+      headers:{Origin:"https://example.com",Cookie:"mmg_session="+TOKEN,"Content-Type":"application/json"},
+      body:JSON.stringify({account_id:"another-account-id",name:"Unauthorized Store"})
+    }),
+    {DB:db}
+  );
+  assert.equal(response.status,404);
+  assert.equal(db.calls.some(item => item.sql.includes("INSERT INTO stores")),false);
+});
+
 test("Account members cannot create additional stores", async () => {
   const db = createDb({session:SESSION,account:{id:"account-001",role:"member"}});
   const response = await handleStores(
