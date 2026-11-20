@@ -770,7 +770,7 @@ footer{
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     for (const node of nodes) {
-      if (node.parentElement?.closest("script,style")) continue;
+      if (node.parentElement?.closest("script,style,[data-no-translate]")) continue;
       if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
       const sourceText = originalTextNodes.get(node);
       const translated = currentLanguage === "en" ? translateText(sourceText) : sourceText;
@@ -906,6 +906,7 @@ footer{
 
       const title = document.createElement("h3");
       title.textContent = account.name;
+      title.dataset.noTranslate = "true";
 
       const role = document.createElement("p");
       role.className = "muted";
@@ -1056,6 +1057,7 @@ footer{
             const option = document.createElement("option");
             option.value = item.id;
             option.textContent = item.name;
+            option.dataset.noTranslate = "true";
             category.append(option);
           }
           const tracking = document.createElement("input");
@@ -1136,6 +1138,7 @@ footer{
             item.className = "account-card";
             const title = document.createElement("h4");
             title.textContent = product.name;
+            title.dataset.noTranslate = "true";
             const details = document.createElement("p");
             details.className = "muted";
             details.textContent = formatMoney(product.base_price,product.currency) +
@@ -1498,6 +1501,7 @@ footer{
       if (paymentInfo.instructions) {
         const p = document.createElement("p");
         p.textContent = paymentInfo.instructions;
+        p.dataset.noTranslate = "true";
         details.append(p);
       }
       panel.append(details);
@@ -1575,6 +1579,7 @@ footer{
         card.className = "account-card";
         const title = document.createElement("h4");
         title.textContent = plan.name;
+        title.dataset.noTranslate = "true";
         const details = document.createElement("p");
         details.className = "muted";
         details.textContent = formatMoney(plan.price, plan.currency) + " — " + formatNumber(plan.duration_days) + " يوم — " + (plan.is_active ? "مفعّلة" : "متوقفة") + " — عدد الاشتراكات: " + formatNumber(plan.subscriptions_count);
