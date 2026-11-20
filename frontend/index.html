@@ -349,6 +349,10 @@ footer{
     </form>
     <hr><h3>طلبات الاشتراك المدفوعة</h3><div id="adminSubscriptionRequests" class="account-grid"></div>
     <hr><h3>الباقات الحالية</h3><div id="adminSubscriptionPlans" class="account-grid"></div>
+    <hr><h3>سجل عمليات الإدارة</h3>
+    <p class="muted">آخر العمليات الإدارية المسجلة، للمتابعة والمراجعة.</p>
+    <button class="secondary" id="refreshAdminLogs" type="button">تحديث السجل</button>
+    <div id="adminActivityLogs" class="account-grid"></div>
     <hr><h3>إنشاء باقة اشتراك</h3>
     <form id="subscriptionPlanForm" class="admin-form">
       <div class="field"><label for="planName">اسم الباقة</label><input id="planName" required minlength="2" maxlength="80"></div>
@@ -848,6 +852,41 @@ footer{
     } catch (error) { container.textContent = "تعذر تحميل الطلبات: " + error.message; }
   }
 
+  async function loadAdminActivityLogs() {
+    const container = $("adminActivityLogs");
+    if (!container) return;
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/activity-logs?limit=50");
+      const logs = data.logs || [];
+      if (!logs.length) {
+        container.textContent = "لا توجد عمليات إدارية مسجلة حتى الآن.";
+        return;
+      }
+      for (const log of logs) {
+        const item = document.createElement("article");
+        item.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = (log.action || "عملية") + " — " + (log.target_type || "عام");
+        const actor = document.createElement("p");
+        actor.className = "muted";
+        actor.textContent = "المنفذ: " + (log.admin_name || log.admin_email || "حساب إداري");
+        const time = document.createElement("p");
+        time.className = "muted";
+        time.textContent = "التاريخ: " + (log.created_at || "—");
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = "التفاصيل: " + (log.details || "—");
+        item.append(title, actor, time, details);
+        container.append(item);
+      }
+    } catch (error) {
+      container.textContent = "تعذر تحميل سجل العمليات: " + error.message;
+    }
+  }
+
+  $("refreshAdminLogs").addEventListener("click", loadAdminActivityLogs);
+
   $("subscriptionPlanForm").addEventListener("submit", async event => {
     event.preventDefault();
     const button = $("createPlanButton"), message = $("planMessage");
@@ -950,6 +989,7 @@ footer{
       $("trialDuration").value = trial.settings?.duration_days || 14;
       await loadAdminSubscriptionRequests();
       await loadAdminSubscriptionPlans();
+      await loadAdminActivityLogs();
 
       panel.classList.remove("hidden");
     } catch (error) {
