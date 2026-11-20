@@ -381,6 +381,9 @@ footer{
   // Central Arabic/English localization for the complete platform interface.
   const translations = {
     "منصة الأعمال الذكية":"Smart Business Platform",
+    "إلى":"to",
+    "تجربة رقمية":"a digital experience",
+    "© 2026 MMG OQVELA — جميع الحقوق محفوظة":"© 2026 MMG OQVELA — All rights reserved",
     "منظومة واحدة لإدارة أعمالك":"One ecosystem to manage your business",
     "حوّل أفكارك التجارية":"Turn your business ideas",
     "إلى تجربة رقمية":"into a digital experience",
@@ -510,12 +513,12 @@ footer{
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
   function translateText(value) {
     if (currentLanguage !== "en" || !value) return value;
-    const trimmed = value.trim();
-    if (translations[trimmed]) return value.replace(trimmed, translations[trimmed]);
+    const trimmed = value.trim().replace(/\\s+/g, " ");
+    if (translations[trimmed]) return translations[trimmed];
     const prefixes = Object.keys(translations).filter(key => key.endsWith(" ") && trimmed.startsWith(key)).sort((a,b)=>b.length-a.length);
     if (prefixes.length) {
       const key = prefixes[0];
-      return value.replace(key, translations[key]);
+      return translations[key] + trimmed.slice(key.length);
     }
     return value;
   }
