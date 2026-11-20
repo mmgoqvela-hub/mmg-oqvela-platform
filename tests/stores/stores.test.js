@@ -27,6 +27,7 @@ const STORE = {
   business_type: "Retail",
   description: "Test description",
   template_key: "modern",
+  whatsapp_phone: null,
   status: "active",
   account_role: "owner",
   subscription_status: "active",
@@ -206,6 +207,7 @@ test("Store owner can update store details", async () => {
     VALID_DATA.business_type,
     VALID_DATA.description,
     STORE.template_key,
+    null,
     STORE.id,
     STORE.account_id
   ]);
@@ -337,6 +339,30 @@ test("Unsupported storefront templates are rejected", async () => {
   const db = createDb({session:SESSION,store:STORE});
   const response = await handleStores(
     makeRequest("PUT",{...VALID_DATA,template_key:"custom-script"}),
+    {DB:db}
+  );
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(item => item.sql.includes("UPDATE stores")),false);
+});
+
+
+test("Store owner can save a WhatsApp number with country code", async () => {
+  const db = createDb({session:SESSION,store:STORE});
+  const response = await handleStores(
+    makeRequest("PUT",{...VALID_DATA,whatsapp_phone:"+963 944 123 456"}),
+    {DB:db}
+  );
+  const result = await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.store.whatsapp_phone,"963944123456");
+  const update = db.calls.find(item => item.sql.includes("UPDATE stores"));
+  assert.equal(update.values[4],"963944123456");
+});
+
+test("Invalid WhatsApp numbers are rejected without saving", async () => {
+  const db = createDb({session:SESSION,store:STORE});
+  const response = await handleStores(
+    makeRequest("PUT",{...VALID_DATA,whatsapp_phone:"abc-123"}),
     {DB:db}
   );
   assert.equal(response.status,400);
