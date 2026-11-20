@@ -78,3 +78,22 @@ test("Subscription billing details are restricted to store owners and admins", (
   assert.ok(roleGuard > storeLookup, "billing role guard must follow store lookup");
   assert.ok(billingQuery > roleGuard, "billing data must only be queried after role guard");
 });
+
+
+test("Sham Cash subscription requests require transaction reference and sender name", () => {
+  assert.match(route, /function validSenderName\(value\)/);
+  assert.match(route, /!validTransactionReference\(reference\)[\s\S]*?!validSenderName\(senderName\)/);
+  assert.match(route, /transaction_reference, sender_name/);
+  assert.match(route, /p\.sender_name/);
+});
+
+test("Subscription payment UI collects and displays the sender name", async () => {
+  const html = await readFile(
+    new URL("../../frontend/index.html", import.meta.url),
+    "utf8"
+  );
+  assert.match(html, /senderName\.required = true/);
+  assert.match(html, /sender_name:senderName\.value\.trim\(\)/);
+  assert.match(html, /request\.sender_name/);
+  assert.match(html, /اسم المرسل/);
+});
