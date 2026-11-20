@@ -10,7 +10,14 @@ const migration = await readFile(
   new URL("../../database/migrations/0012_paid_approval_atomicity.sql", import.meta.url),
   "utf8"
 );
-const trialRoute = await readFile(\n  new URL("../../backend/routes/trial.js", import.meta.url),\n  "utf8"\n);\nconst trialMigration = await readFile(\n  new URL("../../database/migrations/0010_account_trial_period.sql", import.meta.url),\n  "utf8"\n);\nconst senderMigration = await readFile(
+const trialRoute = await readFile(
+  new URL("../../backend/routes/trial.js", import.meta.url),
+  "utf8"
+);
+const trialMigration = await readFile(
+  new URL("../../database/migrations/0010_account_trial_period.sql", import.meta.url),
+  "utf8"
+);\nconst senderMigration = await readFile(
   new URL("../../database/migrations/0017_shamcash_sender_name.sql", import.meta.url),
   "utf8"
 );
