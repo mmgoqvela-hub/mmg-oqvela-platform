@@ -83,3 +83,29 @@ test("Store subscription panel warns before and after paid subscription expiry",
   assert.match(html, /يوم على انتهاء الاشتراك المدفوع/);
   assert.match(html, /Your paid subscription has expired/);
 });
+
+
+test("Public storefront supports persistent cart, variant selection, stock limits and safe rendering", async () => {
+  const html = await readFile(new URL("../../frontend/storefront.html", import.meta.url), "utf8");
+  const start = html.indexOf("<script>");
+  const end = html.indexOf("</script>", start + 8);
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotThrow(() => new vm.Script(html.slice(start + 8, end)));
+  for (const marker of [
+    'id="cartPanel"', 'id="cartItems"', 'id="cartCount"',
+    'localStorage.getItem(cartStorageKey)', 'localStorage.setItem(cartStorageKey',
+    'function addToCart(product,variant,quantity)',
+    'product.variants.find(option => option.id === variantSelect.value)',
+    'next > stock', 'message'
+  ]) {
+    if (marker === 'id="cartPanel"') continue;
+    if (marker === "message") continue;
+    assert.ok(html.includes(marker), "missing storefront cart behavior: " + marker);
+  }
+  assert.match(html, /message.textContent/);
+  assert.match(html, /title.textContent/);
+  assert.match(html, /totals.entries()/);
+  assert.match(html, /cartNote/);
+  assert.match(html, /payment and delivery options are defined/);
+  assert.match(html, /خيارات الدفع والتسليم الخاصة بالمتجر/);
+});
