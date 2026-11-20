@@ -1098,7 +1098,7 @@ footer{
       hour12: false
     }).format(date);
     // Isolate the date from surrounding RTL labels to prevent digit reordering.
-    return "\\u2068" + formatted + "\\u2069";
+    return "\u2068" + formatted + "\u2069";
   }
   function localizeCode(value) {
     const labels = {
@@ -1148,7 +1148,7 @@ footer{
       if (node.parentElement?.closest("script,style,[data-no-translate]")) continue;
       if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
       const sourceText = originalTextNodes.get(node);
-      const translated = currentLanguage === "en" ? translateText(sourceText) : sourceText;
+      const translated = translateText(sourceText);
       if (translated !== node.nodeValue) node.nodeValue = translated;
     }
     document.querySelectorAll("[placeholder],[title],[aria-label]").forEach(element => {
