@@ -2621,9 +2621,16 @@ footer{
       const trial = await api("/api/admin/trial-settings");
       $("trialEnabled").checked = Boolean(trial.settings?.enabled);
       $("trialDuration").value = trial.settings?.duration_days || 14;
-      await loadAdminSubscriptionRequests();
-      await loadAdminSubscriptionPlans();
-      await loadAdminActivityLogs();
+      await Promise.all([
+        loadAdminOverview(),
+        loadAdminUsers(),
+        loadAdminAccounts(),
+        loadAdminStores(),
+        loadPlatformAdmins(),
+        loadAdminSubscriptionRequests(),
+        loadAdminSubscriptionPlans(),
+        loadAdminActivityLogs()
+      ]);
 
       panel.classList.remove("hidden");
     } catch (error) {
