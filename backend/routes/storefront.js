@@ -10,7 +10,7 @@ function json(data, status = 200) {
 
 export async function handlePublicStorefront(request, env) {
   const url = new URL(request.url);
-  const match = url.pathname.match(/^\\/api\\/public\\/stores\\/([^/]+)$/);
+  const match = url.pathname.match(/^\/api\/public\/stores\/([^/]+)$/);
   if (!match) return null;
   if (request.method !== "GET") return json({error:"Method not allowed"},405);
 
