@@ -593,8 +593,9 @@ footer{
 
 
   async function renderSubscriptionPanel(store, card) {
+    card.querySelector(".subscription-panel")?.remove();
     const panel = document.createElement("section");
-    panel.className = "admin-panel";
+    panel.className = "admin-panel subscription-panel";
     const heading = document.createElement("h3");
     heading.textContent = "اشتراك المتجر";
     const status = document.createElement("p");
