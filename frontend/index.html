@@ -1673,6 +1673,137 @@ footer{
               });
               item.append(publish,archive);
             }
+
+            const variantToggle = document.createElement("button");
+            variantToggle.type = "button";
+            variantToggle.className = "secondary";
+            variantToggle.textContent = "خيارات المنتج";
+            const variantPanel = document.createElement("section");
+            variantPanel.className = "admin-panel";
+            variantPanel.hidden = true;
+            let variantsLoaded = false;
+            async function loadVariants() {
+              variantPanel.replaceChildren();
+              const variantHeading = document.createElement("h5");
+              variantHeading.textContent = "المقاسات والخيارات";
+              variantPanel.append(variantHeading);
+              try {
+                const detail = await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id));
+                const variants = detail.variants || [];
+                if (!variants.length) {
+                  const emptyVariants = document.createElement("p");
+                  emptyVariants.className = "muted";
+                  emptyVariants.textContent = "لا توجد خيارات مضافة لهذا المنتج.";
+                  variantPanel.append(emptyVariants);
+                }
+                for (const variant of variants) {
+                  let attributes = {};
+                  try { attributes = JSON.parse(variant.attributes_json || "{}"); } catch {}
+                  const variantCard = document.createElement("article");
+                  variantCard.className = "account-card";
+                  const variantTitle = document.createElement("strong");
+                  variantTitle.textContent = variant.name;
+                  variantTitle.dataset.noTranslate = "true";
+                  const variantDetails = document.createElement("p");
+                  variantDetails.className = "muted";
+                  variantDetails.textContent = formatMoney(variant.price,product.currency) + " — " +
+                    "المخزون: " + formatNumber(variant.stock_quantity) + " — " +
+                    (variant.sku || "دون رمز SKU") + " — " + localizeCode(variant.status);
+                  variantCard.append(variantTitle,variantDetails);
+                  if (Object.keys(attributes).length) {
+                    const attributesLine = document.createElement("p");
+                    attributesLine.className = "muted";
+                    attributesLine.textContent = Object.entries(attributes).map(([key,value]) => key + ": " + value).join("، ");
+                    attributesLine.dataset.noTranslate = "true";
+                    variantCard.append(attributesLine);
+                  }
+                  if (canManage) {
+                    const editForm = document.createElement("form");
+                    editForm.className = "admin-form";
+                    const editName = document.createElement("input");
+                    editName.required = true; editName.maxLength = 100; editName.value = variant.name;
+                    const editSku = document.createElement("input");
+                    editSku.maxLength = 100; editSku.value = variant.sku || "";
+                    const editPrice = document.createElement("input");
+                    editPrice.type = "number"; editPrice.min = "0"; editPrice.step = "0.01"; editPrice.required = true; editPrice.value = variant.price;
+                    const editAttributes = document.createElement("textarea");
+                    editAttributes.maxLength = 4000; editAttributes.value = JSON.stringify(attributes);
+                    for (const [labelText,control] of [["اسم الخيار",editName],["رمز SKU",editSku],["السعر",editPrice],["الخصائص بصيغة JSON",editAttributes]]) {
+                      const field = document.createElement("div"); field.className = "field";
+                      const label = document.createElement("label"); label.textContent = labelText;
+                      field.append(label,control); editForm.append(field);
+                    }
+                    const saveVariant = document.createElement("button");
+                    saveVariant.type = "submit"; saveVariant.className = "secondary"; saveVariant.textContent = "حفظ الخيار";
+                    editForm.append(saveVariant);
+                    editForm.addEventListener("submit",async event => {
+                      event.preventDefault(); saveVariant.disabled = true;
+                      try {
+                        const parsedAttributes = JSON.parse(editAttributes.value || "{}");
+                        if (!parsedAttributes || typeof parsedAttributes !== "object" || Array.isArray(parsedAttributes)) throw new Error("يجب إدخال خصائص JSON صحيحة.");
+                        await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/variants/" + encodeURIComponent(variant.id),{
+                          method:"PUT",body:JSON.stringify({name:editName.value.trim(),sku:editSku.value.trim(),price:Number(editPrice.value),attributes:parsedAttributes,status:variant.status})
+                        });
+                        await loadVariants();
+                      } catch(error) { variantDetails.textContent = error.message; saveVariant.disabled = false; }
+                    });
+                    variantCard.append(editForm);
+                    if (variant.status === "active") {
+                      const deactivate = document.createElement("button");
+                      deactivate.type = "button"; deactivate.className = "secondary"; deactivate.textContent = "تعطيل الخيار";
+                      deactivate.addEventListener("click",async () => {
+                        deactivate.disabled = true;
+                        try {
+                          await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/variants/" + encodeURIComponent(variant.id),{method:"DELETE"});
+                          await loadVariants();
+                        } catch(error) { variantDetails.textContent = error.message; deactivate.disabled = false; }
+                      });
+                      variantCard.append(deactivate);
+                    }
+                  }
+                  variantPanel.append(variantCard);
+                }
+                if (canManage && product.status !== "archived") {
+                  const addHeading = document.createElement("h5");
+                  addHeading.textContent = "إضافة خيار جديد";
+                  const addForm = document.createElement("form");
+                  addForm.className = "admin-form";
+                  const addName = document.createElement("input"); addName.required = true; addName.maxLength = 100;
+                  const addSku = document.createElement("input"); addSku.maxLength = 100;
+                  const addPrice = document.createElement("input"); addPrice.type = "number"; addPrice.min = "0"; addPrice.step = "0.01"; addPrice.required = true; addPrice.value = product.base_price;
+                  const addStock = document.createElement("input"); addStock.type = "number"; addStock.min = "0"; addStock.step = "1"; addStock.value = "0"; addStock.disabled = !product.track_inventory;
+                  const addAttributes = document.createElement("textarea"); addAttributes.maxLength = 4000; addAttributes.value = "{}";
+                  for (const [labelText,control] of [["اسم الخيار",addName],["رمز SKU",addSku],["السعر",addPrice],["المخزون الافتتاحي",addStock],["الخصائص بصيغة JSON",addAttributes]]) {
+                    const field = document.createElement("div"); field.className = "field";
+                    const label = document.createElement("label"); label.textContent = labelText;
+                    field.append(label,control); addForm.append(field);
+                  }
+                  const addSubmit = document.createElement("button"); addSubmit.type = "submit"; addSubmit.className = "primary"; addSubmit.textContent = "إضافة الخيار";
+                  const addMessage = document.createElement("p"); addMessage.className = "muted";
+                  addForm.append(addSubmit,addMessage);
+                  addForm.addEventListener("submit",async event => {
+                    event.preventDefault(); addSubmit.disabled = true;
+                    try {
+                      const parsedAttributes = JSON.parse(addAttributes.value || "{}");
+                      if (!parsedAttributes || typeof parsedAttributes !== "object" || Array.isArray(parsedAttributes)) throw new Error("يجب إدخال خصائص JSON صحيحة.");
+                      await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/variants",{
+                        method:"POST",body:JSON.stringify({name:addName.value.trim(),sku:addSku.value.trim(),price:Number(addPrice.value),stock_quantity:Number(addStock.value),attributes:parsedAttributes})
+                      });
+                      await loadVariants();
+                    } catch(error) { addMessage.textContent = error.message; addSubmit.disabled = false; }
+                  });
+                  variantPanel.append(addHeading,addForm);
+                }
+              } catch(error) {
+                const failure = document.createElement("p"); failure.className = "muted"; failure.textContent = error.message; variantPanel.append(failure);
+              }
+            }
+            variantToggle.addEventListener("click",async () => {
+              variantPanel.hidden = !variantPanel.hidden;
+              variantToggle.textContent = variantPanel.hidden ? "خيارات المنتج" : "إخفاء الخيارات";
+              if (!variantPanel.hidden && !variantsLoaded) { variantsLoaded = true; await loadVariants(); }
+            });
+            item.append(variantToggle,variantPanel);
             productGrid.append(item);
           }
           panel.append(productGrid);
