@@ -12,6 +12,34 @@ function json(data, status = 200) {
   return Response.json(data, { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }
 
+async function readLimitedBody(request, maxBytes) {
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error("UPLOAD_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 export async function handleStoreMedia(request, env) {
   const url = new URL(request.url);
   const mediaMatch = url.pathname.match(/^\/media\/([a-zA-Z0-9_-]+)\/([a-f0-9-]+)\.(jpg|png|webp|gif)$/i);
@@ -44,7 +72,14 @@ export async function handleStoreMedia(request, env) {
   if (declaredLength > MAX_BYTES + 64 * 1024) return json({ error: "حجم الصورة يتجاوز 5 ميغابايت." }, 413);
 
   let form;
-  try { form = await request.formData(); } catch { return json({ error: "صيغة رفع غير صالحة." }, 400); }
+  try {
+    const body = await readLimitedBody(request, MAX_BYTES + 64 * 1024);
+    const boundedRequest = new Request(request.url, { method: "POST", headers: request.headers, body });
+    form = await boundedRequest.formData();
+  } catch (error) {
+    if (error.message === "UPLOAD_TOO_LARGE") return json({ error: "حجم الطلب يتجاوز الحد المسموح." }, 413);
+    return json({ error: "صيغة رفع غير صالحة." }, 400);
+  }
   const storeId = String(form.get("store_id") || "");
   const file = form.get("file");
   if (!/^[a-zA-Z0-9_-]{3,80}$/.test(storeId) || !(file instanceof File)) return json({ error: "اختر المتجر والصورة أولاً." }, 400);
