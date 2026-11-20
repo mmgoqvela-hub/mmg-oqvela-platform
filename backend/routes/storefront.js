@@ -76,7 +76,7 @@ export async function handlePublicStorefront(request, env) {
         ORDER BY p.is_featured DESC, p.created_at DESC
         LIMIT 200
       `).bind(store.id).all(),
-      env.DB.prepare("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN ('platform_footer_ar','platform_footer_en')").all()
+      env.DB.prepare("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN (?,?)").bind("platform_footer_ar","platform_footer_en").all()
     ]);
 
     const products = productsResult.results || [];
