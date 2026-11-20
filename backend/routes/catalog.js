@@ -464,6 +464,29 @@ async function handleProductImages(request, env, storeId, access, productId, ima
   if (!product) return json({ error: "Product not found" }, 404);
   if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
 
+  if (request.method === "PUT" && imageId === "order") {
+    const parsed = await readBody(request, 3000);
+    if (parsed.error) return json({ error: parsed.error }, parsed.status);
+    const ids = parsed.body.image_ids;
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > 5 ||
+        ids.some(id => typeof id !== "string" || id.length > 80) ||
+        new Set(ids).size !== ids.length) {
+      return json({ error: "Invalid product image order" }, 400);
+    }
+    const existing = await env.DB.prepare(
+      "SELECT id FROM product_images WHERE product_id = ? AND store_id = ?"
+    ).bind(productId, storeId).all();
+    const existingIds = (existing.results || []).map(item => item.id);
+    if (existingIds.length !== ids.length || ids.some(id => !existingIds.includes(id))) {
+      return json({ error: "Image list does not match this product gallery" }, 409);
+    }
+    const updates = ids.map((id, index) => env.DB.prepare(
+      "UPDATE product_images SET sort_order = ? WHERE id = ? AND product_id = ? AND store_id = ?"
+    ).bind(index, id, productId, storeId));
+    await env.DB.batch(updates);
+    return json({ status: "ok", image_ids: ids });
+  }
+
   if (request.method === "POST" && !imageId) {
     const parsed = await readBody(request, 3000);
     if (parsed.error) return json({ error: parsed.error }, parsed.status);
