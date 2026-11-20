@@ -2155,6 +2155,9 @@ footer{
           stock.min = "0";
           stock.step = "1";
           stock.value = "0";
+          const productImageFile = document.createElement("input");
+          productImageFile.type = "file";
+          productImageFile.accept = "image/jpeg,image/png,image/webp,image/gif";
           const category = document.createElement("select");
           const none = document.createElement("option");
           none.value = "";
@@ -2177,6 +2180,7 @@ footer{
             ["السعر الأساسي",price],
             ["العملة (رمز من 3 أحرف)",currency],
             ["الكمية الافتتاحية",stock],
+            ["صورة المنتج (اختياري)",productImageFile],
             ["التصنيف",category]
           ];
           for (const [labelText,control] of fields) {
@@ -2205,7 +2209,7 @@ footer{
             event.preventDefault();
             productSubmit.disabled = true;
             try {
-              await api("/api/stores/" + encodeURIComponent(store.id) + "/products", {
+              const created = await api("/api/stores/" + encodeURIComponent(store.id) + "/products", {
                 method:"POST",
                 body:JSON.stringify({
                   name:productName.value.trim(),
@@ -2219,6 +2223,20 @@ footer{
                   status:"draft"
                 })
               });
+              const imageFile = productImageFile.files?.[0];
+              if (imageFile) {
+                if (imageFile.size > 5 * 1024 * 1024) throw new Error("حجم صورة المنتج يجب ألا يتجاوز 5 ميغابايت.");
+                const upload = new FormData();
+                upload.append("store_id",store.id);
+                upload.append("file",imageFile);
+                const uploadedResponse = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:upload});
+                const uploaded = await uploadedResponse.json().catch(()=>({}));
+                if (!uploadedResponse.ok) throw new Error(uploaded.error || "تعذر رفع صورة المنتج.");
+                await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(created.product.id) + "/images", {
+                  method:"POST",
+                  body:JSON.stringify({url:uploaded.url,alt_text:productName.value.trim(),sort_order:0})
+                });
+              }
               productMessage.textContent = "تمت إضافة المنتج.";
               await refresh();
             } catch (error) {
