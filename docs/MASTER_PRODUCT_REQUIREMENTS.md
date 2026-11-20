@@ -222,3 +222,12 @@ A feature is complete only when:
 - Added a regression test for in-flight submission protection and cart-control locking.
 - Public checkout now applies a D1-backed limit of five attempts per store/IP hash per ten-minute window; raw IPs are not persisted and stale buckets are pruned by the daily scheduler. A durable idempotency key for safe replay of successful checkout submissions remains incomplete, so repeated requests below the rate limit may still create separate cash-on-delivery orders.
 - No production migration or deployment performed.
+
+
+### Central footer and public service requests — 2026-11-20
+- Added migration 0024_platform_service_requests.sql for a central inbox covering support, advertising, store setup, website design and general contact requests.
+- Added a same-origin public submission endpoint with bounded input, contact validation, supported request-type allowlisting and a honeypot field. Requests are stored with Arabic/English source-language metadata.
+- Added super-admin-only listing and status/notes update endpoints; status changes create administrative audit entries.
+- Added footer entry points, an about-us dialog, a bilingual service request form and a central-admin review list.
+- These changes are committed to the repository and require CI, remote D1 migration, deployment and live browser verification before they are active in production.
+- WhatsApp and email delivery are not yet integrated; the initial release stores requests in the central admin inbox.
