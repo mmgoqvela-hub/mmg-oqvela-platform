@@ -219,6 +219,8 @@ async function register(request, env) {
     });
 
   } catch (error) {
+    console.error("Registration failed:", error?.message || error);
+
     const message = String(error?.message || "");
 
     if (
