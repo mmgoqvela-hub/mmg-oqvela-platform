@@ -78,6 +78,8 @@ async function createPublicOrder(request,env,slug){
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   const store=await publicStore(env.DB,slug);
   if(!store)return json({error:"Store is unavailable"},404);
+  if(!await enforcePublicCheckoutLimit(env.DB,request,store.id))
+    return json({error:"Too many checkout attempts. Please try again in 10 minutes."},429);
   const parsed=await readBody(request);
   if(parsed.error)return json({error:parsed.error},parsed.status);
   const b=parsed.body;
