@@ -23,6 +23,7 @@ function db(options={}) {
           return {
             sql,values,
             async first() {
+              if(sql.includes("FROM store_orders WHERE id=? AND store_id=?")) calls.push({sql,values});
               if(sql.includes("SELECT COUNT(*) AS total_orders")) return options.reportTotals??{total_orders:0,completed_orders:0,open_orders:0,cancelled_orders:0};
               if(sql.includes("store_order_settings")) return options.settings??null;
               if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
