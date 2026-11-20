@@ -120,6 +120,11 @@ test("Order API and migration enforce tenant scope, stock reservation, restorati
  assert.match(source,/orders\.manage/);
  assert.match(source,/trg_notify_store_order_created/);
  assert.match(source,/store-order-created:/);
+ assert.match(source,/CREATE TABLE store_order_events/);
+ assert.match(source,/trg_store_order_created_event/);
+ assert.match(source,/trg_store_order_status_event/);
+ assert.match(source,/trg_store_payment_status_event/);
+ assert.match(source,/updated_by TEXT/);
 });
 
 
