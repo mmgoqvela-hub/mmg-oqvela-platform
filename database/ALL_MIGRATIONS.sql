@@ -1020,3 +1020,7 @@ CREATE TABLE public_service_request_rate_limits (
 
 CREATE INDEX idx_public_service_request_rate_limits_window
   ON public_service_request_rate_limits(window_started_at);
+
+-- MMG OQVELA
+-- Migration 0026: Persistent per-store visual customization settings.
+ALTER TABLE stores ADD COLUMN customization_json TEXT NOT NULL DEFAULT '{}';
