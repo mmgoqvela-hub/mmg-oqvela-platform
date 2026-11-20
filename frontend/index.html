@@ -1728,7 +1728,13 @@ footer{
                     editPrice.type = "number"; editPrice.min = "0"; editPrice.step = "0.01"; editPrice.required = true; editPrice.value = variant.price;
                     const editAttributes = document.createElement("textarea");
                     editAttributes.maxLength = 4000; editAttributes.value = JSON.stringify(attributes);
-                    for (const [labelText,control] of [["اسم الخيار",editName],["رمز SKU",editSku],["السعر",editPrice],["الخصائص بصيغة JSON",editAttributes]]) {
+                    const editStatus = document.createElement("select");
+                    for (const statusValue of ["active","inactive"]) {
+                      const option = document.createElement("option");
+                      option.value = statusValue; option.textContent = localizeCode(statusValue);
+                      option.selected = variant.status === statusValue; editStatus.append(option);
+                    }
+                    for (const [labelText,control] of [["اسم الخيار",editName],["رمز SKU",editSku],["السعر",editPrice],["الخصائص بصيغة JSON",editAttributes],["الحالة",editStatus]]) {
                       const field = document.createElement("div"); field.className = "field";
                       const label = document.createElement("label"); label.textContent = labelText;
                       field.append(label,control); editForm.append(field);
@@ -1742,7 +1748,7 @@ footer{
                         const parsedAttributes = JSON.parse(editAttributes.value || "{}");
                         if (!parsedAttributes || typeof parsedAttributes !== "object" || Array.isArray(parsedAttributes)) throw new Error("يجب إدخال خصائص JSON صحيحة.");
                         await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/variants/" + encodeURIComponent(variant.id),{
-                          method:"PUT",body:JSON.stringify({name:editName.value.trim(),sku:editSku.value.trim(),price:Number(editPrice.value),attributes:parsedAttributes,status:variant.status})
+                          method:"PUT",body:JSON.stringify({name:editName.value.trim(),sku:editSku.value.trim(),price:Number(editPrice.value),attributes:parsedAttributes,status:editStatus.value})
                         });
                         await loadVariants();
                       } catch(error) { variantDetails.textContent = error.message; saveVariant.disabled = false; }
