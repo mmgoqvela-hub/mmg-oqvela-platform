@@ -241,6 +241,15 @@ textarea{
 .template-preview[data-template="beauty"]{background:#fff4f5}.template-preview[data-template="beauty"] .preview-main{background:#c46d8b}.template-preview[data-template="beauty"] .preview-side{background:#f4d9e1}
 .template-preview[data-template="luxury"]{background:#11100f}.template-preview[data-template="luxury"] .preview-main{background:#c9a45c}.template-preview[data-template="luxury"] .preview-side{background:#51412a}
 .storefront-link{display:inline-flex;margin:12px 0;color:#93c5fd;text-decoration:underline}
+.platform-footer{width:min(1100px,92%);margin:50px auto 0;padding:30px 26px 18px;background:#111c30;border:1px solid var(--border);border-radius:18px 18px 0 0;color:var(--text)}
+.footer-brand strong{font-size:22px;letter-spacing:1px}.footer-brand p{color:var(--muted);line-height:1.8}
+.footer-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;margin:24px 0}
+.footer-links section{display:flex;flex-direction:column;gap:11px}.footer-links h3{font-size:15px;margin:0 0 4px}.footer-links a,.footer-bottom a{color:#b9c9df;text-decoration:none}.footer-links a:hover,.footer-bottom a:hover{color:var(--cyan)}
+.footer-bottom{border-top:1px solid var(--border);padding-top:16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.service-modal{position:fixed;inset:0;z-index:1000;background:#020817d9;display:grid;place-items:center;padding:18px;overflow:auto}
+.service-modal.hidden{display:none}.service-dialog{position:relative;width:min(620px,100%);max-height:92vh;overflow:auto;padding:26px;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 90px #0009}
+.service-close{position:absolute;top:12px;inset-inline-end:12px;width:42px;height:42px;font-size:24px}.service-dialog h2{margin-top:18px}
+@media(max-width:700px){.footer-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.platform-footer{width:calc(100% - 24px);padding:22px 16px}.service-dialog{padding:20px 16px}.service-dialog .admin-form{grid-template-columns:1fr}}
 footer{
   text-align:center;
   color:#667891;
@@ -463,7 +472,38 @@ footer{
 </section>
 </main>
 
-<footer>© 2026 MMG OQVELA — جميع الحقوق محفوظة</footer>
+<footer class="platform-footer" id="platformFooter">
+  <div class="footer-brand"><strong>MMG OQVELA</strong><p>نحوّل الأفكار إلى حلول رقمية متكاملة.</p></div>
+  <div class="footer-links">
+    <section><h3>عن الشركة</h3><a href="#about" id="aboutLink">من نحن</a><a href="#contact" data-open-request="contact">تواصل معنا</a></section>
+    <section><h3>الدعم والمساعدة</h3><a href="#support" data-open-request="support">مركز الدعم</a><a href="#faq" data-open-request="support">الأسئلة الشائعة والدعم</a></section>
+    <section><h3>خدماتنا</h3><a href="#store-request" data-open-request="store_setup">طلب إنشاء متجر</a><a href="#website-request" data-open-request="website_design">طلب تصميم موقع</a></section>
+    <section><h3>التعاون والإعلان</h3><a href="#advertising" data-open-request="advertising">طلب إعلان على مواقعنا</a><a href="#partnership" data-open-request="contact">الشراكات التجارية</a></section>
+  </div>
+  <div class="footer-bottom"><span>© 2026 MMG OQVELA — جميع الحقوق محفوظة</span><span><a href="#privacy" data-open-request="contact">سياسة الخصوصية</a> · <a href="#terms" data-open-request="contact">شروط الاستخدام</a></span></div>
+</footer>
+
+<section class="service-modal hidden" id="serviceRequestModal" role="dialog" aria-modal="true" aria-labelledby="serviceRequestTitle">
+  <div class="service-dialog">
+    <button type="button" class="secondary service-close" id="closeServiceRequest" aria-label="Close">×</button>
+    <h2 id="serviceRequestTitle">أرسل طلبك</h2>
+    <p class="muted">أرسل طلبك وسيتواصل معك فريق MMG OQVELA.</p>
+    <form id="publicServiceRequestForm" class="admin-form">
+      <div class="field wide"><label for="serviceRequestType">نوع الطلب</label><select id="serviceRequestType" required>
+        <option value="support">الدعم الفني</option><option value="advertising">الإعلانات والتسويق</option><option value="store_setup">إنشاء متجر إلكتروني</option><option value="website_design">تصميم أو تطوير موقع</option><option value="contact">استفسار عام</option>
+      </select></div>
+      <div class="field"><label for="serviceRequestName">الاسم الكامل</label><input id="serviceRequestName" required minlength="2" maxlength="120"></div>
+      <div class="field"><label for="serviceRequestEmail">البريد الإلكتروني</label><input id="serviceRequestEmail" type="email" maxlength="254"></div>
+      <div class="field"><label for="serviceRequestPhone">رقم الهاتف أو واتساب</label><input id="serviceRequestPhone" type="tel" maxlength="40"></div>
+      <div class="field wide"><label for="serviceRequestMessage">تفاصيل الطلب</label><textarea id="serviceRequestMessage" required minlength="10" maxlength="3000" placeholder="اكتب تفاصيل طلبك هنا..."></textarea></div>
+      <div class="field wide" aria-hidden="true" style="position:absolute;left:-10000px"><label for="serviceRequestWebsite">Website</label><input id="serviceRequestWebsite" tabindex="-1" autocomplete="off"></div>
+      <div class="field wide"><button class="primary" id="submitServiceRequest" type="submit">إرسال الطلب</button><p id="serviceRequestMessageStatus" class="muted" role="status"></p></div>
+    </form>
+  </div>
+</section>
+<section class="service-modal hidden" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="service-dialog"><button type="button" class="secondary service-close" id="closeAbout" aria-label="Close">×</button><h2 id="aboutTitle">من نحن</h2><p>MMG OQVELA مجموعة تقنية تعمل على بناء حلول رقمية ومنصات تساعد الأعمال على الانتقال إلى تجارب أكثر ذكاءً وتنظيماً.</p><p>نطوّر خدمات المتاجر الإلكترونية وتصميم المواقع والحلول التقنية للأعمال.</p></div>
+</section>
 
 <script>
 (() => {
