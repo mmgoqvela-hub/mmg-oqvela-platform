@@ -1044,7 +1044,41 @@ footer{
     "Role updated":"تم تحديث الدور.",
     "Unable to update role":"تعذر تحديث الدور.",
     "Built-in roles cannot be deleted":"لا يمكن حذف الأدوار الأساسية.",
-    "Remove this role from employees before deleting it":"أزل هذا الدور من الموظفين قبل حذفه."
+    "Remove this role from employees before deleting it":"أزل هذا الدور من الموظفين قبل حذفه.",
+    "من نحن":"About us",
+    "تواصل معنا":"Contact us",
+    "الدعم والمساعدة":"Support & help",
+    "مركز الدعم":"Support center",
+    "خدماتنا":"Our services",
+    "طلب إعلان على مواقعنا":"Advertise with us",
+    "طلب إنشاء متجر":"Request a store",
+    "طلب تصميم موقع":"Request website design",
+    "الشراكات التجارية":"Business partnerships",
+    "سياسة الخصوصية":"Privacy policy",
+    "شروط الاستخدام":"Terms of use",
+    "نحوّل الأفكار إلى حلول رقمية متكاملة.":"Turning ideas into complete digital solutions.",
+    "أرسل طلبك وسيتواصل معك فريق MMG OQVELA.":"Send your request and the MMG OQVELA team will contact you.",
+    "نوع الطلب":"Request type",
+    "الدعم الفني":"Technical support",
+    "الإعلانات والتسويق":"Advertising & marketing",
+    "إنشاء متجر إلكتروني":"Online store setup",
+    "تصميم أو تطوير موقع":"Website design or development",
+    "استفسار عام":"General inquiry",
+    "الاسم الكامل":"Full name",
+    "البريد الإلكتروني":"Email address",
+    "رقم الهاتف أو واتساب":"Phone or WhatsApp number",
+    "اكتب تفاصيل طلبك هنا...":"Describe your request here...",
+    "إرسال الطلب":"Submit request",
+    "تم استلام طلبك بنجاح، وسنراجعه قريباً.":"Your request has been received and will be reviewed.",
+    "طلبات التواصل والخدمات":"Contact & service requests",
+    "الطلبات الجديدة":"New requests",
+    "قيد المراجعة":"Under review",
+    "مقبول":"Accepted",
+    "مكتمل":"Completed",
+    "ملاحظات الإدارة":"Admin notes",
+    "تحديث الطلب":"Update request",
+    "لا توجد طلبات حالياً.":"There are no requests yet.",
+    "الرجاء إدخال وسيلة تواصل واحدة على الأقل.":"Please enter at least one contact method."
   };
   function translateText(value) {
     if (!value) return value;
@@ -1157,7 +1191,7 @@ footer{
       for (const attr of ["placeholder","title","aria-label"]) {
         if (element.hasAttribute(attr)) {
           if (!(attr in originals)) originals[attr] = element.getAttribute(attr);
-          const value = currentLanguage === "en" ? translateText(originals[attr]) : originals[attr];
+          const value = translateText(originals[attr]);
           if (element.getAttribute(attr) !== value) element.setAttribute(attr, value);
         }
       }
