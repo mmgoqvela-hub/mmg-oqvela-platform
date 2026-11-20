@@ -217,3 +217,29 @@ test("An unpaid order cannot be marked completed",async()=>{
  },true),{DB:database});
  assert.equal(response.status,409);
 });
+
+
+test("A foreign-store order ID cannot be used to update an order",async()=>{
+ const database=db({order:null});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-from-store-2","PATCH",{
+  order_status:"confirmed"
+ },true),{DB:database});
+ assert.equal(response.status,404);
+ const lookup=database.calls.find(call=>call.sql.includes("SELECT id,order_status,payment_status,payment_method FROM store_orders"));
+ assert.ok(lookup);
+ assert.match(lookup.sql,/WHERE id=\? AND store_id=\?/);
+ assert.deepEqual(lookup.values,["order-from-store-2","store-1"]);
+ assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_orders")),false);
+});
+
+test("Order item and event history queries are constrained to the same tenant as the order list",async()=>{
+ const database=db({rows:[{id:"order-1",order_number:"1001"}]});
+ const response=await handleOrders(request("/api/stores/store-1/orders","GET",undefined,true),{DB:database});
+ assert.equal(response.status,200);
+ const itemQuery=database.calls.find(call=>call.sql.includes("FROM store_order_items WHERE store_id=?"));
+ const eventQuery=database.calls.find(call=>call.sql.includes("FROM store_order_events WHERE store_id=?"));
+ assert.ok(itemQuery);
+ assert.ok(eventQuery);
+ assert.equal(itemQuery.values[0],"store-1");
+ assert.equal(eventQuery.values[0],"store-1");
+});
