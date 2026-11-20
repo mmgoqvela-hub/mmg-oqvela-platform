@@ -9,6 +9,7 @@ import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
 import { handleOrders } from "./routes/orders.js";
+import { handlePublicServiceRequests } from "./routes/service_requests.js";
 
 export default {
   async scheduled(controller, env, ctx) {
@@ -76,6 +77,9 @@ export default {
         headers: request.headers
       }));
     }
+
+    const serviceRequestsResponse = await handlePublicServiceRequests(request, env);
+    if (serviceRequestsResponse) return serviceRequestsResponse;
 
     const ordersResponse = await handleOrders(request, env);
     if (ordersResponse) return ordersResponse;
