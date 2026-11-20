@@ -135,7 +135,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Role/permission tables and some cross-store integrity triggers.
 
 ### Partially implemented / requires audit or completion
-- Arabic/English switch and translation coverage. The current frontend dictionary does not yet cover every visible/dynamic Arabic string, and the current language preference is browser-local rather than account-synced.
+- Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migration 0013 has not yet been applied to production, and full browser/device verification remains pending.
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff, custom roles and permission-management screens/APIs.
 - Product/category/variant/image/inventory management end-to-end.
@@ -145,7 +145,7 @@ Other detailed business modules (such as order processing, customer management, 
 - R2 file storage, file access policies and quotas.
 - Terms, privacy and risk/security management screens.
 - Full business audit logs beyond platform-admin settings.
-- Comprehensive tenant-isolation and end-to-end tests.
+- Tenant-isolation regression tests now cover cross-store category parents, product categories, variants, images and staff-role assignment at database level, plus cross-account store-creation rejection. Broader API coverage for every future module remains required.
 
 ### Not evidenced as implemented
 - Fully featured storefront pages at `/s/{slug}`.
@@ -157,7 +157,7 @@ Do not represent these as finished until implemented and tested.
 
 ## 6. Delivery order (preserve dependencies)
 
-1. Complete bilingual foundation and verify every visible/dynamic string, errors, RTL/LTR, persistence and locale formatting.
+1. Complete bilingual foundation with the per-user preference migration applied safely, then verify every visible/dynamic string, errors, RTL/LTR, persistence across devices and locale formatting.
 2. Finish security and tenant-isolation audit for every existing API; add negative tests.
 3. Finish account/store lifecycle and reconcile store-creation authority.
 4. Complete roles, staff membership and server-enforced permissions.
