@@ -25,6 +25,22 @@
     .filter{border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:var(--surface);color:var(--ink);cursor:pointer}
     .filter[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:white}
     .section-title{font-size:20px;margin:26px 0 14px}
+    .cart-panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0 26px}
+    .cart-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .cart-count{background:var(--accent);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+    .cart-items{display:grid;gap:10px;margin-top:14px}
+    .cart-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:10px}
+    .cart-row strong{display:block}.cart-row small{color:var(--muted)}
+    .cart-actions{display:flex;align-items:center;gap:7px}
+    .cart-actions button,.add-cart{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 11px;cursor:pointer}
+    .cart-actions button:disabled{opacity:.4;cursor:not-allowed}
+    .cart-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:14px;padding-top:14px;font-weight:800}
+    .product-buy{display:grid;gap:9px;margin-top:14px}
+    .product-buy select,.product-buy input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+    .add-cart{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+    .add-cart:disabled{opacity:.45;cursor:not-allowed}
+    .cart-note{color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}
+    @media(max-width:620px){.cart-row{align-items:flex-start;flex-direction:column}.cart-actions{width:100%;justify-content:flex-end}}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
     .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
     .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}
@@ -103,6 +119,12 @@
         <input class="search" id="search" type="search" placeholder="ابحث في المنتجات..." aria-label="ابحث في المنتجات">
         <div class="filters" id="filters"></div>
       </div>
+      <section class="cart-panel" aria-labelledby="cartHeading">
+        <div class="cart-head"><h2 class="section-title" id="cartHeading">سلة المشتريات</h2><span class="cart-count" id="cartCount">0</span></div>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-total"><span id="cartTotalLabel">الإجمالي</span><span id="cartTotal">—</span></div>
+        <p class="cart-note" id="cartNote">تُحفظ السلة على هذا الجهاز. إتمام الطلب سيُتاح بعد تحديد خيارات الدفع والتسليم الخاصة بالمتجر.</p>
+      </section>
       <h2 class="section-title" id="productsHeading">المنتجات</h2>
       <div class="grid" id="products"></div>
       <div class="status" id="status" role="status" hidden></div>
@@ -112,12 +134,18 @@
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة"},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved"}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"تُحفظ السلة على هذا الجهاز. إتمام الطلب سيُتاح بعد تحديد خيارات الدفع والتسليم الخاصة بالمتجر.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح."},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Your cart is saved on this device. Checkout will be enabled after this store's payment and delivery options are defined.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock."}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
       let categoryFilter = "";
+      const cartStorageKey = "mmg_cart_" + slug;
+      let cart = [];
+      try {
+        const saved = JSON.parse(localStorage.getItem(cartStorageKey) || "[]");
+        if (Array.isArray(saved)) cart = saved.filter(item => item && typeof item.productId === "string" && Number.isInteger(item.quantity) && item.quantity > 0);
+      } catch { cart = []; }
       const $ = id => document.getElementById(id);
       const t = key => messages[language][key] || key;
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
@@ -133,7 +161,10 @@
         $("search").setAttribute("aria-label",t("search"));
         $("platformFooter").textContent = t("footer");
         $("whatsappContact").textContent = t("contact");
-        if (storeData) renderProducts();
+        $("cartHeading").textContent = t("cart");
+        $("cartTotalLabel").textContent = t("total");
+        $("cartNote").textContent = t("cartNote");
+        if (storeData) { renderProducts(); renderCart(); }
       }
 
       function money(amount,currency) {
@@ -144,6 +175,103 @@
         } catch {
           return Number(amount || 0).toFixed(2) + " " + (currency || "USD");
         }
+      }
+
+      function saveCart() {
+        try { localStorage.setItem(cartStorageKey, JSON.stringify(cart)); } catch {}
+      }
+
+      function findCartProduct(productId) {
+        return storeData?.products.find(product => product.id === productId);
+      }
+
+      function cartLinePrice(item) {
+        const product = findCartProduct(item.productId);
+        const variant = product?.variants?.find(option => option.id === item.variantId);
+        return Number(variant?.price ?? product?.base_price ?? 0);
+      }
+
+      function renderCart() {
+        const container = $("cartItems");
+        container.replaceChildren();
+        const valid = cart.filter(item => findCartProduct(item.productId));
+        if (valid.length !== cart.length) { cart = valid; saveCart(); }
+        const count = cart.reduce((sum,item) => sum + item.quantity,0);
+        $("cartCount").textContent = String(count);
+        if (!cart.length) {
+          const empty = document.createElement("p");
+          empty.className = "cart-note";
+          empty.textContent = t("emptyCart");
+          container.append(empty);
+          $("cartTotal").textContent = "—";
+          return;
+        }
+        let total = 0;
+        for (const item of cart) {
+          const product = findCartProduct(item.productId);
+          const variant = product?.variants?.find(option => option.id === item.variantId);
+          const price = cartLinePrice(item);
+          total += price * item.quantity;
+          const row = document.createElement("div");
+          row.className = "cart-row";
+          const info = document.createElement("div");
+          const name = document.createElement("strong");
+          name.textContent = product.name;
+          const detail = document.createElement("small");
+          detail.textContent = (variant ? variant.name + " · " : "") + money(price,product.currency);
+          info.append(name,detail);
+          const actions = document.createElement("div");
+          actions.className = "cart-actions";
+          const minus = document.createElement("button");
+          minus.type = "button"; minus.textContent = "−";
+          minus.setAttribute("aria-label",language === "ar" ? "تقليل الكمية" : "Decrease quantity");
+          minus.addEventListener("click",() => changeCartQuantity(item,-1));
+          const qty = document.createElement("span");
+          qty.textContent = String(item.quantity);
+          const plus = document.createElement("button");
+          plus.type = "button"; plus.textContent = "+";
+          plus.setAttribute("aria-label",language === "ar" ? "زيادة الكمية" : "Increase quantity");
+          const stock = variant ? Number(variant.stock_quantity) : Number(product.stock_quantity);
+          const tracked = Boolean(product.track_inventory);
+          plus.disabled = tracked && item.quantity >= stock;
+          plus.addEventListener("click",() => changeCartQuantity(item,1));
+          const remove = document.createElement("button");
+          remove.type = "button"; remove.textContent = t("remove");
+          remove.addEventListener("click",() => { cart = cart.filter(line => line !== item); saveCart(); renderCart(); });
+          actions.append(minus,qty,plus,remove);
+          row.append(info,actions);
+          container.append(row);
+        }
+        const currency = findCartProduct(cart[0].productId)?.currency || "USD";
+        $("cartTotal").textContent = money(total,currency);
+      }
+
+      function changeCartQuantity(item,delta) {
+        const product = findCartProduct(item.productId);
+        const variant = product?.variants?.find(option => option.id === item.variantId);
+        const stock = variant ? Number(variant.stock_quantity) : Number(product?.stock_quantity || 0);
+        const tracked = Boolean(product?.track_inventory);
+        const next = item.quantity + delta;
+        if (next <= 0) cart = cart.filter(line => line !== item);
+        else if (!tracked || next <= stock) item.quantity = next;
+        saveCart();
+        renderCart();
+      }
+
+      function addToCart(product,variant,quantity) {
+        const stock = variant ? Number(variant.stock_quantity) : Number(product.stock_quantity);
+        const tracked = Boolean(product.track_inventory);
+        const key = variant?.id || "";
+        const existing = cart.find(item => item.productId === product.id && (item.variantId || "") === key);
+        const next = (existing?.quantity || 0) + quantity;
+        if (tracked && next > stock) {
+          alert(t("invalidQuantity"));
+          return;
+        }
+        if (existing) existing.quantity = next;
+        else cart.push({productId:product.id,variantId:key || null,quantity});
+        saveCart();
+        renderCart();
       }
 
       function renderProducts() {
@@ -197,11 +325,52 @@
             variants.className = "variants";
             for (const variant of product.variants) {
               const line = document.createElement("span");
-              line.textContent = variant.name + " · " + money(variant.price,product.currency);
+              line.textContent = variant.name + " · " + money(variant.price,product.currency) +
+                (product.track_inventory ? " · " + t("stock") + ": " + variant.stock_quantity : "");
               variants.append(line);
             }
             body.append(variants);
           }
+          const buy = document.createElement("div");
+          buy.className = "product-buy";
+          let variantSelect = null;
+          if (product.variants?.length) {
+            variantSelect = document.createElement("select");
+            variantSelect.setAttribute("aria-label",t("variant"));
+            const placeholder = document.createElement("option");
+            placeholder.value = ""; placeholder.textContent = t("variant");
+            variantSelect.append(placeholder);
+            for (const variant of product.variants) {
+              const option = document.createElement("option");
+              option.value = variant.id;
+              option.textContent = variant.name + " · " + money(variant.price,product.currency);
+              option.disabled = product.track_inventory && Number(variant.stock_quantity) <= 0;
+              variantSelect.append(option);
+            }
+            buy.append(variantSelect);
+          }
+          const quantity = document.createElement("input");
+          quantity.type = "number"; quantity.min = "1"; quantity.step = "1"; quantity.value = "1";
+          quantity.inputMode = "numeric"; quantity.setAttribute("aria-label",t("quantity"));
+          if (product.track_inventory && !product.variants?.length) quantity.max = String(product.stock_quantity);
+          buy.append(quantity);
+          const add = document.createElement("button");
+          add.type = "button"; add.className = "add-cart"; add.textContent = t("add");
+          const noStock = product.track_inventory && (product.variants?.length
+            ? product.variants.every(option => Number(option.stock_quantity) <= 0)
+            : Number(product.stock_quantity) <= 0);
+          add.disabled = noStock;
+          if (noStock) add.textContent = t("outOfStock");
+          add.addEventListener("click",() => {
+            const amount = Number(quantity.value);
+            const variant = variantSelect ? product.variants.find(option => option.id === variantSelect.value) : null;
+            if (!Number.isInteger(amount) || amount < 1 || (variantSelect && !variant)) {
+              quantity.focus(); return;
+            }
+            addToCart(product,variant,amount);
+          });
+          buy.append(add);
+          body.append(buy);
           card.append(art,body);
           container.append(card);
         }
@@ -252,6 +421,7 @@
           $("status").hidden = true;
           renderCategories();
           renderProducts();
+          renderCart();
         } catch {
           $("status").hidden = false;
           $("status").textContent = t("failed");
