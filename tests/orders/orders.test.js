@@ -24,7 +24,7 @@ function db(options={}) {
           return {
             sql,values,
             async first() {
-              if(sql.includes("FROM store_orders WHERE id=? AND store_id=?")) calls.push({sql,values});
+              if(sql.includes("FROM store_orders WHERE id=? AND store_id=?")||sql.includes("INSERT INTO public_checkout_rate_limits")) calls.push({sql,values});
               if(sql.includes("SELECT COUNT(*) AS total_orders")) return options.reportTotals??{total_orders:0,completed_orders:0,open_orders:0,cancelled_orders:0};
               if(sql.includes("INSERT INTO public_checkout_rate_limits")) return options.rateLimit===undefined?{request_count:1}:options.rateLimit;
               if(sql.includes("store_order_settings")) return options.settings??null;
