@@ -131,7 +131,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Store detail update and tenant membership checks.
 - One-time account trial settings and activation flow.
 - Subscription plans, store subscriptions, Sham Cash transaction references and review flow.
-- Subscription history and invoices for subscription payments. Subscription payment review supports Sham Cash transaction references and admin approval/rejection; receipt-image evidence, trial lifecycle notifications and expiry messaging remain incomplete.
+- Subscription history and invoices for subscription payments. Subscription payment review supports Sham Cash transaction references and admin approval/rejection; receipt-image evidence, trial lifecycle notifications and expiry messaging remain incomplete. The account subscription history now reports an active record whose expiry timestamp has passed as effectively `expired`, without mutating stored production subscription data.
 - Central Sham Cash settings.
 - Central trial settings.
 - Platform-admin activity-log API and visible admin log.
