@@ -18,7 +18,7 @@
     .eyebrow{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
     h1{font-size:clamp(32px,5vw,56px);line-height:1.12;margin:12px 0}
     .description{color:var(--muted);max-width:700px;line-height:1.9;margin:0}
-    .whatsapp{display:inline-flex;margin-top:20px;padding:11px 17px;border-radius:10px;background:#16875c;color:#fff;text-decoration:none;font-weight:700}
+    .platform-support{display:inline-flex;margin:12px 8px 0;padding:10px 15px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;font-weight:700}.whatsapp{display:inline-flex;margin-top:20px;padding:11px 17px;border-radius:10px;background:#16875c;color:#fff;text-decoration:none;font-weight:700}
     .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 25px}
     .search{flex:1;min-width:210px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink)}
     .filters{display:flex;gap:8px;flex-wrap:wrap}
@@ -121,6 +121,7 @@
       <h1 id="storeName">جارٍ تحميل المتجر...</h1>
       <p class="description" id="storeDescription"></p>
       <a class="whatsapp" id="whatsappContact" hidden target="_blank" rel="noopener noreferrer"></a>
+      <a class="platform-support" id="platformSupportContact" hidden target="_blank" rel="noopener noreferrer"></a>
     </section>
     <section>
       <div class="toolbar">
@@ -159,8 +160,8 @@
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"عنوان التسليم (اختياري)",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد."},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Delivery address (optional)",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order."}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",platformSupport:"تواصل مع دعم المنصة",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"عنوان التسليم (اختياري)",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد."},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",platformSupport:"Contact platform support",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Delivery address (optional)",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order."}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
@@ -201,6 +202,7 @@
         $("platformFooter").textContent = (language === "en" ? storeData?.platform_footer?.platform_footer_en : storeData?.platform_footer?.platform_footer_ar) || t("footer");
         renderAnnouncements();
         $("whatsappContact").textContent = t("contact");
+        $("platformSupportContact").textContent = t("platformSupport");
         $("cartHeading").textContent = t("cart");
         $("cartTotalLabel").textContent = t("total");
         $("cartNote").textContent = t("cartNote");
@@ -552,6 +554,11 @@
           $("businessType").textContent = data.store.business_type || "";
           $("storeName").textContent = data.store.name;
           $("storeDescription").textContent = data.store.description || "";
+          const supportPhone = String(data.platform_support_whatsapp || "").replace(/\D/g,"");
+          if (/^\d{8,15}$/.test(supportPhone)) {
+            $("platformSupportContact").href = "https://wa.me/" + supportPhone;
+            $("platformSupportContact").hidden = false;
+          }
           const phone = String(data.store.whatsapp_phone || "").replace(/\D/g,"");
           if (/^\d{8,15}$/.test(phone)) {
             $("whatsappContact").href = "https://wa.me/" + phone;
