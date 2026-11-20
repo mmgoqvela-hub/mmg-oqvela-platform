@@ -26,6 +26,7 @@ const STORE = {
   slug: "test-store",
   business_type: "Retail",
   description: "Test description",
+  template_key: "modern",
   status: "active",
   account_role: "owner",
   subscription_status: "active",
@@ -204,6 +205,7 @@ test("Store owner can update store details", async () => {
     VALID_DATA.name,
     VALID_DATA.business_type,
     VALID_DATA.description,
+    STORE.template_key,
     STORE.id,
     STORE.account_id
   ]);
@@ -315,5 +317,29 @@ test("Account members cannot create additional stores", async () => {
     {DB:db}
   );
   assert.equal(response.status,403);
+});
+
+
+test("Store owner can select a supported storefront template", async () => {
+  const db = createDb({session:SESSION,store:STORE});
+  const response = await handleStores(
+    makeRequest("PUT",{...VALID_DATA,template_key:"boutique"}),
+    {DB:db}
+  );
+  const result = await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.store.template_key,"boutique");
+  const update = db.calls.find(item => item.sql.includes("UPDATE stores"));
+  assert.equal(update.values[3],"boutique");
+});
+
+test("Unsupported storefront templates are rejected", async () => {
+  const db = createDb({session:SESSION,store:STORE});
+  const response = await handleStores(
+    makeRequest("PUT",{...VALID_DATA,template_key:"custom-script"}),
+    {DB:db}
+  );
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(item => item.sql.includes("UPDATE stores")),false);
 });
 
