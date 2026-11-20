@@ -2323,6 +2323,286 @@ footer{
     }
   }
 
+  let adminUsersCache = [];
+
+  async function loadAdminOverview() {
+    const container = $("adminOverviewCards");
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/overview");
+      const overview = data.overview || {};
+      const items = [
+        ["إجمالي المستخدمين",overview.users],
+        ["إجمالي الحسابات",overview.accounts],
+        ["إجمالي المتاجر",overview.stores],
+        ["الاشتراكات النشطة",overview.active_subscriptions],
+        ["طلبات الدفع المعلقة",overview.pending_payments]
+      ];
+      for (const [labelText,value] of items) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const label = document.createElement("p");
+        label.className = "muted";
+        label.textContent = labelText;
+        const number = document.createElement("h3");
+        number.textContent = formatNumber(value || 0);
+        card.append(label,number);
+        container.append(card);
+      }
+      for (const total of overview.approved_payment_totals || []) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const label = document.createElement("p");
+        label.className = "muted";
+        label.textContent = "إجمالي المدفوعات المعتمدة";
+        const number = document.createElement("h3");
+        number.textContent = formatMoney(total.total,total.currency);
+        card.append(label,number);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
+  async function loadAdminUsers() {
+    const container = $("adminUsers");
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/users?limit=200");
+      adminUsersCache = data.users || [];
+      const selector = $("newSuperAdmin");
+      selector.replaceChildren();
+      for (const user of adminUsersCache.filter(item => item.status === "active" && item.id !== authenticatedUserId)) {
+        const option = document.createElement("option");
+        option.value = user.id;
+        option.textContent = user.full_name + " — " + user.email;
+        option.dataset.noTranslate = "true";
+        selector.append(option);
+      }
+      if (!selector.options.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "لا توجد بيانات لعرضها.";
+        selector.append(option);
+      }
+      if (!adminUsersCache.length) {
+        container.textContent = "لا توجد بيانات لعرضها.";
+        return;
+      }
+      for (const user of adminUsersCache) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = user.full_name;
+        title.dataset.noTranslate = "true";
+        const email = document.createElement("p");
+        email.className = "muted";
+        email.textContent = user.email;
+        email.dataset.noTranslate = "true";
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = user.status + " — " + formatNumber(user.accounts_count) + " — " + formatNumber(user.stores_count);
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "secondary";
+        toggle.textContent = user.status === "active" ? "إيقاف" : "تفعيل";
+        toggle.disabled = user.id === authenticatedUserId || user.status === "pending";
+        toggle.addEventListener("click",async () => {
+          toggle.disabled = true;
+          try {
+            await api("/api/admin/users/" + encodeURIComponent(user.id),{
+              method:"PUT",body:JSON.stringify({status:user.status === "active" ? "suspended" : "active"})
+            });
+            await loadAdminUsers();
+            await loadAdminOverview();
+          } catch(error) {
+            details.textContent = error.message;
+            toggle.disabled = false;
+          }
+        });
+        card.append(title,email,details,toggle);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
+  async function loadAdminAccounts() {
+    const container = $("adminAccounts");
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/accounts?limit=200");
+      const accounts = data.accounts || [];
+      if (!accounts.length) { container.textContent = "لا توجد بيانات لعرضها."; return; }
+      for (const account of accounts) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = account.name;
+        title.dataset.noTranslate = "true";
+        const owner = document.createElement("p");
+        owner.className = "muted";
+        owner.textContent = "صاحب الحساب: " + account.owner_name + " — " + account.owner_email;
+        owner.dataset.noTranslate = "true";
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = account.status + " — " + formatNumber(account.stores_count);
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "secondary";
+        toggle.textContent = account.status === "active" ? "إيقاف" : "تفعيل";
+        toggle.addEventListener("click",async () => {
+          toggle.disabled = true;
+          try {
+            await api("/api/admin/accounts/" + encodeURIComponent(account.id),{
+              method:"PUT",body:JSON.stringify({status:account.status === "active" ? "suspended" : "active"})
+            });
+            await loadAdminAccounts();
+          } catch(error) {
+            details.textContent = error.message;
+            toggle.disabled = false;
+          }
+        });
+        card.append(title,owner,details,toggle);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
+  async function loadAdminStores() {
+    const container = $("adminStores");
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/stores?limit=200");
+      const stores = data.stores || [];
+      if (!stores.length) { container.textContent = "لا توجد بيانات لعرضها."; return; }
+      for (const store of stores) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = store.name;
+        title.dataset.noTranslate = "true";
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = store.account_name + " — " + (store.business_type || "عام") + " — " + (store.subscription_status || "—");
+        details.dataset.noTranslate = "true";
+        const status = document.createElement("select");
+        for (const value of ["active","suspended","maintenance","closed"]) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          option.selected = store.status === value;
+          status.append(option);
+        }
+        const save = document.createElement("button");
+        save.type = "button";
+        save.className = "secondary";
+        save.textContent = "تحديث الحالة";
+        save.addEventListener("click",async () => {
+          save.disabled = true;
+          try {
+            await api("/api/admin/stores/" + encodeURIComponent(store.id),{
+              method:"PUT",body:JSON.stringify({status:status.value})
+            });
+            await loadAdminStores();
+          } catch(error) {
+            details.textContent = error.message;
+            save.disabled = false;
+          }
+        });
+        card.append(title,details,status,save);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
+  async function loadPlatformAdmins() {
+    const container = $("platformAdmins");
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/platform-admins");
+      const admins = data.admins || [];
+      if (!admins.length) { container.textContent = "لا توجد بيانات لعرضها."; return; }
+      for (const item of admins) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = item.full_name;
+        title.dataset.noTranslate = "true";
+        const email = document.createElement("p");
+        email.className = "muted";
+        email.textContent = item.email;
+        email.dataset.noTranslate = "true";
+        const level = document.createElement("p");
+        level.className = "muted";
+        level.textContent = item.admin_level + " — " + item.status;
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "secondary";
+        toggle.textContent = item.status === "active" ? "إيقاف" : "تفعيل";
+        toggle.disabled = item.admin_level === "super_admin";
+        toggle.addEventListener("click",async () => {
+          toggle.disabled = true;
+          try {
+            await api("/api/admin/platform-admins/" + encodeURIComponent(item.user_id),{
+              method:"PUT",body:JSON.stringify({status:item.status === "active" ? "suspended" : "active"})
+            });
+            await loadPlatformAdmins();
+          } catch(error) {
+            level.textContent = error.message;
+            toggle.disabled = false;
+          }
+        });
+        card.append(title,email,level,toggle);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
+  $("platformAdminForm").addEventListener("submit",async event => {
+    event.preventDefault();
+    const button=$("platformAdminForm").querySelector("button[type=submit]");
+    const message=$("platformAdminMessage");
+    button.disabled=true;
+    try {
+      const result=await api("/api/admin/platform-admins",{
+        method:"POST",
+        body:JSON.stringify({email:$("platformAdminEmail").value.trim(),admin_level:$("platformAdminLevel").value})
+      });
+      message.textContent=result.message || "تمت إضافة مدير المنصة.";
+      $("platformAdminEmail").value="";
+      await loadPlatformAdmins();
+    } catch(error) {
+      message.textContent=error.message;
+    } finally {button.disabled=false;}
+  });
+
+  $("transferSuperAdminForm").addEventListener("submit",async event => {
+    event.preventDefault();
+    const button=$("transferSuperAdminForm").querySelector("button[type=submit]");
+    const message=$("transferAdminMessage");
+    if(!$("newSuperAdmin").value) return;
+    if(!window.confirm("سيتم نقل صلاحية المدير الرئيسي ولن تبقى لديك هذه الصلاحية. هل تريد المتابعة؟")) return;
+    button.disabled=true;
+    try {
+      const result=await api("/api/admin/transfer-super-admin",{
+        method:"POST",body:JSON.stringify({user_id:$("newSuperAdmin").value})
+      });
+      message.textContent=result.message || "تم نقل صلاحية المدير الرئيسي.";
+      await checkSession();
+    } catch(error) {
+      message.textContent=error.message;
+    } finally {button.disabled=false;}
+  });
+
   async function loadAdminPanel() {
     const panel = $("adminPanel");
     panel.classList.add("hidden");
