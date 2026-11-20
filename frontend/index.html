@@ -3119,6 +3119,14 @@ footer{
     previewButton.style.cssText = "display:inline-block;border-radius:7px;padding:8px 13px;font-size:11px;font-weight:bold";
     previewButton.textContent = "تصفح المنتجات";
     previewHero.append(previewHeading,previewSubtitle,previewButton);
+    const previewToolbar = document.createElement("div");
+    previewToolbar.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;font-size:10px";
+    const previewCategories = document.createElement("span");
+    previewCategories.textContent = "التصنيفات　 الكل　 جديد";
+    const previewCart = document.createElement("span");
+    previewCart.textContent = "السلة　 0";
+    previewCart.style.cssText = "padding:5px 9px;border:1px solid #ffffff35;border-radius:20px";
+    previewToolbar.append(previewCategories,previewCart);
     const previewProducts = document.createElement("div");
     previewProducts.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px";
     for (let n=0;n<3;n++) {
@@ -3126,7 +3134,7 @@ footer{
       item.style.cssText = "height:35px;border:1px solid #ffffff25;border-radius:8px;background:#ffffff12";
       previewProducts.append(item);
     }
-    livePreview.append(previewAnnouncement,previewHeader,previewHero,previewProducts);
+    livePreview.append(previewAnnouncement,previewHeader,previewHero,previewToolbar,previewProducts);
     const previewThemes = {
       modern:{radius:"16px",hero:"linear-gradient(135deg,#ffffff12,#00000018)",weight:"600"},
       classic:{radius:"4px",hero:"linear-gradient(135deg,#eee3d0,#8f7655)",weight:"500"},
@@ -3166,6 +3174,9 @@ footer{
       if (previewLogo.style.display === "block") previewLogo.src = logoUrl.value;
       else previewLogo.removeAttribute("src");
       previewProducts.style.display = sectionOptions.products?.checked === false ? "none" : "grid";
+      previewCategories.style.display = sectionOptions.categories?.checked === false ? "none" : "inline";
+      previewCart.style.display = sectionOptions.cart?.checked === false ? "none" : "inline-block";
+      previewToolbar.style.display = sectionOptions.categories?.checked === false && sectionOptions.cart?.checked === false ? "none" : "flex";
     };
 
 
