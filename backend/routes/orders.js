@@ -154,21 +154,71 @@ async function createPublicOrder(request,env,slug){
   }
 }
 
+async function loadStoreReport(db,storeId,period){
+  const modifier=period==="7d"?"-7 days":period==="90d"?"-90 days":"-30 days";
+  const [totals,revenue,topProducts]=await Promise.all([
+    db.prepare(`
+      SELECT COUNT(*) AS total_orders,
+        SUM(CASE WHEN order_status='completed' THEN 1 ELSE 0 END) AS completed_orders,
+        SUM(CASE WHEN order_status IN ('pending','confirmed','processing','shipped') THEN 1 ELSE 0 END) AS open_orders,
+        SUM(CASE WHEN order_status='cancelled' THEN 1 ELSE 0 END) AS cancelled_orders
+      FROM store_orders WHERE store_id=? AND created_at>=datetime('now',?)
+    `).bind(storeId,modifier).first(),
+    db.prepare(`
+      SELECT currency,COUNT(*) AS paid_orders,ROUND(SUM(total),2) AS paid_revenue
+      FROM store_orders
+      WHERE store_id=? AND payment_status='paid' AND order_status!='cancelled'
+        AND created_at>=datetime('now',?)
+      GROUP BY currency ORDER BY currency
+    `).bind(storeId,modifier).all(),
+    db.prepare(`
+      SELECT i.product_id,i.product_name,SUM(i.quantity) AS units_sold,
+        ROUND(SUM(i.line_total),2) AS paid_sales
+      FROM store_order_items i
+      JOIN store_orders o ON o.id=i.order_id AND o.store_id=i.store_id
+      WHERE i.store_id=? AND o.payment_status='paid' AND o.order_status!='cancelled'
+        AND o.created_at>=datetime('now',?)
+      GROUP BY i.product_id,i.product_name
+      ORDER BY units_sold DESC,i.product_name COLLATE NOCASE ASC LIMIT 5
+    `).bind(storeId,modifier).all()
+  ]);
+  return {
+    period,
+    totals:{
+      total_orders:totals?.total_orders||0,
+      completed_orders:totals?.completed_orders||0,
+      open_orders:totals?.open_orders||0,
+      cancelled_orders:totals?.cancelled_orders||0
+    },
+    paid_revenue:revenue.results||[],
+    top_products:topProducts.results||[]
+  };
+}
+
 export async function handleOrders(request,env){
   const url=new URL(request.url);
   const publicMatch=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/orders$/);
   if(publicMatch)return createPublicOrder(request,env,publicMatch[1]);
   const settingsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/settings$/);
+  const reportsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/reports$/);
   const orderMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([^/]+))?$/);
-  if(!settingsMatch&&!orderMatch)return null;
+  if(!settingsMatch&&!orderMatch&&!reportsMatch)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   const session=await getAuthenticatedSession(request,env.DB);
   if(!session)return json({error:"Authentication required"},401);
   let storeId;
-  try{storeId=decodeURIComponent((settingsMatch||orderMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
+  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
   const access=await getAccess(env.DB,storeId,session.user_id);
   if(!access)return json({error:"Store not found"},404);
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
+
+  if(reportsMatch){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
+    const period=url.searchParams.get("period")||"30d";
+    if(!["7d","30d","90d"].includes(period))return json({error:"Invalid report period"},400);
+    return json({status:"ok",report:await loadStoreReport(env.DB,storeId,period)});
+  }
 
   if(settingsMatch){
     if(request.method==="GET"){
