@@ -104,6 +104,23 @@ test("Authenticated store settings cannot be changed by ordinary members",async(
  assert.equal(response.status,403);
 });
 
+test("Order reads require orders.read and remain scoped to the requested store",async()=>{
+ const denied=db({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"catalog.read"}});
+ const forbidden=await handleOrders(request("/api/stores/store-1/orders","GET",undefined,true),{DB:denied});
+ assert.equal(forbidden.status,403);
+ const allowedDb=db({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"orders.read"},rows:[]});
+ const allowed=await handleOrders(request("/api/stores/store-1/orders","GET",undefined,true),{DB:allowedDb});
+ assert.equal(allowed.status,200);
+ assert.ok(allowedDb.calls.some(call=>call.sql.includes("FROM store_orders WHERE store_id=?")&&call.values[0]==="store-1"));
+});
+
+test("Order updates require orders.manage even when a member can read orders",async()=>{
+ const database=db({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"orders.read"},order:{id:"order-1",order_status:"pending",payment_status:"unpaid",payment_method:"cash_on_delivery"}});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{order_status:"confirmed"},true),{DB:database});
+ assert.equal(response.status,403);
+ assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_orders")),false);
+});
+
 test("Order API and migration enforce tenant scope, stock reservation, restoration and payment audit fields",async()=>{
  const source=await readFile(new URL("../../database/migrations/0020_store_orders_checkout.sql",import.meta.url),"utf8");
  assert.match(source,/UNIQUE \(id, store_id\)/);
