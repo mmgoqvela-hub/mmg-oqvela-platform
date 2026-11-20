@@ -173,7 +173,7 @@ Do not represent these as finished until implemented and tested.
 5. Complete catalog management UI refinements, R2-backed product media upload/storage and R2-backed media upload/storage and remaining inventory workflow refinements; variant-level stock movements are now implemented and tested.
 6. Finish storefront template previews, accessibility, product media, and public-store verification at `/s/{slug}`.
 7. Customer checkout, order persistence and store-side order management are implemented for the approved cash-on-delivery + Sham Cash methods; next verify browser/device behavior, accessibility, stock concurrency and order lifecycle edge cases. Customer accounts/order history and external delivery integrations remain separate discovery items.
-8. Central admin overview, user/account/store management, platform-admin management and protected super-admin transfer APIs/UI are implemented with audit logging and CI coverage. Remaining central admin work: announcements/ads and notification/WhatsApp platform contact workflows.
+8. Central admin overview, user/account/store management, platform-admin management and protected super-admin transfer APIs/UI are implemented with audit logging and CI coverage. Remaining central admin work: paid advertising campaigns/targeting/analytics and notification/WhatsApp platform contact workflows.
 9. Complete subscription lifecycle alerts, renewal controls and notification preferences.
 10. Implement R2 file management and quotas.
 11. Complete terms/privacy, risk controls, audit coverage and operational safeguards.
