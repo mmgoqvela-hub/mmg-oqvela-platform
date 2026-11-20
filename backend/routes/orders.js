@@ -213,14 +213,23 @@ export async function handleOrders(request,env){
     if(!orders.length)return json({status:"ok",orders:[]});
     const ids=orders.map(o=>o.id);
     const placeholders=ids.map(()=>"?").join(",");
-    const lines=await env.DB.prepare(`
-      SELECT order_id,id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency
-      FROM store_order_items WHERE store_id=? AND order_id IN (${placeholders})
-      ORDER BY created_at ASC
-    `).bind(storeId,...ids).all();
+    const [lines,events]=await Promise.all([
+      env.DB.prepare(`
+        SELECT order_id,id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency
+        FROM store_order_items WHERE store_id=? AND order_id IN (${placeholders})
+        ORDER BY created_at ASC
+      `).bind(storeId,...ids).all(),
+      env.DB.prepare(`
+        SELECT order_id,event_type,from_value,to_value,created_at
+        FROM store_order_events WHERE store_id=? AND order_id IN (${placeholders})
+        ORDER BY created_at ASC
+      `).bind(storeId,...ids).all()
+    ]);
     const grouped=new Map();
     for(const line of lines.results||[]){const group=grouped.get(line.order_id)||[];group.push(line);grouped.set(line.order_id,group);}
-    return json({status:"ok",orders:orders.map(order=>({...order,items:grouped.get(order.id)||[]}))});
+    const eventGroups=new Map();
+    for(const event of events.results||[]){const group=eventGroups.get(event.order_id)||[];group.push(event);eventGroups.set(event.order_id,group);}
+    return json({status:"ok",orders:orders.map(order=>({...order,items:grouped.get(order.id)||[],events:eventGroups.get(order.id)||[]}))});
   }
 
   if(request.method!=="PATCH")return json({error:"Method not allowed"},405);
@@ -260,9 +269,9 @@ export async function handleOrders(request,env){
   if(nextPayment==="refunded"&&nextStatus!=="cancelled")
     return json({error:"A refunded order must be cancelled"},409);
   const result=await env.DB.prepare(`
-    UPDATE store_orders SET order_status=?,payment_status=?,updated_at=CURRENT_TIMESTAMP
+    UPDATE store_orders SET order_status=?,payment_status=?,updated_by=?,updated_at=CURRENT_TIMESTAMP
     WHERE id=? AND store_id=? AND order_status=? AND payment_status=?
-  `).bind(nextStatus,nextPayment,orderId,storeId,existing.order_status,existing.payment_status).run();
+  `).bind(nextStatus,nextPayment,session.user_id,orderId,storeId,existing.order_status,existing.payment_status).run();
   if(!result.meta?.changes)return json({error:"Order changed; refresh and retry"},409);
   return json({status:"ok",order:{id:orderId,order_status:nextStatus,payment_status:nextPayment}});
 }
