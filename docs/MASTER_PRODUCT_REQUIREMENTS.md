@@ -135,6 +135,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Tenant-scoped catalog APIs for category listing/creation/update/deletion, product listing/creation/update/archive, product variant creation/update/deactivation, and inventory movement history/stock adjustments. Product and variant creation record initial stock; stock changes are guarded against negative quantities and concurrent updates. Automated API tests cover tenant access, permissions and inventory integrity.
 - Per-store storefront template selection persisted in D1 with five approved presets: modern, classic, minimal, boutique and tech. Owners/admins can choose a template and open the public store preview without changing catalog data.
 - Public storefront route `/s/{slug}` with a tenant-safe public API, subscription-active visibility check, category filters, product search, product/variant display, responsive layouts, Arabic/English and RTL/LTR.
+- Optional per-store WhatsApp contact number with server-side international-number validation and a public WhatsApp contact link on the storefront.
 - Role/permission tables, seeded catalog/inventory/team permission codes, store team API and bilingual team-management UI. Store owners/admins can add existing active platform accounts as staff, assign built-in or custom roles, update/suspend access, and create/edit/delete custom roles. Permissions are checked server-side for catalog and inventory endpoints; no employee-count cap is imposed.
 
 ### Partially implemented / requires audit or completion
@@ -145,7 +146,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Storefronts: five selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
 - Subscription lifecycle notifications and renewal rules.
 - Platform-wide announcements/ads and mandatory footer.
-- WhatsApp contact configuration/links.
+- Per-store WhatsApp contact configuration and public contact link are implemented. A separate centrally configured platform support contact remains to be added if required.
 - R2 file storage, file access policies and quotas.
 - Terms, privacy and risk/security management screens.
 - Full business audit logs beyond platform-admin settings.
