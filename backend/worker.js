@@ -57,7 +57,7 @@ export default {
       }
     }
 
-    const storefrontPath = url.pathname.match(/^\\/s\\/[^/]+\\/?$/);
+    const storefrontPath = url.pathname.match(/^\/s\/[^/]+\/?$/);
     if (storefrontPath && request.method === "GET") {
       const assetUrl = new URL("/storefront.html", request.url);
       return env.ASSETS.fetch(new Request(assetUrl.toString(), {
