@@ -243,7 +243,7 @@ async function createPlatformAdmin(request,env,admin) {
   const email=typeof parsed.body.email==="string"?parsed.body.email.trim().toLowerCase():"";
   const level=parsed.body.admin_level;
   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254||!["admin","support"].includes(level)) {
-    return json({error:"Invalid platform administrator details"},400);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||!["admin","support"].includes(level)) {
   }
   const user=await env.DB.prepare("SELECT id,status FROM users WHERE email=? LIMIT 1").bind(email).first();
   if(!user||user.status!=="active") return json({error:"An active platform user with this email is required"},404);
@@ -317,7 +317,7 @@ export async function handleAdmin(request, env) {
   const isActivityLogs = path === "/api/admin/activity-logs";
   const isOverview = path === "/api/admin/overview";
   const isTransfer = path === "/api/admin/transfer-super-admin";
-  const isManagement = /^\\/api\\/admin\\/(users|accounts|stores|platform-admins)(?:\\/[^/]+)?$/.test(path);
+  const isManagement = /^\/api\/admin\/(users|accounts|stores|platform-admins)(?:\/[^/]+)?$/.test(path);
   const isSettings = ["/api/admin/settings", "/api/admin/trial-settings"].includes(path);
   if (!isSettings && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
 
