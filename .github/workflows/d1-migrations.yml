@@ -20,7 +20,37 @@ jobs:
         with:
           node-version: 22
 
-      - name: Apply database migrations
+      - name: Verify and reconcile already-present migration 0009
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT CASE WHEN
+            EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='platform_settings')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='admin_activity_logs')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_admin_activity_logs_created')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_admin_activity_logs_admin')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_settings') WHERE name='setting_key')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_settings') WHERE name='setting_value')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_settings') WHERE name='updated_by')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_settings') WHERE name='updated_at')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='id')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='admin_user_id')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='action')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='target_type')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='target_id')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='details')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='created_at')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('payments') WHERE name='payment_details_snapshot')
+            AND (SELECT COUNT(*) FROM platform_settings WHERE setting_key IN ('shamcash_link','shamcash_recipient','shamcash_instructions','shamcash_enabled')) = 4
+            AND NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name='0009_platform_admin_settings.sql')
+            THEN 'Migration 0009 schema verified'
+            ELSE abs(-9223372036854775808)
+          END"
+
+      - name: Record verified migration 0009
+        run: |
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "INSERT INTO d1_migrations(name) SELECT '0009_platform_admin_settings.sql' WHERE NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name='0009_platform_admin_settings.sql')"
+
+      - name: Apply remaining database migrations
         run: npx --yes wrangler@4 d1 migrations apply mmg-oqvela-db --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
