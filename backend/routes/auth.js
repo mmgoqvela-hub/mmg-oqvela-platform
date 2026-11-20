@@ -446,6 +446,15 @@ async function currentUser(request, env) {
           ON au.account_id = s.account_id
         WHERE au.user_id = ?
           AND au.status = 'active'
+          AND (
+            au.role IN ('owner','admin')
+            OR EXISTS (
+              SELECT 1 FROM store_members sm
+              WHERE sm.store_id = s.id
+                AND sm.user_id = au.user_id
+                AND sm.status = 'active'
+            )
+          )
         ORDER BY s.created_at DESC
         LIMIT 100
       `).bind(session.user_id).all()
