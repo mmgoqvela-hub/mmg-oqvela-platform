@@ -242,7 +242,6 @@ async function createPlatformAdmin(request,env,admin) {
   if(parsed.error) return json({error:parsed.error},parsed.status);
   const email=typeof parsed.body.email==="string"?parsed.body.email.trim().toLowerCase():"";
   const level=parsed.body.admin_level;
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254||!["admin","support"].includes(level)) {
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||!["admin","support"].includes(level)) {
   }
   const user=await env.DB.prepare("SELECT id,status FROM users WHERE email=? LIMIT 1").bind(email).first();
