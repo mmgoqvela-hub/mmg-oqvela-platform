@@ -57,6 +57,19 @@ async function getContext(request,env,storeId) {
   return {session,store};
 }
 
+async function canAssignRole(db,store,roleId) {
+  if(["owner","admin"].includes(store.account_role)) return true;
+  const result=await db.prepare(`
+    SELECT p.code
+    FROM role_permissions rp
+    JOIN permissions p ON p.id=rp.permission_id
+    JOIN roles r ON r.id=rp.role_id
+    WHERE r.id=? AND r.store_id=?
+  `).bind(roleId,store.id).all();
+  const own=new Set(String(store.permissions||"").split(",").filter(Boolean));
+  return (result.results||[]).every(permission=>own.has(permission.code));
+}
+
 async function ensurePresetRoles(db,storeId) {
   const statements=[];
   for(const preset of ROLE_PRESETS) {
@@ -126,6 +139,7 @@ async function addMember(request,env,session,store) {
   if(!user||user.status!=="active") return json({error:"The employee must have an active MMG OQVELA account first"},404);
   const role=await env.DB.prepare("SELECT id FROM roles WHERE id=? AND store_id=? LIMIT 1").bind(roleId,store.id).first();
   if(!role) return json({error:"Role not found in this store"},404);
+  if(!(await canAssignRole(env.DB,store,roleId))) return json({error:"You cannot assign permissions you do not hold"},403);
   const accountMember=await env.DB.prepare("SELECT role,status FROM account_users WHERE account_id=? AND user_id=? LIMIT 1").bind(store.account_id,user.id).first();
   if(accountMember && accountMember.status!=="active") return json({error:"This account membership is suspended"},409);
   if(accountMember && ["owner","admin"].includes(accountMember.role)) return json({error:"Account owners and administrators already have store access"},409);
@@ -171,6 +185,7 @@ async function updateMember(request,env,store,memberId) {
   if(status==="active") {
     const role=await env.DB.prepare("SELECT id FROM roles WHERE id=? AND store_id=? LIMIT 1").bind(roleId,store.id).first();
     if(!role) return json({error:"Choose a valid role for this store"},400);
+    if(!(await canAssignRole(env.DB,store,roleId))) return json({error:"You cannot assign permissions you do not hold"},403);
     const results=await env.DB.batch([
       env.DB.prepare("UPDATE store_members SET status='active' WHERE id=? AND store_id=?").bind(memberId,store.id),
       env.DB.prepare("DELETE FROM member_roles WHERE store_member_id=?").bind(memberId),
@@ -192,6 +207,9 @@ async function createRole(request,env,store) {
   if(name.length<2||name.length>80||description.length>300||!Array.isArray(permissions)||permissions.length<1||permissions.length>5||
     permissions.some(code=>typeof code!=="string"||!ALLOWED_PERMISSIONS.has(code))||new Set(permissions).size!==permissions.length) {
     return json({error:"Invalid custom role or permissions"},400);
+  }
+  if(!["owner","admin"].includes(store.account_role) && permissions.some(code=>!String(store.permissions||"").split(",").includes(code))) {
+    return json({error:"You cannot grant permissions you do not hold"},403);
   }
   const roleId=crypto.randomUUID();
   const statements=[
@@ -216,6 +234,9 @@ async function updateRole(request,env,store,roleId) {
   if(name.length<2||name.length>80||description.length>300||!Array.isArray(permissions)||permissions.length<1||permissions.length>5||
     permissions.some(code=>typeof code!=="string"||!ALLOWED_PERMISSIONS.has(code))||new Set(permissions).size!==permissions.length) {
     return json({error:"Invalid custom role or permissions"},400);
+  }
+  if(!["owner","admin"].includes(store.account_role) && permissions.some(code=>!String(store.permissions||"").split(",").includes(code))) {
+    return json({error:"You cannot grant permissions you do not hold"},403);
   }
   const role=await env.DB.prepare("SELECT id,is_system FROM roles WHERE id=? AND store_id=? LIMIT 1").bind(roleId,store.id).first();
   if(!role) return json({error:"Role not found"},404);
