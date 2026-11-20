@@ -3058,6 +3058,7 @@ footer{
       option.addEventListener("click",() => {
         selectedTemplate = key;
         for (const button of templateButtons) button.setAttribute("aria-pressed",String(button.dataset.template === key));
+        updatePreview();
       });
       templateButtons.push(option);
       templatePicker.append(option);
@@ -3092,25 +3093,79 @@ footer{
     makeDesignField("عنوان الواجهة",headingText);
     makeDesignField("النص التعريفي",subtitleText);
     const livePreview = document.createElement("div");
-    livePreview.style.cssText = "margin-top:12px;border-radius:12px;padding:20px;min-height:125px;color:white;transition:background .15s";
+    livePreview.className = "store-editor-preview";
+    livePreview.style.cssText = "margin-top:12px;border:1px solid #ffffff24;overflow:hidden;border-radius:16px;min-height:230px;color:white;transition:background .15s, border-radius .15s";
+    const previewAnnouncement = document.createElement("div");
+    previewAnnouncement.style.cssText = "padding:7px 12px;text-align:center;font-size:11px;display:none";
+    const previewHeader = document.createElement("div");
+    previewHeader.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #ffffff22";
+    const previewLogo = document.createElement("img");
+    previewLogo.alt = "Store logo";
+    previewLogo.style.cssText = "width:38px;height:38px;object-fit:contain;border-radius:8px;display:none";
+    const previewBrand = document.createElement("strong");
+    previewBrand.style.cssText = "font-size:13px;flex:1";
+    previewBrand.textContent = store.name || "اسم المتجر";
+    const previewMenu = document.createElement("span");
+    previewMenu.style.cssText = "font-size:11px;opacity:.75";
+    previewMenu.textContent = "الرئيسية　 المنتجات　 تواصل";
+    previewHeader.append(previewLogo,previewBrand,previewMenu);
+    const previewHero = document.createElement("div");
+    previewHero.style.cssText = "padding:26px 20px;min-height:118px;background-size:cover;background-position:center";
     const previewHeading = document.createElement("h3");
     previewHeading.style.cssText = "margin:0 0 8px;font-size:22px";
     const previewSubtitle = document.createElement("p");
-    previewSubtitle.style.cssText = "margin:0 0 14px;opacity:.82;line-height:1.7";
+    previewSubtitle.style.cssText = "margin:0 0 14px;opacity:.82;line-height:1.7;font-size:12px";
     const previewButton = document.createElement("span");
-    previewButton.style.cssText = "display:inline-block;border-radius:7px;padding:8px 13px;font-size:12px;font-weight:bold";
+    previewButton.style.cssText = "display:inline-block;border-radius:7px;padding:8px 13px;font-size:11px;font-weight:bold";
     previewButton.textContent = "تصفح المنتجات";
-    livePreview.append(previewHeading,previewSubtitle,previewButton);
+    previewHero.append(previewHeading,previewSubtitle,previewButton);
+    const previewProducts = document.createElement("div");
+    previewProducts.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px";
+    for (let n=0;n<3;n++) {
+      const item = document.createElement("div");
+      item.style.cssText = "height:35px;border:1px solid #ffffff25;border-radius:8px;background:#ffffff12";
+      previewProducts.append(item);
+    }
+    livePreview.append(previewAnnouncement,previewHeader,previewHero,previewProducts);
+    const previewThemes = {
+      modern:{radius:"16px",hero:"linear-gradient(135deg,#ffffff12,#00000018)",weight:"600"},
+      classic:{radius:"4px",hero:"linear-gradient(135deg,#eee3d0,#8f7655)",weight:"500"},
+      minimal:{radius:"2px",hero:"linear-gradient(135deg,#ffffff,#e9e9e9)",weight:"400"},
+      boutique:{radius:"18px",hero:"linear-gradient(135deg,#f3e5df,#8d6b62)",weight:"500"},
+      tech:{radius:"10px",hero:"linear-gradient(135deg,#102d45,#050b18)",weight:"700"},
+      market:{radius:"8px",hero:"linear-gradient(135deg,#d8f1d5,#80bd83)",weight:"700"},
+      restaurant:{radius:"6px",hero:"linear-gradient(135deg,#603c2c,#21150f)",weight:"600"},
+      fashion:{radius:"0px",hero:"linear-gradient(135deg,#e9e2dc,#b5a69b)",weight:"400"},
+      electronics:{radius:"8px",hero:"linear-gradient(135deg,#dce8f6,#7d9fc7)",weight:"700"},
+      beauty:{radius:"16px",hero:"linear-gradient(135deg,#f8dce8,#d5a8bd)",weight:"500"},
+      luxury:{radius:"2px",hero:"linear-gradient(135deg,#3a3325,#080808)",weight:"500"}
+    };
     const updatePreview = () => {
+      const theme = previewThemes[selectedTemplate] || previewThemes.modern;
+      livePreview.dataset.template = selectedTemplate;
       livePreview.style.background = backgroundColor.value;
+      livePreview.style.borderRadius = theme.radius;
+      previewBrand.textContent = headingText.value || store.name || "اسم متجرك";
       previewHeading.textContent = headingText.value || store.name || "اسم متجرك";
       previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
       previewButton.style.background = primaryColor.value;
+      previewButton.style.color = "#ffffff";
+      previewHeading.style.fontWeight = theme.weight;
       livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
-      livePreview.style.textAlign = heroAlignment.value === "center" ? "center" : "right";
-      livePreview.style.backgroundImage = /^https?:/i.test(heroImageUrl.value) ? "linear-gradient(#0008,#0008),url(" + JSON.stringify(heroImageUrl.value) + ")" : "none";
-      livePreview.style.backgroundSize = "cover";
-      livePreview.style.backgroundPosition = "center";
+      const alignment = heroAlignment.value === "center" ? "center" : "right";
+      previewHero.style.textAlign = alignment;
+      previewHeader.style.direction = "rtl";
+      previewAnnouncement.textContent = announcementText.value;
+      previewAnnouncement.style.display = announcementText.value.trim() ? "block" : "none";
+      previewAnnouncement.style.background = primaryColor.value;
+      previewHero.style.backgroundImage = /^https?:/i.test(heroImageUrl.value)
+        ? "linear-gradient(#0008,#0008),url(" + JSON.stringify(heroImageUrl.value) + ")"
+        : theme.hero;
+      previewHero.style.color = ["minimal","classic","boutique","market","electronics","beauty","fashion"].includes(selectedTemplate) ? "#242424" : "#ffffff";
+      previewLogo.style.display = /^https?:/i.test(logoUrl.value) ? "block" : "none";
+      if (previewLogo.style.display === "block") previewLogo.src = logoUrl.value;
+      else previewLogo.removeAttribute("src");
+      previewProducts.style.display = sectionOptions.products?.checked === false ? "none" : "grid";
     };
 
 
@@ -3165,9 +3220,10 @@ footer{
       const check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
-    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl].forEach(input => input.addEventListener("input",updatePreview));
+    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl,logoUrl,announcementText].forEach(input => input.addEventListener("input",updatePreview));
     fontSelect.addEventListener("change",updatePreview);
     heroAlignment.addEventListener("change",updatePreview);
+    for (const check of Object.values(sectionOptions)) check.addEventListener("change",updatePreview);
     updatePreview();
     livePreview.append(document.createTextNode(""));
     designField.append(designTitle,designHint,designGrid,uploadButtons,sectionsWrap,livePreview);
@@ -3188,6 +3244,7 @@ footer{
         heroAlignment.value = loadedCustomization.layout?.heroAlignment === "center" ? "center" : "right";
         announcementText.value = loadedCustomization.announcement || "";
         for (const key of Object.keys(sectionOptions)) sectionOptions[key].checked = loadedCustomization.sections?.[key] !== false;
+        for (const button of templateButtons) button.setAttribute("aria-pressed",String(button.dataset.template === selectedTemplate));
         updatePreview();
       } catch (error) {
         message.textContent = "تعذر تحميل إعدادات التصميم: " + error.message;
