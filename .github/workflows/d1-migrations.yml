@@ -44,7 +44,6 @@ jobs:
             AND EXISTS (SELECT 1 FROM pragma_table_info('admin_activity_logs') WHERE name='created_at')
             AND EXISTS (SELECT 1 FROM pragma_table_info('payments') WHERE name='payment_details_snapshot')
             AND (SELECT COUNT(*) FROM platform_settings WHERE setting_key IN ('shamcash_link','shamcash_recipient','shamcash_instructions','shamcash_enabled')) = 4
-            AND NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name='0009_platform_admin_settings.sql')
             THEN 'Migration 0009 schema verified'
             ELSE abs(-9223372036854775808)
           END"
@@ -52,6 +51,29 @@ jobs:
       - name: Record verified migration 0009
         run: |
           npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "INSERT INTO d1_migrations(name) SELECT '0009_platform_admin_settings.sql' WHERE NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name='0009_platform_admin_settings.sql')"
+
+      - name: Verify existing migration 0010 schema and trial seed (read only)
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT CASE WHEN
+            EXISTS (SELECT 1 FROM pragma_table_info('accounts') WHERE name='trial_used_at')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('store_subscriptions') WHERE name='is_trial')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('store_subscriptions') WHERE name='trial_account_id')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_one_trial_per_account' AND sql LIKE '%trial_account_id%')
+            AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='platform_trial_settings')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_trial_settings') WHERE name='enabled')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_trial_settings') WHERE name='duration_days')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_trial_settings') WHERE name='updated_by')
+            AND EXISTS (SELECT 1 FROM pragma_table_info('platform_trial_settings') WHERE name='updated_at')
+            AND EXISTS (SELECT 1 FROM platform_trial_settings WHERE id=1 AND enabled=1 AND duration_days=14)
+            AND EXISTS (SELECT 1 FROM subscription_plans WHERE id='00000000-0000-4000-8000-000000000001' AND name='الفترة التجريبية' AND price=0 AND duration_days=14 AND is_active=1)
+            THEN 'Migration 0010 schema and seed verified'
+            ELSE abs(-9223372036854775808)
+          END"
+
+      - name: Record verified migration 0010
+        run: |
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "INSERT INTO d1_migrations(name) SELECT '0010_account_trial_period.sql' WHERE NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name='0010_account_trial_period.sql')"
 
       - name: Apply remaining database migrations
         run: npx --yes wrangler@4 d1 migrations apply mmg-oqvela-db --remote
