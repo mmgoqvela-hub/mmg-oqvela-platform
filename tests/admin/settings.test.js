@@ -64,15 +64,17 @@ function createDb(options = {}) {
               return {
                 results: sql.includes("FROM admin_activity_logs")
                   ? (options.activityLogs ?? [])
-                  : sql.includes("FROM users u")
-                    ? (options.users ?? [])
-                    : sql.includes("FROM accounts a")
-                      ? (options.accounts ?? [])
-                      : sql.includes("FROM stores s")
-                        ? (options.stores ?? [])
-                        : sql.includes("FROM platform_admins pa")
-                          ? (options.platformAdmins ?? [])
-                          : (options.settings ?? DEFAULT_SETTINGS)
+                  : sql.includes("GROUP BY currency")
+                    ? (options.revenue ?? [])
+                    : sql.includes("FROM users u")
+                      ? (options.users ?? [])
+                      : sql.includes("FROM accounts a")
+                        ? (options.accounts ?? [])
+                        : sql.includes("FROM stores s")
+                          ? (options.stores ?? [])
+                          : sql.includes("FROM platform_admins pa")
+                            ? (options.platformAdmins ?? [])
+                            : (options.settings ?? DEFAULT_SETTINGS)
               };
             }
           };
@@ -351,8 +353,9 @@ test("Super admins can suspend a store with an audit entry",async()=>{
 });
 
 test("The last active super administrator cannot be suspended",async()=>{
-  const db=createDb({session:SESSION,admin:SUPER_ADMIN,targetAdmin:{id:USER_ID},superAdminCount:1});
-  const response=await handleAdmin(makeAdminPathRequest("/api/admin/users/"+USER_ID,"PUT",{status:"suspended"}),{DB:db});
+  const targetId="other-user";
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN,targetAdmin:{id:targetId},superAdminCount:1});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/users/"+targetId,"PUT",{status:"suspended"}),{DB:db});
   assert.equal(response.status,409);
   assert.equal(db.calls.some(call=>call.sql.includes("UPDATE users SET status")),false);
 });
