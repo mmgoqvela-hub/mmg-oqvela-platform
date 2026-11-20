@@ -363,8 +363,8 @@ test("Super admins can suspend a store with an audit entry",async()=>{
   const result=await response.json();
   assert.equal(response.status,200);
   assert.equal(result.status,"ok");
-  assert.ok(db.calls.some(call=>call.sql.includes("UPDATE stores SET status")));
-  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO admin_activity_logs")));
+  assert.ok(db.calls.some(call=>call?.sql?.includes("UPDATE stores SET status")));
+  assert.ok(db.calls.some(call=>call?.sql?.includes("INSERT INTO admin_activity_logs")));
 });
 
 test("The last active super administrator cannot be suspended",async()=>{
