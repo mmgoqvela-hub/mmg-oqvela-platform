@@ -3037,6 +3037,19 @@ footer{
       ["beauty","جمال وعناية","ألوان ناعمة لمنتجات التجميل والعناية الشخصية."],
       ["luxury","فاخر","مظهر راقٍ داكن ولمسات ذهبية للعلامات الفاخرة."]
     ];
+    const templatePalettes = {
+      modern:{primary:"#2867d8",background:"#f4f7fb"},
+      classic:{primary:"#87552f",background:"#f4ecdf"},
+      minimal:{primary:"#171717",background:"#ffffff"},
+      boutique:{primary:"#a35e58",background:"#f7efeb"},
+      tech:{primary:"#39c8c2",background:"#0b1423"},
+      market:{primary:"#27834b",background:"#eff8ef"},
+      restaurant:{primary:"#e18b54",background:"#211b19"},
+      fashion:{primary:"#24211f",background:"#f7f5f1"},
+      electronics:{primary:"#54d5e8",background:"#0b1220"},
+      beauty:{primary:"#c46d8b",background:"#fff4f5"},
+      luxury:{primary:"#c9a45c",background:"#11100f"}
+    };
     const templateButtons = [];
     for (const [key,labelText,descriptionText] of templates) {
       const option = document.createElement("button");
@@ -3060,6 +3073,9 @@ footer{
       option.addEventListener("click",() => {
         selectedTemplate = key;
         for (const button of templateButtons) button.setAttribute("aria-pressed",String(button.dataset.template === key));
+        const palette = templatePalettes[key] || templatePalettes.modern;
+        if (!loadedCustomization.colors?.primary) primaryColor.value = palette.primary;
+        if (!loadedCustomization.colors?.background) backgroundColor.value = palette.background;
         updatePreview();
       });
       templateButtons.push(option);
@@ -3083,9 +3099,9 @@ footer{
       wrap.append(label,input); designGrid.append(wrap); return input;
     };
     const primaryColor = document.createElement("input");
-    primaryColor.type = "color"; primaryColor.value = "#3678ed";
+    primaryColor.type = "color"; primaryColor.value = templatePalettes[selectedTemplate].primary;
     const backgroundColor = document.createElement("input");
-    backgroundColor.type = "color"; backgroundColor.value = "#101a2c";
+    backgroundColor.type = "color"; backgroundColor.value = templatePalettes[selectedTemplate].background;
     const headingText = document.createElement("input");
     headingText.type = "text"; headingText.maxLength = 120; headingText.value = store.name || "";
     const subtitleText = document.createElement("input");
@@ -3254,8 +3270,8 @@ footer{
         let saved = data.store?.customization_json || data.store?.customization || {};
         if (typeof saved === "string") { try { saved = JSON.parse(saved); } catch { saved = {}; } }
         loadedCustomization = saved && typeof saved === "object" ? saved : {};
-        primaryColor.value = loadedCustomization.colors?.primary || "#3678ed";
-        backgroundColor.value = loadedCustomization.colors?.background || "#101a2c";
+        primaryColor.value = loadedCustomization.colors?.primary || templatePalettes[selectedTemplate].primary;
+        backgroundColor.value = loadedCustomization.colors?.background || templatePalettes[selectedTemplate].background;
         headingText.value = loadedCustomization.texts?.heroTitle || store.name || "";
         subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
         productsTitleText.value = loadedCustomization.texts?.productsTitle || "المنتجات";
