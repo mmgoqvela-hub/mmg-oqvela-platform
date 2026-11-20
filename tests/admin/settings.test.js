@@ -78,7 +78,7 @@ function createDb(options = {}) {
             async all() {
               calls.push({ sql, values });
               return {
-                results: sql.includes("FROM admin_activity_logs")
+                results: sql.includes("FROM platform_announcements") ? (options.announcements ?? []) : sql.includes("FROM admin_activity_logs")
                   ? (options.activityLogs ?? [])
                   : sql.includes("GROUP BY currency")
                     ? (options.revenue ?? [])
@@ -408,3 +408,33 @@ test("Super-admin ownership can be transferred without leaving two active super 
   assert.ok(db.calls.some(call=>call.sql.includes("admin_level='super_admin'")));
 });
 
+
+
+test("Only super admins can list platform announcements",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN,announcements:[{id:"announcement-1",title_ar:"تنبيه"}]});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/announcements"),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.announcements.length,1);
+ const denied=await handleAdmin(makeAdminPathRequest("/api/admin/announcements"),{DB:createDb({session:SESSION,admin:NORMAL_ADMIN})});
+ assert.equal(denied.status,403);
+});
+
+test("Platform announcement creation validates bilingual content and records audit",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/announcements","POST",{
+  title_ar:"إعلان",title_en:"Announcement",message_ar:"رسالة",message_en:"Message",announcement_type:"warning"
+ }),{DB:db});
+ assert.equal(response.status,201);
+ assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO platform_announcements")));
+ assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO admin_activity_logs")));
+});
+
+test("Platform announcements reject invalid schedules and unsupported types",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/announcements","POST",{
+  title_ar:"إعلان",title_en:"Announcement",message_ar:"رسالة",message_en:"Message",announcement_type:"script",starts_at:"2026-11-22T12:00:00Z",ends_at:"2026-11-21T12:00:00Z"
+ }),{DB:db});
+ assert.equal(response.status,400);
+ assert.equal(db.calls.length,0);
+});
