@@ -170,3 +170,15 @@ test("Frontend API requests have a finite timeout and show a retryable message",
   assert.match(html, /clearTimeout\(timeoutId\)/);
   assert.match(html, /انتهت مهلة الاتصال بالخادم/);
 });
+
+
+test("Language translation disconnects its mutation observer during DOM updates", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  const start = html.indexOf("function applyLanguage()");
+  const end = html.indexOf("\n  const languageObserver", start);
+  assert.ok(start >= 0 && end > start);
+  const applyLanguage = html.slice(start, end);
+  assert.match(applyLanguage, /languageObserver\.disconnect\(\)/);
+  assert.match(applyLanguage, /languageObserver\.observe\(document\.body/);
+  assert.ok(applyLanguage.indexOf("languageObserver.disconnect()") < applyLanguage.indexOf("languageObserver.observe("));
+});
