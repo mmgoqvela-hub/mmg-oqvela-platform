@@ -147,7 +147,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff and custom role management are now implemented for existing active platform accounts. Email-based invitation delivery, invitation acceptance, and adding users who do not yet have platform accounts remain incomplete; no email provider has been configured.
 - Product/category/variant/image/inventory management end-to-end: category and product create/edit UI, guarded category deletion, variant creation/listing/editing/activation/deactivation and initial variant stock are exposed in the store catalog UI; server-side tenant and permission checks exist. Category deletion is blocked while products or child categories are linked. R2-backed product image upload/management remains incomplete. Variant-level stock movements are supported in the store UI and recorded with variant names in inventory history. Inventory writes require `inventory.manage`; history reads require `inventory.read`. Movement direction, disabled tracking, nonnegative stock, atomic stock/history writes and read-only member restrictions have automated API coverage. Latest product/category UI and inventory permission/movement test workflows pass CI; full browser/device verification remains pending.
-- Storefronts: eleven selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
+- Storefronts: eleven selectable design templates and public product browsing are implemented. A persistent browser-local customer cart is now implemented with product/variant selection, quantity controls, stock-aware limits, per-store cart isolation and currency-grouped totals. Checkout, order persistence, order processing and store-side order management remain incomplete and require approved payment/delivery workflows.
 - Subscription lifecycle notifications and renewal rules. Trial and paid-subscription reminders and expiry notices are now surfaced in the authenticated store subscription panel when the owner visits: a warning appears within three days of expiry and an expired-subscription message explains that the public storefront is hidden and directs the owner to request a new paid plan. These subscription-panel notices are visit-triggered. In addition, a daily UTC Worker scheduled event now writes persistent inbox notifications three days and one day before expiry and after expiry. Transactional database triggers also notify the account owner when a trial starts and when a Sham Cash payment request is submitted, approved or rejected. External email/push/WhatsApp delivery and secure receipt-image storage remain incomplete.
 - Platform-wide announcements/ads and mandatory footer.
 - Per-store WhatsApp contact configuration and public contact link are implemented. A separate centrally configured platform support contact remains to be added if required.
@@ -157,7 +157,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Tenant-isolation regression tests now cover cross-store category parents, product categories, variants, images and staff-role assignment at database level, plus cross-account store-creation rejection. Broader API coverage for every future module remains required.
 
 ### Not evidenced as implemented
-- Customer shopping, cart, checkout and order workflows end-to-end at `/s/{slug}`.
+- Complete customer checkout, order persistence, order processing and store-side order management at `/s/{slug}` after payment and delivery rules are approved.
 - End-to-end customer shopping/order workflows.
 - Store-side business reports/analytics.
 - A complete staff invitation/onboarding workflow.
@@ -172,7 +172,7 @@ Do not represent these as finished until implemented and tested.
 4. Complete invitation/onboarding delivery and audit coverage for staff membership; the existing team and custom-role API/UI and catalog/inventory permission enforcement are implemented.
 5. Complete catalog management UI refinements, R2-backed product media upload/storage and R2-backed media upload/storage and remaining inventory workflow refinements; variant-level stock movements are now implemented and tested.
 6. Finish storefront template previews, accessibility, product media, and public-store verification at `/s/{slug}`.
-7. Specify and implement customer-facing cart, checkout and order/business workflows only against approved requirements.
+7. Specify and implement customer checkout, order persistence and store-side order management only against approved payment and delivery requirements; the browser-local cart and variant-aware quantity selection are now implemented.
 8. Central admin overview, user/account/store management, platform-admin management and protected super-admin transfer APIs/UI are implemented with audit logging and CI coverage. Remaining central admin work: announcements/ads, mandatory centrally controlled footer and notification/WhatsApp platform contact workflows.
 9. Complete subscription lifecycle alerts, renewal controls and notification preferences.
 10. Implement R2 file management and quotas.
