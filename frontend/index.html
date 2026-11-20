@@ -547,7 +547,55 @@ footer{
     "الصلاحية: ":"Role: ",
     "عدد المتاجر: ":"Number of stores: ",
     "المتجر: ":"Store: ",
-    "مرحباً، ":"Hello, "
+    "مرحباً، ":"Hello, ",
+    "إدارة المنتجات والمخزون":"Manage products and inventory",
+    "إدارة التصنيفات والمنتجات وحركة المخزون لهذا المتجر.":"Manage categories, products and stock movements for this store.",
+    "التصنيفات":"Categories",
+    "اسم التصنيف":"Category name",
+    "إضافة التصنيف":"Add category",
+    "المنتجات":"Products",
+    "اسم المنتج":"Product name",
+    "وصف المنتج":"Product description",
+    "نوع المنتج":"Product type",
+    "منتج مادي":"Physical product",
+    "منتج رقمي":"Digital product",
+    "خدمة":"Service",
+    "السعر الأساسي":"Base price",
+    "العملة (رمز من 3 أحرف)":"Currency (3-letter code)",
+    "الكمية الافتتاحية":"Initial quantity",
+    "تتبع المخزون":"Track inventory",
+    "التصنيف":"Category",
+    "بدون تصنيف":"Uncategorized",
+    "إضافة المنتج":"Add product",
+    "لا توجد منتجات في هذا المتجر بعد.":"There are no products in this store yet.",
+    "لا توجد تصنيفات بعد.":"There are no categories yet.",
+    "المخزون":"Inventory",
+    "المنتج":"Product",
+    "نوع الحركة":"Movement type",
+    "شراء":"Purchase",
+    "بيع":"Sale",
+    "مرتجع":"Return",
+    "تسوية":"Adjustment",
+    "تالف":"Damage",
+    "كمية التغيير (+/-)":"Quantity change (+/-)",
+    "ملاحظات":"Notes",
+    "تسجيل حركة المخزون":"Record stock movement",
+    "سجل حركة المخزون":"Inventory movement history",
+    "لا توجد حركات مخزون مسجلة.":"No inventory movements recorded.",
+    "تفعيل المنتج":"Activate product",
+    "إيقاف المنتج":"Unpublish product",
+    "أرشفة المنتج":"Archive product",
+    "منتج نشط":"Active product",
+    "مسودة":"Draft",
+    "مؤرشف":"Archived",
+    "الكمية المتوفرة: ":"Available quantity: ",
+    "المخزون غير متاح لهذا المنتج.":"Inventory is not tracked for this product.",
+    "تعذر تحميل الكتالوج: ":"Unable to load catalog: ",
+    "تمت إضافة التصنيف.":"Category added.",
+    "تمت إضافة المنتج.":"Product added.",
+    "تم تحديث حالة المنتج.":"Product status updated.",
+    "تم تسجيل حركة المخزون.":"Inventory movement recorded.",
+    "الكمية":"Quantity"
   };
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
   let authenticated = false;
@@ -592,7 +640,39 @@ footer{
     "Account not found":"الحساب غير موجود.",
     "Trial unavailable or already used":"الفترة التجريبية غير متاحة أو سبق استخدامها.",
     "Unable to activate trial":"تعذر تفعيل الفترة التجريبية.",
-    "Unable to process subscription request":"تعذر تنفيذ طلب الاشتراك."
+    "Unable to process subscription request":"تعذر تنفيذ طلب الاشتراك.",
+    "Store write permission required":"لا تملك صلاحية تعديل كتالوج هذا المتجر.",
+    "Invalid category data":"بيانات التصنيف غير صالحة.",
+    "Parent category not found in this store":"التصنيف الأب غير موجود في هذا المتجر.",
+    "Category not found":"التصنيف غير موجود.",
+    "Category not found in this store":"التصنيف غير موجود في هذا المتجر.",
+    "Category hierarchy cannot contain a cycle":"لا يمكن أن يحتوي تسلسل التصنيفات على حلقة.",
+    "Unable to create category":"تعذر إنشاء التصنيف.",
+    "Invalid product data":"بيانات المنتج غير صالحة.",
+    "Invalid product status":"حالة المنتج غير صالحة.",
+    "Invalid category ID":"معرّف التصنيف غير صالح.",
+    "Invalid initial stock quantity":"كمية المخزون الافتتاحية غير صالحة.",
+    "Stock quantity requires inventory tracking":"إدخال كمية يتطلب تفعيل تتبع المخزون.",
+    "Unable to create product and its initial stock record":"تعذر إنشاء المنتج وسجل مخزونه الافتتاحي.",
+    "Unable to create product; check whether the SKU is already used in this store":"تعذر إنشاء المنتج؛ تحقق من عدم استخدام رمز SKU مسبقاً في هذا المتجر.",
+    "Product not found":"المنتج غير موجود.",
+    "Product archived":"تمت أرشفة المنتج.",
+    "Cannot disable inventory tracking while stock remains":"لا يمكن إيقاف تتبع المخزون مع وجود كمية متبقية.",
+    "Invalid product variant data":"بيانات متغير المنتج غير صالحة.",
+    "Inventory tracking is disabled for this product":"تتبع المخزون معطل لهذا المنتج.",
+    "Unable to create product variant and its initial stock record":"تعذر إنشاء متغير المنتج وسجله الافتتاحي.",
+    "Unable to create variant; check whether the SKU is already used in this store":"تعذر إنشاء المتغير؛ تحقق من عدم استخدام رمز SKU مسبقاً في هذا المتجر.",
+    "Product variant not found":"متغير المنتج غير موجود.",
+    "A variant with remaining stock cannot be deactivated":"لا يمكن تعطيل متغير لديه مخزون متبقٍ.",
+    "Unable to update variant; check whether the SKU is already used in this store":"تعذر تحديث المتغير؛ تحقق من عدم استخدام رمز SKU مسبقاً في هذا المتجر.",
+    "Invalid inventory movement data":"بيانات حركة المخزون غير صالحة.",
+    "This movement type requires a positive quantity":"نوع الحركة هذا يتطلب كمية موجبة.",
+    "This movement type requires a negative quantity":"نوع الحركة هذا يتطلب كمية سالبة.",
+    "Insufficient stock for this movement":"المخزون غير كافٍ لهذه الحركة.",
+    "Stock changed concurrently; refresh and try again":"تغير المخزون بالتزامن؛ حدّث الصفحة وحاول مجدداً.",
+    "Unable to record inventory movement":"تعذر تسجيل حركة المخزون.",
+    "Store is not active":"المتجر غير نشط.",
+    "Unable to process catalog request":"تعذر تنفيذ طلب الكتالوج."
   };
   function translateText(value) {
     if (!value) return value;
@@ -847,6 +927,7 @@ footer{
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
           renderSubscriptionPanel(store, card);
+          renderCatalogPanel(store, card, account.role);
         }
       }
 
@@ -863,6 +944,368 @@ footer{
     }
   }
 
+
+  function renderCatalogPanel(store, card, accountRole) {
+    const canManage = ["owner", "admin"].includes(accountRole);
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary";
+    toggle.textContent = "إدارة المنتجات والمخزون";
+    const panel = document.createElement("section");
+    panel.className = "admin-panel";
+    panel.hidden = true;
+    let loaded = false;
+
+    async function refresh() {
+      panel.replaceChildren();
+      const heading = document.createElement("h3");
+      heading.textContent = "إدارة المنتجات والمخزون";
+      const intro = document.createElement("p");
+      intro.className = "muted";
+      intro.textContent = "إدارة التصنيفات والمنتجات وحركة المخزون لهذا المتجر.";
+      panel.append(heading, intro);
+      try {
+        const [categoryData, productData, inventoryData] = await Promise.all([
+          api("/api/stores/" + encodeURIComponent(store.id) + "/categories"),
+          api("/api/stores/" + encodeURIComponent(store.id) + "/products?limit=100"),
+          api("/api/stores/" + encodeURIComponent(store.id) + "/inventory")
+        ]);
+        const categories = categoryData.categories || [];
+        const products = productData.products || [];
+        const movements = inventoryData.movements || [];
+
+        if (canManage) {
+          const categoryHeading = document.createElement("h4");
+          categoryHeading.textContent = "إضافة تصنيف";
+          const categoryForm = document.createElement("form");
+          categoryForm.className = "admin-form";
+          const categoryName = document.createElement("input");
+          categoryName.required = true;
+          categoryName.minLength = 2;
+          categoryName.maxLength = 100;
+          const categoryField = document.createElement("div");
+          categoryField.className = "field wide";
+          const categoryLabel = document.createElement("label");
+          categoryLabel.textContent = "اسم التصنيف";
+          categoryField.append(categoryLabel, categoryName);
+          const categorySubmit = document.createElement("button");
+          categorySubmit.type = "submit";
+          categorySubmit.className = "primary";
+          categorySubmit.textContent = "إضافة التصنيف";
+          const categoryMessage = document.createElement("p");
+          categoryMessage.className = "muted";
+          categoryForm.append(categoryField, categorySubmit, categoryMessage);
+          categoryForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            categorySubmit.disabled = true;
+            try {
+              await api("/api/stores/" + encodeURIComponent(store.id) + "/categories", {
+                method: "POST",
+                body: JSON.stringify({name: categoryName.value.trim()})
+              });
+              categoryMessage.textContent = "تمت إضافة التصنيف.";
+              await refresh();
+            } catch (error) {
+              categoryMessage.textContent = error.message;
+              categorySubmit.disabled = false;
+            }
+          });
+          panel.append(categoryHeading, categoryForm);
+
+          const productHeading = document.createElement("h4");
+          productHeading.textContent = "إضافة منتج";
+          const productForm = document.createElement("form");
+          productForm.className = "admin-form";
+          const productName = document.createElement("input");
+          productName.required = true;
+          productName.minLength = 2;
+          productName.maxLength = 160;
+          const description = document.createElement("textarea");
+          description.maxLength = 10000;
+          const type = document.createElement("select");
+          for (const [value,label] of [["physical","منتج مادي"],["digital","منتج رقمي"],["service","خدمة"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            type.append(option);
+          }
+          const price = document.createElement("input");
+          price.type = "number";
+          price.min = "0";
+          price.step = "0.01";
+          price.required = true;
+          const currency = document.createElement("input");
+          currency.value = "USD";
+          currency.maxLength = 3;
+          currency.pattern = "[A-Z]{3}";
+          currency.required = true;
+          const stock = document.createElement("input");
+          stock.type = "number";
+          stock.min = "0";
+          stock.step = "1";
+          stock.value = "0";
+          const category = document.createElement("select");
+          const none = document.createElement("option");
+          none.value = "";
+          none.textContent = "بدون تصنيف";
+          category.append(none);
+          for (const item of categories) {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.name;
+            category.append(option);
+          }
+          const tracking = document.createElement("input");
+          tracking.type = "checkbox";
+          tracking.checked = true;
+          const fields = [
+            ["اسم المنتج",productName],
+            ["وصف المنتج",description],
+            ["نوع المنتج",type],
+            ["السعر الأساسي",price],
+            ["العملة (رمز من 3 أحرف)",currency],
+            ["الكمية الافتتاحية",stock],
+            ["التصنيف",category]
+          ];
+          for (const [labelText,control] of fields) {
+            const field = document.createElement("div");
+            field.className = "field" + (control === description ? " wide" : "");
+            const label = document.createElement("label");
+            label.textContent = labelText;
+            field.append(label,control);
+            productForm.append(field);
+          }
+          const trackingField = document.createElement("div");
+          trackingField.className = "field wide";
+          const trackingLabel = document.createElement("label");
+          trackingLabel.className = "toggle-row";
+          trackingLabel.append(tracking,"تتبع المخزون");
+          trackingField.append(trackingLabel);
+          productForm.append(trackingField);
+          const productSubmit = document.createElement("button");
+          productSubmit.type = "submit";
+          productSubmit.className = "primary";
+          productSubmit.textContent = "إضافة المنتج";
+          const productMessage = document.createElement("p");
+          productMessage.className = "muted";
+          productForm.append(productSubmit,productMessage);
+          productForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            productSubmit.disabled = true;
+            try {
+              await api("/api/stores/" + encodeURIComponent(store.id) + "/products", {
+                method:"POST",
+                body:JSON.stringify({
+                  name:productName.value.trim(),
+                  description:description.value.trim(),
+                  product_type:type.value,
+                  base_price:Number(price.value),
+                  currency:currency.value.trim().toUpperCase(),
+                  stock_quantity:Number(stock.value),
+                  track_inventory:tracking.checked,
+                  category_id:category.value || null,
+                  status:"draft"
+                })
+              });
+              productMessage.textContent = "تمت إضافة المنتج.";
+              await refresh();
+            } catch (error) {
+              productMessage.textContent = error.message;
+              productSubmit.disabled = false;
+            }
+          });
+          panel.append(productHeading,productForm);
+        }
+
+        const productsHeading = document.createElement("h4");
+        productsHeading.textContent = "المنتجات";
+        panel.append(productsHeading);
+        if (!products.length) {
+          const empty = document.createElement("p");
+          empty.className = "muted";
+          empty.textContent = "لا توجد منتجات في هذا المتجر بعد.";
+          panel.append(empty);
+        } else {
+          const productGrid = document.createElement("div");
+          productGrid.className = "account-grid";
+          for (const product of products) {
+            const item = document.createElement("article");
+            item.className = "account-card";
+            const title = document.createElement("h4");
+            title.textContent = product.name;
+            const details = document.createElement("p");
+            details.className = "muted";
+            details.textContent = formatMoney(product.base_price,product.currency) +
+              " — " + localizeCode(product.status) +
+              (product.track_inventory ? " — " + "الكمية المتوفرة: " + formatNumber(product.stock_quantity) : " — المخزون غير متاح لهذا المنتج.");
+            item.append(title,details);
+            if (canManage && product.status !== "archived") {
+              const publish = document.createElement("button");
+              publish.type = "button";
+              publish.className = "secondary";
+              publish.textContent = product.status === "active" ? "إيقاف المنتج" : "تفعيل المنتج";
+              publish.addEventListener("click", async () => {
+                publish.disabled = true;
+                try {
+                  await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id), {
+                    method:"PUT",
+                    body:JSON.stringify({
+                      name:product.name,
+                      description:product.description || "",
+                      product_type:product.product_type,
+                      status:product.status === "active" ? "draft" : "active",
+                      base_price:Number(product.base_price),
+                      compare_at_price:product.compare_at_price == null ? null : Number(product.compare_at_price),
+                      currency:product.currency,
+                      sku:product.sku || "",
+                      track_inventory:Boolean(product.track_inventory),
+                      is_featured:Boolean(product.is_featured),
+                      category_id:product.category_id || null
+                    })
+                  });
+                  await refresh();
+                } catch (error) {
+                  details.textContent = error.message;
+                  publish.disabled = false;
+                }
+              });
+              const archive = document.createElement("button");
+              archive.type = "button";
+              archive.className = "secondary";
+              archive.textContent = "أرشفة المنتج";
+              archive.addEventListener("click", async () => {
+                archive.disabled = true;
+                try {
+                  await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id), {method:"DELETE"});
+                  await refresh();
+                } catch (error) {
+                  details.textContent = error.message;
+                  archive.disabled = false;
+                }
+              });
+              item.append(publish,archive);
+            }
+            productGrid.append(item);
+          }
+          panel.append(productGrid);
+        }
+
+        const inventoryHeading = document.createElement("h4");
+        inventoryHeading.textContent = "سجل حركة المخزون";
+        panel.append(inventoryHeading);
+        if (canManage && products.some(product => product.track_inventory && product.status !== "archived")) {
+          const movementForm = document.createElement("form");
+          movementForm.className = "admin-form";
+          const productSelect = document.createElement("select");
+          for (const product of products.filter(item => item.track_inventory && item.status !== "archived")) {
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = product.name;
+            productSelect.append(option);
+          }
+          const movementType = document.createElement("select");
+          for (const [value,label] of [["purchase","شراء"],["sale","بيع"],["return","مرتجع"],["adjustment","تسوية"],["damage","تالف"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            movementType.append(option);
+          }
+          const quantity = document.createElement("input");
+          quantity.type = "number";
+          quantity.step = "1";
+          quantity.required = true;
+          const notes = document.createElement("input");
+          notes.maxLength = 1000;
+          const productField = document.createElement("div");
+          productField.className = "field";
+          const productLabel = document.createElement("label");
+          productLabel.textContent = "المنتج";
+          productField.append(productLabel,productSelect);
+          const typeField = document.createElement("div");
+          typeField.className = "field";
+          const typeLabel = document.createElement("label");
+          typeLabel.textContent = "نوع الحركة";
+          typeField.append(typeLabel,movementType);
+          const quantityField = document.createElement("div");
+          quantityField.className = "field";
+          const quantityLabel = document.createElement("label");
+          quantityLabel.textContent = "كمية التغيير (+/-)";
+          quantityField.append(quantityLabel,quantity);
+          const notesField = document.createElement("div");
+          notesField.className = "field";
+          const notesLabel = document.createElement("label");
+          notesLabel.textContent = "ملاحظات";
+          notesField.append(notesLabel,notes);
+          const movementSubmit = document.createElement("button");
+          movementSubmit.type = "submit";
+          movementSubmit.className = "primary";
+          movementSubmit.textContent = "تسجيل حركة المخزون";
+          const movementMessage = document.createElement("p");
+          movementMessage.className = "muted";
+          movementForm.append(productField,typeField,quantityField,notesField,movementSubmit,movementMessage);
+          movementForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const entered = Number(quantity.value);
+            if (!Number.isInteger(entered) || entered === 0) {
+              movementMessage.textContent = "أدخل كمية صحيحة لا تساوي صفراً.";
+              return;
+            }
+            const typeValue = movementType.value;
+            const signedQuantity = ["sale","damage"].includes(typeValue) ? -Math.abs(entered) :
+              ["purchase","return"].includes(typeValue) ? Math.abs(entered) : entered;
+            movementSubmit.disabled = true;
+            try {
+              await api("/api/stores/" + encodeURIComponent(store.id) + "/inventory", {
+                method:"POST",
+                body:JSON.stringify({
+                  product_id:productSelect.value,
+                  movement_type:typeValue,
+                  quantity_change:signedQuantity,
+                  notes:notes.value.trim()
+                })
+              });
+              movementMessage.textContent = "تم تسجيل حركة المخزون.";
+              await refresh();
+            } catch (error) {
+              movementMessage.textContent = error.message;
+              movementSubmit.disabled = false;
+            }
+          });
+          panel.append(movementForm);
+        }
+        if (!movements.length) {
+          const empty = document.createElement("p");
+          empty.className = "muted";
+          empty.textContent = "لا توجد حركات مخزون مسجلة.";
+          panel.append(empty);
+        } else {
+          for (const movement of movements.slice(0,20)) {
+            const line = document.createElement("p");
+            line.className = "muted";
+            line.textContent = movement.product_name + " — " +
+              localizeCode(movement.movement_type) + " — " +
+              formatNumber(movement.quantity_change) + " — " +
+              formatDateTime(movement.created_at);
+            panel.append(line);
+          }
+        }
+      } catch (error) {
+        const failure = document.createElement("p");
+        failure.className = "message error";
+        failure.textContent = "تعذر تحميل الكتالوج: " + error.message;
+        panel.append(failure);
+      }
+    }
+
+    toggle.addEventListener("click", async () => {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden && !loaded) {
+        loaded = true;
+        await refresh();
+      }
+    });
+    card.append(toggle,panel);
+  }
 
   function renderStoreCreator(account, card) {
     const toggle = document.createElement("button");
