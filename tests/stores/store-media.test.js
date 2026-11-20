@@ -14,7 +14,7 @@ function env(options={}) {
       if (sql.includes("FROM auth_sessions")) return options.session === false ? null : SESSION;
       if (sql.includes("FROM stores s")) return options.store === false ? null : {id:"store-1",account_id:"account-1"};
       return null;
-    } }; } }; } },
+    }, async run() { return {meta:{changes:1}}; } }; } }; } },
     STORE_MEDIA: {
       async put(key,value,metadata) { objects.set(key,{value,metadata}); },
       async get(key) { const item=objects.get(key); if(!item)return null; return {body:new Blob([item.value]).stream(),writeHttpMetadata(headers){headers.set("Content-Type",item.metadata.httpMetadata.contentType);}}; }
