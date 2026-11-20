@@ -3124,13 +3124,13 @@ footer{
     makeDesignField("شريط إعلان قصير",announcementText);
     const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
     const sectionsLabel = document.createElement("label"); sectionsLabel.textContent = "الأقسام الظاهرة";
+    sectionsWrap.append(sectionsLabel);
     const sectionOptions = {};
     for (const [key,label] of [["products","عرض المنتجات"],["cart","عرض سلة المشتريات"],["categories","عرض تصنيفات المنتجات"]]) {
       const line = document.createElement("label"); line.className = "toggle-row";
       const check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
-    designField.append(sectionsWrap);
     [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl].forEach(input => input.addEventListener("input",updatePreview));
     fontSelect.addEventListener("change",updatePreview);
     heroAlignment.addEventListener("change",updatePreview);
