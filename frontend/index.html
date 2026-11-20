@@ -639,7 +639,39 @@ footer{
     "واجهة داكنة حديثة للمنتجات والخدمات التقنية.":"A modern dark interface for technology products and services.",
     "معاينة المتجر":"View storefront",
     "تم حفظ القالب بنجاح.":"Store template saved successfully.",
-    "القالب":"Template",
+    "القالب":"Template",,
+    "إدارة فريق المتجر":"Manage store team",
+    "إضافة موظف":"Add employee",
+    "بريد الموظف الإلكتروني":"Employee email address",
+    "الدور":"Role",
+    "إضافة للفريق":"Add to team",
+    "أعضاء الفريق":"Team members",
+    "لا يوجد موظفون مضافون إلى هذا المتجر بعد.":"No employees have been added to this store yet.",
+    "تحديث الصلاحية":"Update access",
+    "تعطيل الوصول":"Suspend access",
+    "إعادة تفعيل الوصول":"Reactivate access",
+    "الأدوار المخصصة":"Custom roles",
+    "اسم الدور":"Role name",
+    "وصف الدور":"Role description",
+    "إنشاء دور":"Create role",
+    "صلاحيات الدور":"Role permissions",
+    "عرض المنتجات والتصنيفات":"View products and categories",
+    "إدارة المنتجات والتصنيفات":"Manage products and categories",
+    "عرض المخزون":"View inventory",
+    "إدارة حركات المخزون":"Manage inventory movements",
+    "إدارة فريق المتجر والصلاحيات":"Manage store team and permissions",
+    "حالة العضوية":"Membership status",
+    "نشط":"Active",
+    "موقوف":"Suspended",
+    "تمت إضافة الموظف إلى المتجر.":"Employee added to the store.",
+    "تم تحديث صلاحيات الموظف.":"Employee permissions updated.",
+    "تم إنشاء الدور المخصص.":"Custom role created.",
+    "اختر الدور المناسب للموظف.":"Choose the appropriate role for this employee.",
+    "يتطلب الموظف حساباً فعالاً في المنصة أولاً.":"The employee must first have an active platform account.",
+    "المشاهد":"Viewer",
+    "مدير الكتالوج":"Catalog manager",
+    "مدير المخزون":"Inventory manager",
+    "مدير المتجر":"Store manager"
     "هذا المتجر غير متاح حالياً.":"This store is currently unavailable.",
     "لم يتم نشر منتجات بعد.":"No products have been published yet.",
     "عرض المنتجات":"Browse products",
@@ -721,7 +753,30 @@ footer{
     "Stock changed concurrently; refresh and try again":"تغير المخزون بالتزامن؛ حدّث الصفحة وحاول مجدداً.",
     "Unable to record inventory movement":"تعذر تسجيل حركة المخزون.",
     "Store is not active":"المتجر غير نشط.",
-    "Unable to process catalog request":"تعذر تنفيذ طلب الكتالوج."
+    "Unable to process catalog request":"تعذر تنفيذ طلب الكتالوج.",
+    "Store owner or administrator access required":"يتطلب هذا الإجراء صلاحية مالك المتجر أو مديره أو تفويض إدارة الفريق.",
+    "Store team management permission required":"لا تملك صلاحية إدارة فريق هذا المتجر.",
+    "Enter a valid employee email and role":"أدخل بريداً إلكترونياً صحيحاً للموظف وحدد دوره.",
+    "The employee must have an active MMG OQVELA account first":"يجب أن يمتلك الموظف حساباً فعالاً في منصة MMG OQVELA أولاً.",
+    "Role not found in this store":"الدور غير موجود في هذا المتجر.",
+    "This account membership is suspended":"عضوية هذا الحساب موقوفة.",
+    "Account owners and administrators already have store access":"مالكو الحساب ومديروه لديهم صلاحية الوصول إلى المتجر مسبقاً.",
+    "This employee is already assigned to the store":"هذا الموظف مضاف إلى المتجر بالفعل.",
+    "Unable to assign this employee and role":"تعذر إضافة الموظف وتعيين دوره.",
+    "Unable to add employee to this store":"تعذر إضافة الموظف إلى هذا المتجر.",
+    "Invalid employee status":"حالة عضوية الموظف غير صالحة.",
+    "Store employee not found":"الموظف غير موجود في هذا المتجر.",
+    "Choose a valid role for this store":"اختر دوراً صالحاً لهذا المتجر.",
+    "Unable to update employee access":"تعذر تحديث صلاحيات الموظف.",
+    "Invalid custom role or permissions":"بيانات الدور المخصص أو صلاحياته غير صالحة.",
+    "Unable to create role":"تعذر إنشاء الدور.",
+    "A role with this name already exists in this store":"يوجد دور بهذا الاسم في هذا المتجر.",
+    "Role not found":"الدور غير موجود.",
+    "Built-in roles cannot be modified":"لا يمكن تعديل الأدوار الأساسية.",
+    "Role updated":"تم تحديث الدور.",
+    "Unable to update role":"تعذر تحديث الدور.",
+    "Built-in roles cannot be deleted":"لا يمكن حذف الأدوار الأساسية.",
+    "Remove this role from employees before deleting it":"أزل هذا الدور من الموظفين قبل حذفه."
   };
   function translateText(value) {
     if (!value) return value;
@@ -977,6 +1032,7 @@ footer{
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
           renderSubscriptionPanel(store, card);
+          renderTeamPanel(store, card);
         }
         renderCatalogPanel(store, card, account.role);
       }
@@ -994,6 +1050,240 @@ footer{
     }
   }
 
+
+  function renderTeamPanel(store, card) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary";
+    toggle.textContent = "إدارة فريق المتجر";
+    const panel = document.createElement("section");
+    panel.className = "admin-panel";
+    panel.hidden = true;
+    let loaded = false;
+
+    async function refresh() {
+      panel.replaceChildren();
+      const heading = document.createElement("h3");
+      heading.textContent = "إدارة فريق المتجر";
+      panel.append(heading);
+      try {
+        const data = await api("/api/stores/" + encodeURIComponent(store.id) + "/team");
+        const roles = data.roles || [];
+        const members = data.members || [];
+        const makeRoleSelect = selected => {
+          const select = document.createElement("select");
+          for (const role of roles) {
+            const option = document.createElement("option");
+            option.value = role.id;
+            option.textContent = role.name;
+            if (!role.is_system) option.dataset.noTranslate = "true";
+            option.selected = role.id === selected;
+            select.append(option);
+          }
+          return select;
+        };
+
+        const addHeading = document.createElement("h4");
+        addHeading.textContent = "إضافة موظف";
+        const addForm = document.createElement("form");
+        addForm.className = "admin-form";
+        const email = document.createElement("input");
+        email.type = "email";
+        email.required = true;
+        email.maxLength = 254;
+        const emailField = document.createElement("div");
+        emailField.className = "field";
+        const emailLabel = document.createElement("label");
+        emailLabel.textContent = "بريد الموظف الإلكتروني";
+        emailField.append(emailLabel,email);
+        const addRole = makeRoleSelect(roles[0]?.id);
+        const roleField = document.createElement("div");
+        roleField.className = "field";
+        const roleLabel = document.createElement("label");
+        roleLabel.textContent = "الدور";
+        roleField.append(roleLabel,addRole);
+        const addButton = document.createElement("button");
+        addButton.type = "submit";
+        addButton.className = "primary";
+        addButton.textContent = "إضافة للفريق";
+        const addMessage = document.createElement("p");
+        addMessage.className = "muted";
+        addForm.append(emailField,roleField,addButton,addMessage);
+        addForm.addEventListener("submit",async event => {
+          event.preventDefault();
+          addButton.disabled = true;
+          try {
+            await api("/api/stores/" + encodeURIComponent(store.id) + "/team",{
+              method:"POST",
+              body:JSON.stringify({email:email.value.trim(),role_id:addRole.value})
+            });
+            addMessage.textContent = "تمت إضافة الموظف إلى المتجر.";
+            await refresh();
+          } catch(error) {
+            addMessage.textContent = error.message;
+            addButton.disabled = false;
+          }
+        });
+        panel.append(addHeading,addForm);
+
+        const membersHeading = document.createElement("h4");
+        membersHeading.textContent = "أعضاء الفريق";
+        panel.append(membersHeading);
+        if (!members.length) {
+          const empty = document.createElement("p");
+          empty.className = "muted";
+          empty.textContent = "لا يوجد موظفون مضافون إلى هذا المتجر بعد.";
+          panel.append(empty);
+        }
+        for (const member of members) {
+          const item = document.createElement("article");
+          item.className = "account-card";
+          const name = document.createElement("h4");
+          name.textContent = member.full_name;
+          name.dataset.noTranslate = "true";
+          const address = document.createElement("p");
+          address.className = "muted";
+          address.textContent = member.email;
+          address.dataset.noTranslate = "true";
+          const status = document.createElement("p");
+          status.className = "muted";
+          status.textContent = "حالة العضوية: " + (member.status === "active" ? "نشط" : "موقوف");
+          const memberRole = makeRoleSelect(member.role_ids[0]);
+          const update = document.createElement("button");
+          update.type = "button";
+          update.className = "secondary";
+          update.textContent = "تحديث الصلاحية";
+          update.addEventListener("click",async () => {
+            update.disabled = true;
+            try {
+              await api("/api/stores/" + encodeURIComponent(store.id) + "/team/" + encodeURIComponent(member.member_id),{
+                method:"PUT",
+                body:JSON.stringify({status:"active",role_id:memberRole.value})
+              });
+              await refresh();
+            } catch(error) {
+              status.textContent = error.message;
+              update.disabled = false;
+            }
+          });
+          const suspend = document.createElement("button");
+          suspend.type = "button";
+          suspend.className = "secondary";
+          suspend.textContent = member.status === "active" ? "تعطيل الوصول" : "إعادة تفعيل الوصول";
+          suspend.addEventListener("click",async () => {
+            suspend.disabled = true;
+            try {
+              if (member.status === "active") {
+                await api("/api/stores/" + encodeURIComponent(store.id) + "/team/" + encodeURIComponent(member.member_id),{method:"DELETE"});
+              } else {
+                await api("/api/stores/" + encodeURIComponent(store.id) + "/team/" + encodeURIComponent(member.member_id),{
+                  method:"PUT",body:JSON.stringify({status:"active",role_id:memberRole.value})
+                });
+              }
+              await refresh();
+            } catch(error) {
+              status.textContent = error.message;
+              suspend.disabled = false;
+            }
+          });
+          item.append(name,address,status,memberRole,update,suspend);
+          panel.append(item);
+        }
+
+        const customHeading = document.createElement("h4");
+        customHeading.textContent = "الأدوار المخصصة";
+        const roleForm = document.createElement("form");
+        roleForm.className = "admin-form";
+        const roleName = document.createElement("input");
+        roleName.required = true;
+        roleName.minLength = 2;
+        roleName.maxLength = 80;
+        const roleNameField = document.createElement("div");
+        roleNameField.className = "field";
+        const roleNameLabel = document.createElement("label");
+        roleNameLabel.textContent = "اسم الدور";
+        roleNameField.append(roleNameLabel,roleName);
+        const roleDescription = document.createElement("input");
+        roleDescription.maxLength = 300;
+        const roleDescriptionField = document.createElement("div");
+        roleDescriptionField.className = "field";
+        const roleDescriptionLabel = document.createElement("label");
+        roleDescriptionLabel.textContent = "وصف الدور";
+        roleDescriptionField.append(roleDescriptionLabel,roleDescription);
+        const permissionsField = document.createElement("div");
+        permissionsField.className = "field wide";
+        const permissionsLabel = document.createElement("label");
+        permissionsLabel.textContent = "صلاحيات الدور";
+        permissionsField.append(permissionsLabel);
+        const permissionOptions = [
+          ["catalog.read","عرض المنتجات والتصنيفات"],
+          ["catalog.manage","إدارة المنتجات والتصنيفات"],
+          ["inventory.read","عرض المخزون"],
+          ["inventory.manage","إدارة حركات المخزون"],
+          ["team.manage","إدارة فريق المتجر والصلاحيات"]
+        ];
+        const selectedPermissions = [];
+        for (const [code,labelText] of permissionOptions) {
+          const label = document.createElement("label");
+          label.className = "toggle-row";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = code;
+          checkbox.addEventListener("change",() => {
+            if (checkbox.checked) selectedPermissions.push(code);
+            else {
+              const index = selectedPermissions.indexOf(code);
+              if (index >= 0) selectedPermissions.splice(index,1);
+            }
+          });
+          label.append(checkbox,labelText);
+          permissionsField.append(label);
+        }
+        const roleSubmit = document.createElement("button");
+        roleSubmit.type = "submit";
+        roleSubmit.className = "primary";
+        roleSubmit.textContent = "إنشاء دور";
+        const roleMessage = document.createElement("p");
+        roleMessage.className = "muted";
+        roleForm.append(roleNameField,roleDescriptionField,permissionsField,roleSubmit,roleMessage);
+        roleForm.addEventListener("submit",async event => {
+          event.preventDefault();
+          roleSubmit.disabled = true;
+          try {
+            await api("/api/stores/" + encodeURIComponent(store.id) + "/team/roles",{
+              method:"POST",
+              body:JSON.stringify({
+                name:roleName.value.trim(),
+                description:roleDescription.value.trim(),
+                permissions:selectedPermissions
+              })
+            });
+            roleMessage.textContent = "تم إنشاء الدور المخصص.";
+            await refresh();
+          } catch(error) {
+            roleMessage.textContent = error.message;
+            roleSubmit.disabled = false;
+          }
+        });
+        panel.append(customHeading,roleForm);
+      } catch(error) {
+        loaded = false;
+        const failure = document.createElement("p");
+        failure.className = "message error";
+        failure.textContent = error.message;
+        panel.append(failure);
+      }
+    }
+
+    toggle.addEventListener("click",async () => {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden && !loaded) {
+        loaded = true;
+        await refresh();
+      }
+    });
+    card.append(toggle,panel);
+  }
 
   function renderCatalogPanel(store, card, accountRole) {
     const canManage = ["owner", "admin"].includes(accountRole);
