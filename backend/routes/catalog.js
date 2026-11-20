@@ -440,10 +440,11 @@ async function handleInventory(request, env, storeId, userId, access) {
     if (!canRead(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
     const result = await env.DB.prepare(`
       SELECT im.id, im.product_id, p.name AS product_name, im.variant_id,
-             im.movement_type, im.quantity_change, im.reference_id,
+             v.name AS variant_name, im.movement_type, im.quantity_change, im.reference_id,
              im.notes, im.created_at, u.full_name AS created_by_name
       FROM inventory_movements im
       JOIN products p ON p.id = im.product_id AND p.store_id = im.store_id
+      LEFT JOIN product_variants v ON v.id = im.variant_id AND v.product_id = im.product_id AND v.store_id = im.store_id
       LEFT JOIN users u ON u.id = im.created_by
       WHERE im.store_id = ?
       ORDER BY im.created_at DESC, im.id DESC
