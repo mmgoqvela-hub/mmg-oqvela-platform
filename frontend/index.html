@@ -1115,6 +1115,9 @@ footer{
   const originalTextNodes = new WeakMap();
   const originalAttributes = new WeakMap();
   function applyLanguage() {
+    // Prevent the language observer from reacting to the text mutations
+    // produced by this translation pass itself.
+    languageObserver.disconnect();
     document.documentElement.lang = currentLanguage;
     document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
     document.title = currentLanguage === "ar" ? "MMG OQVELA | منصة الأعمال الذكية" : "MMG OQVELA | Smart Business Platform";
@@ -1150,6 +1153,8 @@ footer{
       element.style.direction = currentLanguage === "ar" ? "rtl" : "ltr";
       element.style.textAlign = currentLanguage === "ar" ? "right" : "left";
     });
+    // Resume observing future dynamic content after this pass is complete.
+    languageObserver.observe(document.body, {childList:true,subtree:true,characterData:true});
   }
   const languageObserver = new MutationObserver(() => applyLanguage());
   languageObserver.observe(document.body, {childList:true,subtree:true,characterData:true});
