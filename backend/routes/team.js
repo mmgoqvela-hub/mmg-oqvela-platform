@@ -262,6 +262,6 @@ export async function handleTeam(request,env) {
   if(!memberId && request.method==="GET") return list(request,env,store);
   if(!memberId && request.method==="POST") return addMember(request,env,session,store);
   if(memberId && request.method==="PUT") return updateMember(request,env,store,memberId);
-  if(memberId && request.method==="DELETE") return updateMember(new Request(request.url,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"suspended"})}),env,store,memberId);
+  if(memberId && request.method==="DELETE") { const headers=new Headers(request.headers); headers.set("Content-Type","application/json"); return updateMember(new Request(request.url,{method:"PUT",headers,body:JSON.stringify({status:"suspended"})}),env,store,memberId); }
   return json({error:"Method not allowed"},405);
 }
