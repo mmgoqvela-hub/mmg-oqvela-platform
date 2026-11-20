@@ -127,7 +127,7 @@ test("Admin subscription payment review returns sender name", () => {
 
 test("Trial activation is restricted to the account owner and one claim per account", () => {
   assert.match(trialRoute, /au\.role = 'owner'/);
-  assert.match(trialRoute, /au\.user_id = session\.user_id/);
+  assert.match(trialRoute, /au\\.user_id = \\?/);\n  assert.match(trialRoute, /\\.bind\\(claim, accountId, session\\.user_id, TRIAL_PLAN_ID\\)/);
   assert.match(trialRoute, /trial_used_at IS NULL/);
   assert.match(trialRoute, /platform_trial_settings[\s\S]*?id = 1 AND enabled = 1/);
   assert.match(trialRoute, /env\.DB\.batch\(\[/);
