@@ -618,6 +618,57 @@ footer{
     }
     return value;
   }
+
+  function formatNumber(value) {
+    const locale = currentLanguage === "ar" ? "ar" : "en";
+    return new Intl.NumberFormat(locale, {maximumFractionDigits: 2}).format(Number(value));
+  }
+  function formatMoney(amount, currency) {
+    try {
+      return new Intl.NumberFormat(currentLanguage === "ar" ? "ar" : "en", {
+        style: "currency",
+        currency: String(currency || "USD").toUpperCase()
+      }).format(Number(amount));
+    } catch {
+      return formatNumber(amount) + " " + String(currency || "");
+    }
+  }
+  function formatDateTime(value) {
+    if (!value) return "—";
+    const raw = String(value);
+    const normalized = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return raw;
+    return new Intl.DateTimeFormat(currentLanguage === "ar" ? "ar" : "en", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(date);
+  }
+  function localizeCode(value) {
+    const labels = {
+      ar: {
+        owner:"مالك", admin:"مدير", member:"عضو",
+        pending:"قيد المراجعة", active:"نشط", expired:"منتهي",
+        suspended:"معلّق", cancelled:"ملغي", approved:"مقبول",
+        rejected:"مرفوض", refunded:"مسترد", update:"تحديث",
+        create:"إنشاء", platform_settings:"إعدادات المنصة",
+        trial_settings:"إعدادات الفترة التجريبية",
+        subscription_plan:"باقة اشتراك", subscription_payment:"طلب دفع",
+        general:"عام"
+      },
+      en: {
+        owner:"Owner", admin:"Administrator", member:"Member",
+        pending:"Pending", active:"Active", expired:"Expired",
+        suspended:"Suspended", cancelled:"Cancelled", approved:"Approved",
+        rejected:"Rejected", refunded:"Refunded", update:"Update",
+        create:"Create", platform_settings:"Platform settings",
+        trial_settings:"Trial settings", subscription_plan:"Subscription plan",
+        subscription_payment:"Payment request", general:"General"
+      }
+    };
+    const key = String(value ?? "");
+    return labels[currentLanguage][key] || key;
+  }
   const originalTextNodes = new WeakMap();
   const originalAttributes = new WeakMap();
   function applyLanguage() {
@@ -762,7 +813,7 @@ footer{
 
       const role = document.createElement("p");
       role.className = "muted";
-      role.textContent = "الصلاحية: " + account.role;
+      role.textContent = "الصلاحية: " + localizeCode(account.role);
 
       const stores = data.stores.filter(
         store => store.account_id === account.id
@@ -770,7 +821,7 @@ footer{
 
       const count = document.createElement("p");
       count.className = "muted";
-      count.textContent = "عدد المتاجر: " + stores.length;
+      count.textContent = "عدد المتاجر: " + formatNumber(stores.length);
 
       card.append(title, role, count);
       if (["owner", "admin"].includes(account.role)) renderStoreCreator(account, card);
@@ -959,7 +1010,7 @@ footer{
       for (const sub of subscriptions.slice(0, 3)) {
         const line = document.createElement("p");
         line.className = "muted";
-        line.textContent = "الباقة: " + sub.plan_name + " — الاشتراك: " + sub.subscription_status + " — الدفع: " + (sub.payment_status || "—");
+        line.textContent = "الباقة: " + sub.plan_name + " — الاشتراك: " + localizeCode(sub.subscription_status) + " — الدفع: " + (sub.payment_status ? localizeCode(sub.payment_status) : "—");
         panel.append(line);
       }
       if (subscriptions.some(x => ["pending","active","suspended"].includes(x.subscription_status))) {
@@ -998,7 +1049,7 @@ footer{
       for (const plan of plansData.plans || []) {
         const option = document.createElement("option");
         option.value = plan.id;
-        option.textContent = plan.name + " — " + plan.price + " " + plan.currency + " / " + plan.duration_days + " يوم";
+        option.textContent = plan.name + " — " + formatMoney(plan.price, plan.currency) + " / " + formatNumber(plan.duration_days) + " يوم";
         select.append(option);
       }
       const selectLabel = document.createElement("label");
@@ -1066,7 +1117,7 @@ footer{
         title.textContent = plan.name;
         const details = document.createElement("p");
         details.className = "muted";
-        details.textContent = plan.price + " " + plan.currency + " — " + plan.duration_days + " يوم — " + (plan.is_active ? "مفعّلة" : "متوقفة") + " — عدد الاشتراكات: " + plan.subscriptions_count;
+        details.textContent = formatMoney(plan.price, plan.currency) + " — " + formatNumber(plan.duration_days) + " يوم — " + (plan.is_active ? "مفعّلة" : "متوقفة") + " — عدد الاشتراكات: " + formatNumber(plan.subscriptions_count);
         const toggle = document.createElement("button");
         toggle.type = "button";
         toggle.className = "secondary";
@@ -1114,7 +1165,7 @@ footer{
         title.textContent = request.store_name + " — " + request.plan_name;
         const details = document.createElement("p");
         details.className = "muted";
-        details.textContent = "العميل: " + (request.requester_name || request.account_name) + " | المبلغ: " + request.amount + " " + request.currency + " | رقم العملية: " + (request.transaction_reference || "—") + " | الحالة: " + request.payment_status;
+        details.textContent = "العميل: " + (request.requester_name || request.account_name) + " | المبلغ: " + formatMoney(request.amount, request.currency) + " | رقم العملية: " + (request.transaction_reference || "—") + " | الحالة: " + localizeCode(request.payment_status);
         item.append(title, details);
         if (request.payment_status === "pending") {
           const approve = document.createElement("button");
@@ -1164,13 +1215,13 @@ footer{
         const item = document.createElement("article");
         item.className = "account-card";
         const title = document.createElement("h4");
-        title.textContent = (log.action || "عملية") + " — " + (log.target_type || "عام");
+        title.textContent = localizeCode(log.action || "عملية") + " — " + localizeCode(log.target_type || "general");
         const actor = document.createElement("p");
         actor.className = "muted";
         actor.textContent = "المنفذ: " + (log.admin_name || log.admin_email || "حساب إداري");
         const time = document.createElement("p");
         time.className = "muted";
-        time.textContent = "التاريخ: " + (log.created_at || "—");
+        time.textContent = "التاريخ: " + formatDateTime(log.created_at);
         const details = document.createElement("p");
         details.className = "muted";
         details.textContent = "التفاصيل: " + (log.details || "—");
@@ -1235,7 +1286,7 @@ footer{
       }
 
       status.textContent =
-        "الفترة التجريبية متاحة لمدة " + data.duration_days + " يوماً.";
+        "الفترة التجريبية متاحة لمدة " + formatNumber(data.duration_days) + " يوماً.";
 
       const button = document.createElement("button");
       button.type = "button";
