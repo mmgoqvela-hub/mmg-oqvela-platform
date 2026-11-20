@@ -519,6 +519,8 @@ footer{
     }
     return value;
   }
+  const originalTextNodes = new WeakMap();
+  const originalAttributes = new WeakMap();
   function applyLanguage() {
     document.documentElement.lang = currentLanguage;
     document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
@@ -535,12 +537,20 @@ footer{
     while (walker.nextNode()) nodes.push(walker.currentNode);
     for (const node of nodes) {
       if (node.parentElement?.closest("script,style")) continue;
-      const translated = translateText(node.nodeValue);
+      if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
+      const sourceText = originalTextNodes.get(node);
+      const translated = currentLanguage === "en" ? translateText(sourceText) : sourceText;
       if (translated !== node.nodeValue) node.nodeValue = translated;
     }
     document.querySelectorAll("[placeholder],[title],[aria-label]").forEach(element => {
+      let originals = originalAttributes.get(element);
+      if (!originals) { originals = {}; originalAttributes.set(element, originals); }
       for (const attr of ["placeholder","title","aria-label"]) {
-        if (element.hasAttribute(attr)) element.setAttribute(attr, translateText(element.getAttribute(attr)));
+        if (element.hasAttribute(attr)) {
+          if (!(attr in originals)) originals[attr] = element.getAttribute(attr);
+          const value = currentLanguage === "en" ? translateText(originals[attr]) : originals[attr];
+          if (element.getAttribute(attr) !== value) element.setAttribute(attr, value);
+        }
       }
     });
     document.querySelectorAll("input:not([dir]),textarea:not([dir])").forEach(element => {
