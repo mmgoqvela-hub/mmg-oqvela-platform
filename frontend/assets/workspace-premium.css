@@ -1,0 +1,41 @@
+/* MMG OQVELA premium workspace shell */
+:root{--oq-bg:#090d16;--oq-surface:#111827;--oq-surface-2:#172235;--oq-line:#26344a;--oq-blue:#3984ff;--oq-cyan:#55d7e8;--oq-muted:#91a0b7}
+body{background:radial-gradient(ellipse at 82% 0%,#18365b55,transparent 34%),radial-gradient(ellipse at 5% 90%,#12344a44,transparent 30%),#090d16}
+header{position:sticky;top:0;z-index:30;background:#090d16eF;backdrop-filter:blur(18px);border-bottom:1px solid #ffffff12}
+.logo{font-size:23px;letter-spacing:2.4px}
+main{width:min(1440px,96%);margin:34px auto}
+.hero{gap:clamp(28px,5vw,76px)}
+.auth-card,.admin-panel,.account-card{background:linear-gradient(145deg,#151f30,#101827);border:1px solid #2a3a52;box-shadow:0 18px 55px #0003}
+.auth-card{border-radius:22px}
+.primary{background:linear-gradient(110deg,#2671e8,#35a8d5);box-shadow:0 8px 22px #2878e833;transition:transform .18s,filter .18s}
+.primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.secondary,.tab,.template-option{transition:border-color .18s,background .18s,transform .18s}
+.secondary:hover,.template-option:hover{border-color:#5798ff;transform:translateY(-1px)}
+.dashboard{margin-top:24px}
+.workspace-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:22px;align-items:start}
+.workspace-sidebar{position:sticky;top:94px;display:flex;flex-direction:column;gap:7px;padding:16px;background:linear-gradient(180deg,#131e30,#0f1725);border:1px solid #293950;border-radius:19px;min-height:calc(100vh - 120px);box-shadow:0 18px 50px #0003}
+.workspace-brand{padding:10px 12px 18px;border-bottom:1px solid #ffffff12;margin-bottom:8px}
+.workspace-brand strong{display:block;font-size:16px;letter-spacing:1.5px;direction:ltr;text-align:start}
+.workspace-brand small{display:block;color:var(--oq-muted);margin-top:6px;font-size:11px}
+.workspace-nav{display:flex;flex-direction:column;gap:6px}
+.workspace-nav button{display:flex;align-items:center;gap:11px;width:100%;padding:12px 13px;border:1px solid transparent;border-radius:11px;background:transparent;color:#b9c7db;text-align:start;font:inherit;font-size:13px;cursor:pointer}
+.workspace-nav button:hover{background:#ffffff09;color:#fff}
+.workspace-nav button[aria-current="page"]{background:linear-gradient(100deg,#2563eb33,#22b8cf18);border-color:#4289ee66;color:#fff}
+.workspace-nav .nav-icon{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#ffffff0b;color:#7db5ff;font-size:14px}
+.workspace-sidebar-foot{margin-top:auto;padding:12px;border-top:1px solid #ffffff12;color:var(--oq-muted);font-size:11px;line-height:1.8}
+.workspace-content{min-width:0}
+.workspace-content>.dashboard-top{padding:8px 4px 18px}
+.workspace-content>.dashboard-top h2{font-size:clamp(22px,3vw,30px);margin:5px 0}
+.workspace-view[hidden]{display:none!important}
+.workspace-view>.admin-panel:first-child{margin-top:0}
+.workspace-content .account-grid{margin-top:16px}
+.workspace-content .admin-panel{border-radius:17px;padding:clamp(16px,2.5vw,26px)}
+.workspace-content hr{border:0;border-top:1px solid #ffffff12;margin:26px 0}
+.workspace-content h2,.workspace-content h3{letter-spacing:-.25px}
+.workspace-content .account-card{border-radius:14px;transition:transform .18s,border-color .18s}
+.workspace-content .account-card:hover{transform:translateY(-2px);border-color:#42618a}
+.notification-toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.notification-count{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:30px;background:#1d4ed833;color:#9cc5ff}
+.platform-footer{background:linear-gradient(145deg,#121e30,#0d1522);border-color:#293950}
+@media(max-width:900px){.workspace-layout{grid-template-columns:1fr;gap:13px}.workspace-sidebar{position:relative;top:auto;min-height:0;padding:10px}.workspace-brand{display:none}.workspace-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.workspace-nav button{justify-content:center;flex-direction:column;gap:5px;padding:9px 4px;font-size:11px;text-align:center}.workspace-nav .nav-icon{width:28px;height:25px}.workspace-sidebar-foot{display:none}}
+@media(max-width:520px){main{width:calc(100% - 18px);margin:18px auto}.workspace-nav{grid-template-columns:repeat(4,minmax(0,1fr))}.workspace-content>.dashboard-top{align-items:flex-start}.workspace-content>.dashboard-top>button{width:auto}.workspace-content .admin-panel{padding:14px}.workspace-content .account-grid{grid-template-columns:minmax(0,1fr)}}
