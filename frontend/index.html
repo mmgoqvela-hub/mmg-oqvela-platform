@@ -1923,7 +1923,6 @@ footer{
           ? "تم حفظ القالب بنجاح."
           : (result.message || "تم الحفظ بنجاح");
         store.template_key = selectedTemplate;
-        store.whatsapp_phone = whatsappInput.value.trim().replace(/[\\s()+.-]/g, "") || null;
         await checkSession();
       } catch (error) {
         message.textContent = error.message;
