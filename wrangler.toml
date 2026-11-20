@@ -16,7 +16,3 @@ binding = "DB"
 database_name = "mmg-oqvela-db"
 database_id = "537b494e-611b-44fb-9e34-f8721d2a9631"
 migrations_dir = "database/migrations"
-
-[[r2_buckets]]
-binding = "STORE_MEDIA"
-bucket_name = "mmg-oqvela-store-media"
