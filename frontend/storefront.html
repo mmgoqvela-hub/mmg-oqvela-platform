@@ -183,7 +183,7 @@
         $("productsHeading").textContent = t("products");
         $("search").placeholder = t("search");
         $("search").setAttribute("aria-label",t("search"));
-        $("platformFooter").textContent = t("footer");
+        $("platformFooter").textContent = (language === "en" ? storeData?.platform_footer?.platform_footer_en : storeData?.platform_footer?.platform_footer_ar) || t("footer");
         $("whatsappContact").textContent = t("contact");
         $("cartHeading").textContent = t("cart");
         $("cartTotalLabel").textContent = t("total");
