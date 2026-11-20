@@ -24,6 +24,7 @@ function db(options={}) {
             sql,values,
             async first() {
               if(sql.includes("store_order_settings")) return options.settings??null;
+              if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
               if(sql.includes("GROUP_CONCAT")) return options.access===undefined
                 ? {id:"store-1",store_status:"active",account_status:"active",account_role:"owner",permissions:""}
                 : options.access;
@@ -119,4 +120,41 @@ test("Order API and migration enforce tenant scope, stock reservation, restorati
  assert.match(source,/orders\\.manage/);
  assert.match(source,/trg_notify_store_order_created/);
  assert.match(source,/store-order-created:/);
+});
+
+
+test("Store owner can configure both checkout methods and Sham Cash recipient",async()=>{
+ const database=db();
+ const response=await handleOrders(request("/api/stores/store-1/orders/settings","PUT",{
+  cash_on_delivery_enabled:true,shamcash_enabled:true,
+  shamcash_recipient:"recipient-123",shamcash_instructions:"Transfer the exact order total"
+ },true),{DB:database});
+ assert.equal(response.status,200);
+ assert.ok(database.calls.some(call=>call.sql.includes("INSERT INTO store_order_settings")));
+});
+
+test("Sham Cash orders cannot be fulfilled before manual payment approval",async()=>{
+ const database=db({order:{id:"order-1",order_status:"pending",payment_status:"pending",payment_method:"shamcash"}});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  order_status:"confirmed"
+ },true),{DB:database});
+ assert.equal(response.status,409);
+ assert.equal(database.calls.length,0);
+});
+
+test("Store owner can approve Sham Cash payment and confirm the order together",async()=>{
+ const database=db({order:{id:"order-1",order_status:"pending",payment_status:"pending",payment_method:"shamcash"}});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  order_status:"confirmed",payment_status:"paid"
+ },true),{DB:database});
+ assert.equal(response.status,200);
+ assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_orders")));
+});
+
+test("An unpaid order cannot be marked completed",async()=>{
+ const database=db({order:{id:"order-1",order_status:"processing",payment_status:"unpaid",payment_method:"cash_on_delivery"}});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  order_status:"completed"
+ },true),{DB:database});
+ assert.equal(response.status,409);
 });
