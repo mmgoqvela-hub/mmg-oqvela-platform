@@ -92,20 +92,20 @@ test("Public storefront supports persistent cart, variant selection, stock limit
   assert.ok(start >= 0 && end > start);
   assert.doesNotThrow(() => new vm.Script(html.slice(start + 8, end)));
   for (const marker of [
-    'id="cartPanel"', 'id="cartItems"', 'id="cartCount"',
-    'localStorage.getItem(cartStorageKey)', 'localStorage.setItem(cartStorageKey',
+    'id="cartItems"',
+    'id="cartCount"',
+    'localStorage.getItem(cartStorageKey)',
+    'localStorage.setItem(cartStorageKey',
     'function addToCart(product,variant,quantity)',
     'product.variants.find(option => option.id === variantSelect.value)',
-    'next > stock', 'message'
+    'next > stock',
+    'totals.entries()',
+    'cartNote'
   ]) {
-    if (marker === 'id="cartPanel"') continue;
-    if (marker === "message") continue;
     assert.ok(html.includes(marker), "missing storefront cart behavior: " + marker);
   }
-  assert.match(html, /message.textContent/);
-  assert.match(html, /title.textContent/);
-  assert.match(html, /totals.entries()/);
-  assert.match(html, /cartNote/);
+  assert.match(html, /name\.textContent = product\.name/);
+  assert.match(html, /title\.textContent/);
   assert.match(html, /payment and delivery options are defined/);
   assert.match(html, /خيارات الدفع والتسليم الخاصة بالمتجر/);
 });
