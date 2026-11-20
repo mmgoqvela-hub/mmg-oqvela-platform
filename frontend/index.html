@@ -536,6 +536,8 @@ footer{
     "خط كلاسيكي":"Classic serif",
     "رابط شعار المتجر":"Store logo URL",
     "رابط صورة الواجهة":"Hero image URL",
+    "عنوان قسم المنتجات":"Products section title",
+    "نص زر الإضافة للسلة":"Add-to-cart button text",
     "ملف شعار المتجر":"Store logo file",
     "ملف صورة الواجهة":"Hero image file",
     "رفع الشعار من الجهاز":"Upload logo from device",
@@ -3092,6 +3094,10 @@ footer{
     makeDesignField("لون الخلفية",backgroundColor);
     makeDesignField("عنوان الواجهة",headingText);
     makeDesignField("النص التعريفي",subtitleText);
+    const productsTitleText = document.createElement("input"); productsTitleText.type = "text"; productsTitleText.maxLength = 80; productsTitleText.value = "المنتجات";
+    const addToCartText = document.createElement("input"); addToCartText.type = "text"; addToCartText.maxLength = 80; addToCartText.value = "أضف إلى السلة";
+    makeDesignField("عنوان قسم المنتجات",productsTitleText);
+    makeDesignField("نص زر الإضافة للسلة",addToCartText);
     const livePreview = document.createElement("div");
     livePreview.className = "store-editor-preview";
     livePreview.style.cssText = "margin-top:12px;border:1px solid #ffffff24;overflow:hidden;border-radius:16px;min-height:230px;color:white;transition:background .15s, border-radius .15s";
@@ -3127,6 +3133,8 @@ footer{
     previewCart.textContent = "السلة　 0";
     previewCart.style.cssText = "padding:5px 9px;border:1px solid #ffffff35;border-radius:20px";
     previewToolbar.append(previewCategories,previewCart);
+    const previewProductsTitle = document.createElement("strong");
+    previewProductsTitle.style.cssText = "display:block;padding:10px 12px 0;font-size:12px";
     const previewProducts = document.createElement("div");
     previewProducts.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px";
     for (let n=0;n<3;n++) {
@@ -3134,7 +3142,7 @@ footer{
       item.style.cssText = "height:35px;border:1px solid #ffffff25;border-radius:8px;background:#ffffff12";
       previewProducts.append(item);
     }
-    livePreview.append(previewAnnouncement,previewHeader,previewHero,previewToolbar,previewProducts);
+    livePreview.append(previewAnnouncement,previewHeader,previewHero,previewToolbar,previewProductsTitle,previewProducts);
     const previewThemes = {
       modern:{radius:"16px",hero:"linear-gradient(135deg,#ffffff12,#00000018)",weight:"600"},
       classic:{radius:"4px",hero:"linear-gradient(135deg,#eee3d0,#8f7655)",weight:"500"},
@@ -3173,6 +3181,7 @@ footer{
       previewLogo.style.display = /^https?:/i.test(logoUrl.value) ? "block" : "none";
       if (previewLogo.style.display === "block") previewLogo.src = logoUrl.value;
       else previewLogo.removeAttribute("src");
+      previewProductsTitle.textContent = productsTitleText.value || "المنتجات";
       previewProducts.style.display = sectionOptions.products?.checked === false ? "none" : "grid";
       previewCategories.style.display = sectionOptions.categories?.checked === false ? "none" : "inline";
       previewCart.style.display = sectionOptions.cart?.checked === false ? "none" : "inline-block";
@@ -3231,7 +3240,7 @@ footer{
       const check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
-    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl,logoUrl,announcementText].forEach(input => input.addEventListener("input",updatePreview));
+    [primaryColor,backgroundColor,headingText,subtitleText,productsTitleText,addToCartText,heroImageUrl,logoUrl,announcementText].forEach(input => input.addEventListener("input",updatePreview));
     fontSelect.addEventListener("change",updatePreview);
     heroAlignment.addEventListener("change",updatePreview);
     for (const check of Object.values(sectionOptions)) check.addEventListener("change",updatePreview);
@@ -3249,6 +3258,8 @@ footer{
         backgroundColor.value = loadedCustomization.colors?.background || "#101a2c";
         headingText.value = loadedCustomization.texts?.heroTitle || store.name || "";
         subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
+        productsTitleText.value = loadedCustomization.texts?.productsTitle || "المنتجات";
+        addToCartText.value = loadedCustomization.texts?.addToCart || "أضف إلى السلة";
         fontSelect.value = ["system","cairo","tajawal","serif"].includes(loadedCustomization.fonts?.family) ? loadedCustomization.fonts.family : "system";
         logoUrl.value = loadedCustomization.logo || "";
         heroImageUrl.value = loadedCustomization.heroImage || "";
@@ -3319,7 +3330,7 @@ footer{
               customization: {
                 ...loadedCustomization,
                 colors: { ...(loadedCustomization.colors || {}), primary: primaryColor.value, background: backgroundColor.value },
-                texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim() },
+                texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim(), productsTitle: productsTitleText.value.trim(), addToCart: addToCartText.value.trim() },
                 fonts: { ...(loadedCustomization.fonts || {}), family: fontSelect.value },
                 logo: logoUrl.value.trim(),
                 heroImage: heroImageUrl.value.trim(),
