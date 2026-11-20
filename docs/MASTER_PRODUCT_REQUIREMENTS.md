@@ -220,5 +220,5 @@ A feature is complete only when:
 - Audited public storefront checkout, API validation, server-side price calculation, tenant scoping, payment configuration, stock reservation and lifecycle enforcement.
 - Fixed a browser race: repeated form submissions are now ignored while a checkout is in flight, and cart controls are temporarily disabled so cart changes cannot be lost when the response clears the submitted cart.
 - Added a regression test for in-flight submission protection and cart-control locking.
-- Remaining gap: public checkout has no dedicated abuse/rate limiting or durable idempotency key. Repeated cash-on-delivery requests can still create separate orders; do not mark abuse protection complete.
+- Public checkout now applies a D1-backed limit of five attempts per store/IP hash per ten-minute window; raw IPs are not persisted and stale buckets are pruned by the daily scheduler. A durable idempotency key for safe replay of successful checkout submissions remains incomplete, so repeated requests below the rate limit may still create separate cash-on-delivery orders.
 - No production migration or deployment performed.
