@@ -3104,7 +3104,7 @@ footer{
       livePreview.style.backgroundSize = "cover";
       livePreview.style.backgroundPosition = "center";
     };
-    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl].forEach(input => input.addEventListener("input",updatePreview));
+
 
     const fontSelect = document.createElement("select");
     for (const [value,label] of [["system","النظام الافتراضي"],["cairo","Cairo"],["tajawal","Tajawal"],["serif","خط كلاسيكي"]]) {
@@ -3131,6 +3131,7 @@ footer{
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
     designField.append(sectionsWrap);
+    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl].forEach(input => input.addEventListener("input",updatePreview));
     fontSelect.addEventListener("change",updatePreview);
     heroAlignment.addEventListener("change",updatePreview);
     updatePreview();
