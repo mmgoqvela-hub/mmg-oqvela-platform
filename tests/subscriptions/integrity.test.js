@@ -109,3 +109,9 @@ test("Sender name is stored and protected as immutable payment evidence", () => 
   assert.match(senderMigration, /NEW\.sender_name IS NOT OLD\.sender_name/);
   assert.match(route, /sender_name: senderName/);
 });
+
+
+test("Admin subscription payment review returns sender name", () => {
+  const source = functionSource("adminListRequests", "adminPlans");
+  assert.match(source, /p\.transaction_reference,[\s\S]*?p\.sender_name,[\s\S]*?p\.status AS payment_status/);
+});
