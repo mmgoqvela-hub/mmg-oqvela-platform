@@ -1,0 +1,9 @@
+name = "mmg-oqvela-platform"
+main = "backend/worker.js"
+compatibility_date = "2026-11-20"
+
+workers_dev = true
+
+[assets]
+directory = "./frontend"
+binding = "ASSETS"
