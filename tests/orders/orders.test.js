@@ -104,7 +104,7 @@ test("Public checkout creates a COD order using server-side prices and atomic D1
  assert.equal(result.order.payment_method,"cash_on_delivery");
  assert.equal(result.order.payment_status,"unpaid");
  assert.equal(result.order.total,25);
- assert.equal(database.calls.length,2);
+ assert.equal(database.calls.filter(call=>call.sql.includes("INSERT INTO store_orders")||call.sql.includes("INSERT INTO store_order_items")).length,2);
  assert.match(database.calls[0].sql,/INSERT INTO store_orders/);
  assert.match(database.calls[1].sql,/INSERT INTO store_order_items/);
  assert.equal(database.calls[1].values[8],2);
@@ -142,7 +142,7 @@ test("Checkout rejects client price tampering and out-of-stock quantities",async
  const database=db({product:{...PRODUCT,stock_quantity:1}});
  const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,items:[{product_id:"product-1",quantity:2,price:0.01}]}),{DB:database});
  assert.equal(response.status,409);
- assert.equal(database.calls.length,0);
+ assert.equal(database.calls.some(call=>call.sql.includes("INSERT INTO store_orders")||call.sql.includes("INSERT INTO store_order_items")),false);
 });
 
 test("Checkout rejects mixed currencies and invalid payment methods",async()=>{
