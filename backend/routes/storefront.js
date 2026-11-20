@@ -28,7 +28,7 @@ export async function handlePublicStorefront(request, env) {
     const store = await env.DB.prepare(`
       SELECT
         s.id, s.name, s.slug, s.business_type, s.description,
-        s.template_key, s.whatsapp_phone
+        s.template_key, s.whatsapp_phone, s.customization_json
       FROM stores s
       JOIN accounts a ON a.id = s.account_id
       WHERE s.slug = ?
@@ -118,7 +118,7 @@ export async function handlePublicStorefront(request, env) {
 
     return json({
       status:"ok",
-      store,
+      store: { ...store, customization: (() => { try { return JSON.parse(store.customization_json || "{}"); } catch { return {}; } })() },
       order_settings:orderSettings,
       platform_footer: Object.fromEntries((platformSettings.results || []).map(item => [item.setting_key, item.setting_value])),
       platform_support_whatsapp: (platformSettings.results || []).find(item => item.setting_key === "platform_support_whatsapp")?.setting_value || "",
