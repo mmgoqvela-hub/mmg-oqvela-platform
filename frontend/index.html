@@ -550,14 +550,71 @@ footer{
     "مرحباً، ":"Hello, "
   };
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
+  const englishMessagesToArabic = {
+    "Request body is too large":"حجم بيانات الطلب أكبر من المسموح.",
+    "Content-Type must be application/json":"نوع محتوى الطلب غير صالح.",
+    "Invalid request body":"بيانات الطلب غير صالحة.",
+    "Invalid JSON":"صيغة البيانات غير صالحة.",
+    "Name must contain 2 to 100 characters":"يجب أن يتراوح الاسم بين حرفين و100 حرف.",
+    "Invalid email address":"البريد الإلكتروني غير صالح.",
+    "Password must contain at least 12 characters":"يجب ألا تقل كلمة المرور عن 12 حرفاً.",
+    "Account created successfully":"تم إنشاء الحساب بنجاح.",
+    "An account with this email already exists":"يوجد حساب مسجل بهذا البريد الإلكتروني.",
+    "Unable to create account":"تعذر إنشاء الحساب.",
+    "Invalid email or password":"البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "Too many login attempts. Try again in 15 minutes.":"محاولات تسجيل دخول كثيرة. حاول مجدداً بعد 15 دقيقة.",
+    "Login successful":"تم تسجيل الدخول بنجاح.",
+    "Unable to complete login":"تعذر إكمال تسجيل الدخول.",
+    "Authentication required":"يرجى تسجيل الدخول أولاً.",
+    "Session expired or invalid":"انتهت صلاحية الجلسة أو أنها غير صالحة. سجّل الدخول مجدداً.",
+    "Unable to retrieve account":"تعذر تحميل بيانات الحساب.",
+    "Logged out successfully":"تم تسجيل الخروج بنجاح.",
+    "Unable to complete logout":"تعذر إكمال تسجيل الخروج.",
+    "Invalid request origin":"مصدر الطلب غير موثوق.",
+    "Method not allowed":"طريقة الطلب غير مسموح بها.",
+    "Not found":"العنصر المطلوب غير موجود.",
+    "Invalid origin":"مصدر الطلب غير صالح.",
+    "Admin access required":"يتطلب هذا الإجراء صلاحية مدير المنصة.",
+    "Super admin access required":"يتطلب هذا الإجراء صلاحية المدير العام للمنصة.",
+    "Invalid settings data":"بيانات الإعدادات غير صالحة.",
+    "Invalid Sham Cash link":"رابط شام كاش غير صالح.",
+    "Invalid trial settings":"إعدادات الفترة التجريبية غير صالحة.",
+    "Unable to process admin request":"تعذر تنفيذ طلب الإدارة.",
+    "Invalid store ID":"معرّف المتجر غير صالح.",
+    "Store not found":"المتجر غير موجود.",
+    "You do not have permission to edit this store":"لا تملك صلاحية تعديل هذا المتجر.",
+    "Store was not updated":"لم يتم تحديث بيانات المتجر.",
+    "Unable to process store request":"تعذر تنفيذ طلب المتجر.",
+    "Invalid payment ID":"معرّف عملية الدفع غير صالح.",
+    "Invalid account or store name":"الحساب أو اسم المتجر غير صالح.",
+    "Account ID required":"معرّف الحساب مطلوب.",
+    "Account not found":"الحساب غير موجود.",
+    "Trial unavailable or already used":"الفترة التجريبية غير متاحة أو سبق استخدامها.",
+    "Unable to activate trial":"تعذر تفعيل الفترة التجريبية.",
+    "Unable to process subscription request":"تعذر تنفيذ طلب الاشتراك."
+  };
   function translateText(value) {
-    if (currentLanguage !== "en" || !value) return value;
-    const trimmed = value.trim().replace(/\\s+/g, " ");
-    if (translations[trimmed]) return translations[trimmed];
-    const prefixes = Object.keys(translations).filter(key => key.endsWith(" ") && trimmed.startsWith(key)).sort((a,b)=>b.length-a.length);
+    if (!value) return value;
+    const normalized = String(value).replace(/\s+/g, " ");
+    const trimmed = normalized.trim();
+    const leading = normalized.match(/^\s*/)?.[0] || "";
+    const trailing = normalized.match(/\s*$/)?.[0] || "";
+    if (currentLanguage === "en") {
+      if (translations[trimmed]) return leading + translations[trimmed] + trailing;
+      const prefixes = Object.keys(translations).filter(key => key.endsWith(" ") && normalized.startsWith(key)).sort((a,b)=>b.length-a.length);
+      if (prefixes.length) {
+        const key = prefixes[0];
+        return translations[key] + normalized.slice(key.length);
+      }
+      return value;
+    }
+    if (englishMessagesToArabic[trimmed]) return leading + englishMessagesToArabic[trimmed] + trailing;
+    const reverse = Object.fromEntries(Object.entries(translations).map(([ar,en]) => [en,ar]));
+    if (reverse[trimmed]) return leading + reverse[trimmed] + trailing;
+    const prefixes = Object.keys(englishMessagesToArabic).filter(key => key.endsWith(" ") && normalized.startsWith(key)).sort((a,b)=>b.length-a.length);
     if (prefixes.length) {
       const key = prefixes[0];
-      return translations[key] + trimmed.slice(key.length);
+      return englishMessagesToArabic[key] + normalized.slice(key.length);
     }
     return value;
   }
