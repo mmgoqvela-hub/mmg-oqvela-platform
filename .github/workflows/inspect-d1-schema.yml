@@ -1,0 +1,27 @@
+name: Inspect D1 Schema (Read Only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Inspect existing schema (read only)
+        run: |
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT type, name, sql FROM sqlite_master WHERE name IN ('platform_settings', 'admin_activity_logs', 'payments', 'd1_migrations') ORDER BY type, name" 
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "PRAGMA table_info(platform_settings)"
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "PRAGMA table_info(payments)"
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT name, applied_at FROM d1_migrations ORDER BY name"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
