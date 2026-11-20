@@ -398,7 +398,9 @@ test("Store owner can save persistent visual customization", async () => {
     colors: { primary: "#123456", background: "#ffffff" },
     texts: { heroTitle: "Welcome to our store" },
     fonts: { heading: "Cairo" },
-    sections: { featured: true, testimonials: false }
+    sections: { featured: true, testimonials: false },
+    layout: { heroAlignment: "center" },
+    heroImage: "https://example.com/hero.jpg"
   };
   const response = await handleStores(
     makeRequest("PUT", { ...VALID_DATA, customization }),
