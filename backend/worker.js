@@ -12,7 +12,10 @@ import { handleOrders } from "./routes/orders.js";
 
 export default {
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(scheduleSubscriptionNotifications(env));
+    ctx.waitUntil(Promise.all([
+      scheduleSubscriptionNotifications(env),
+      env.DB.prepare("DELETE FROM public_checkout_rate_limits WHERE window_started_at < datetime('now','-2 days')").run()
+    ]));
   },
 
   async fetch(request, env) {
