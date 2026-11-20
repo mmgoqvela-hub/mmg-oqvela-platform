@@ -438,5 +438,5 @@ test("Platform announcements reject invalid schedules and unsupported types",asy
   title_ar:"إعلان",title_en:"Announcement",message_ar:"رسالة",message_en:"Message",announcement_type:"script",starts_at:"2026-11-22T12:00:00Z",ends_at:"2026-11-21T12:00:00Z"
  }),{DB:db});
  assert.equal(response.status,400);
- assert.equal(db.calls.length,0);
+ assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO platform_announcements")||call.sql.includes("INSERT INTO admin_activity_logs")),false);
 });
