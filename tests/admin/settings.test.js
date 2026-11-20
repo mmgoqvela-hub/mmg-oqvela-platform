@@ -58,6 +58,7 @@ function createDb(options = {}) {
             },
 
             async all() {
+              calls.push({ sql, values });
               return {
                 results: sql.includes("FROM admin_activity_logs")
                   ? (options.activityLogs ?? [])
