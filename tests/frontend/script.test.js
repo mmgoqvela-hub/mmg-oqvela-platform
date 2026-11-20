@@ -105,6 +105,15 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     assert.ok(html.includes(marker), "missing storefront cart behavior: " + marker);
   }
   assert.match(html, /name\.textContent = product\.name/);
-  assert.match(html, /payment and delivery options are defined/);
-  assert.match(html, /خيارات الدفع والتسليم الخاصة بالمتجر/);
+  for (const marker of [
+    'id="checkoutForm"',
+    'id="paymentMethod"',
+    'id="shamcashFields"',
+    'id="transactionReference"',
+    'fetch("/api/public/stores/" + encodeURIComponent(slug) + "/orders"',
+    'payment_method:method',
+    'function submitOrder(event)',
+    'cash_on_delivery',
+    'shamcash'
+  ]) assert.ok(html.includes(marker), "missing checkout behavior: " + marker);
 });
