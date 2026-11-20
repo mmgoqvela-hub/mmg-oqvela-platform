@@ -423,3 +423,15 @@ test("Inventory movements are rejected when tracking is disabled",async()=>{
   assert.equal(db.calls.length,0);
 });
 
+test("Members without inventory.manage cannot create inventory movements",async()=>{
+  const db=createDb({
+    access:{...MEMBER,permissions:"catalog.read,inventory.read"},
+    product:{id:"product-1",track_inventory:1,stock_quantity:5}
+  });
+  const response=await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"purchase",quantity_change:2
+  }),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.some(call=>call.sql.includes("UPDATE products") || call.sql.includes("INSERT INTO inventory_movements")),false);
+});
+
