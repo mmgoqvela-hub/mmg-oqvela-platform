@@ -744,6 +744,7 @@ footer{
   };
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
   let authenticated = false;
+  let authenticatedUserId = null;
   const englishMessagesToArabic = {
     "Request body is too large":"حجم بيانات الطلب أكبر من المسموح.",
     "Content-Type must be application/json":"نوع محتوى الطلب غير صالح.",
@@ -2402,7 +2403,7 @@ footer{
         email.dataset.noTranslate = "true";
         const details = document.createElement("p");
         details.className = "muted";
-        details.textContent = user.status + " — " + formatNumber(user.accounts_count) + " — " + formatNumber(user.stores_count);
+        details.textContent = localizeCode(user.status) + " — " + formatNumber(user.accounts_count) + " — " + formatNumber(user.stores_count);
         const toggle = document.createElement("button");
         toggle.type = "button";
         toggle.className = "secondary";
@@ -2448,7 +2449,7 @@ footer{
         owner.dataset.noTranslate = "true";
         const details = document.createElement("p");
         details.className = "muted";
-        details.textContent = account.status + " — " + formatNumber(account.stores_count);
+        details.textContent = localizeCode(account.status) + " — " + formatNumber(account.stores_count);
         const toggle = document.createElement("button");
         toggle.type = "button";
         toggle.className = "secondary";
@@ -2488,13 +2489,13 @@ footer{
         title.dataset.noTranslate = "true";
         const details = document.createElement("p");
         details.className = "muted";
-        details.textContent = store.account_name + " — " + (store.business_type || "عام") + " — " + (store.subscription_status || "—");
+        details.textContent = store.account_name + " — " + (store.business_type || "عام") + " — " + localizeCode(store.subscription_status || "—");
         details.dataset.noTranslate = "true";
         const status = document.createElement("select");
         for (const value of ["active","suspended","maintenance","closed"]) {
           const option = document.createElement("option");
           option.value = value;
-          option.textContent = value;
+          option.textContent = localizeCode(value);
           option.selected = store.status === value;
           status.append(option);
         }
@@ -2541,7 +2542,7 @@ footer{
         email.dataset.noTranslate = "true";
         const level = document.createElement("p");
         level.className = "muted";
-        level.textContent = item.admin_level + " — " + item.status;
+        level.textContent = localizeCode(item.admin_level) + " — " + localizeCode(item.status);
         const toggle = document.createElement("button");
         toggle.type = "button";
         toggle.className = "secondary";
@@ -2694,6 +2695,7 @@ footer{
     try {
       const data = await api("/api/auth/me");
       authenticated = true;
+      authenticatedUserId = data.user.id;
       const savedLanguage = data.user?.preferredLanguage === "en" ? "en" : "ar";
       if (localStorage.getItem("mmg_language_user_selected") === "1") {
         try {
