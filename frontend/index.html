@@ -3077,7 +3077,7 @@ footer{
       livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
     };
     [primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
-    updatePreview();
+
     const fontSelect = document.createElement("select");
     for (const [value,label] of [["system","النظام الافتراضي"],["cairo","Cairo"],["tajawal","Tajawal"],["serif","خط كلاسيكي"]]) {
       const option = document.createElement("option"); option.value = value; option.textContent = label; fontSelect.append(option);
@@ -3097,6 +3097,7 @@ footer{
     }
     designField.append(sectionsWrap);
     fontSelect.addEventListener("change",updatePreview);
+    updatePreview();
     livePreview.append(document.createTextNode(""));
     designField.append(designTitle,designHint,designGrid,sectionsWrap,livePreview);
     let loadedCustomization = {};
