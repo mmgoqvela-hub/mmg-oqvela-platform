@@ -51,7 +51,7 @@
     @media(max-width:620px){.cart-row{align-items:flex-start;flex-direction:column}.cart-actions{width:100%;justify-content:flex-end}}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
     .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
-    .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}.product-art img{width:100%;height:100%;object-fit:cover;display:block}.product-art.has-image{background:var(--surface)}
+    .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}.product-art img{width:100%;height:100%;object-fit:cover;display:block}.product-art.has-image{background:var(--surface)}.product-thumbnails{display:flex;gap:7px;overflow-x:auto;margin:0 0 12px;padding:2px}.product-thumbnails button{width:48px;height:48px;flex:0 0 48px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden;cursor:pointer}.product-thumbnails button[aria-pressed=true]{border:2px solid var(--accent)}.product-thumbnails img{width:100%;height:100%;object-fit:cover;display:block}
     .product-body{padding:16px}
     .product h3{margin:0 0 7px;font-size:17px}
     .product p{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -451,26 +451,53 @@
           const art = document.createElement("div");
           art.className = "product-art";
           art.setAttribute("aria-hidden","true");
-          const productImage = Array.isArray(product.images) ? product.images[0] : null;
-          if (productImage && typeof productImage.url === "string" && productImage.url.startsWith("/media/")) {
-            const image = document.createElement("img");
-            image.src = productImage.url;
-            image.alt = productImage.alt_text || product.name;
-            image.loading = "lazy";
-            image.decoding = "async";
-            image.addEventListener("error", () => {
+          const productImages = Array.isArray(product.images) ? product.images.filter(item => item && typeof item.url === "string" && item.url.startsWith("/media/")) : [];
+          let coverImage = null;
+          const productImage = productImages[0];
+          if (productImage) {
+            coverImage = document.createElement("img");
+            coverImage.src = productImage.url;
+            coverImage.alt = productImage.alt_text || product.name;
+            coverImage.loading = "lazy";
+            coverImage.decoding = "async";
+            coverImage.addEventListener("error", () => {
               art.classList.remove("has-image");
-              image.remove();
+              coverImage.remove();
+              coverImage = null;
               art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
             }, { once:true });
             art.classList.add("has-image");
             art.removeAttribute("aria-hidden");
-            art.append(image);
+            art.append(coverImage);
           } else {
             art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
           }
           const body = document.createElement("div");
           body.className = "product-body";
+          if (coverImage && productImages.length > 1) {
+            const thumbnails = document.createElement("div");
+            thumbnails.className = "product-thumbnails";
+            thumbnails.setAttribute("aria-label",t("productImages") || "Product images");
+            productImages.forEach((entry,index) => {
+              const thumbnailButton = document.createElement("button");
+              thumbnailButton.type = "button";
+              thumbnailButton.setAttribute("aria-label",(entry.alt_text || product.name) + " " + (index + 1));
+              thumbnailButton.setAttribute("aria-pressed",index === 0 ? "true" : "false");
+              const thumbnail = document.createElement("img");
+              thumbnail.src = entry.url;
+              thumbnail.alt = "";
+              thumbnail.loading = "lazy";
+              thumbnailButton.append(thumbnail);
+              thumbnailButton.addEventListener("click",() => {
+                if (!coverImage) return;
+                coverImage.src = entry.url;
+                coverImage.alt = entry.alt_text || product.name;
+                thumbnails.querySelectorAll("button").forEach((button,buttonIndex) => button.setAttribute("aria-pressed",buttonIndex === index ? "true" : "false"));
+              });
+              thumbnails.append(thumbnailButton);
+            });
+            body.append(thumbnails);
+          }
           const name = document.createElement("h3");
           name.textContent = product.name;
           const description = document.createElement("p");
