@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>المتجر | MMG OQVELA</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:light;--bg:#f4f7fb;--surface:#fff;--ink:#172033;--muted:#68758a;--accent:#2867d8;--line:#e1e7f0}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh}
+    button,input{font:inherit}
+    .topbar{height:64px;padding:0 max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:var(--surface)}
+    .brand{font-weight:800;letter-spacing:.04em}.brand span{color:var(--accent)}
+    .lang{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 13px;cursor:pointer}
+    .container{max-width:1180px;margin:0 auto;padding:0 22px}
+    .hero{padding:58px 0 40px}
+    .eyebrow{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    h1{font-size:clamp(32px,5vw,56px);line-height:1.12;margin:12px 0}
+    .description{color:var(--muted);max-width:700px;line-height:1.9;margin:0}
+    .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 25px}
+    .search{flex:1;min-width:210px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink)}
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .filter{border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:var(--surface);color:var(--ink);cursor:pointer}
+    .filter[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:white}
+    .section-title{font-size:20px;margin:26px 0 14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
+    .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
+    .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}
+    .product-body{padding:16px}
+    .product h3{margin:0 0 7px;font-size:17px}
+    .product p{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .price{font-weight:800;font-size:18px}
+    .compare{font-size:12px;color:var(--muted);text-decoration:line-through;margin-inline-start:8px}
+    .variants{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:grid;gap:5px}
+    .empty{grid-column:1/-1;padding:42px 20px;text-align:center;background:var(--surface);border:1px dashed var(--line);border-radius:16px;color:var(--muted)}
+    .status{padding:80px 20px;text-align:center;color:var(--muted)}
+    footer{border-top:1px solid var(--line);padding:26px 18px;text-align:center;color:var(--muted);font-size:12px}
+    [hidden]{display:none!important}
+    body[data-template=classic]{--bg:#f4ecdf;--surface:#fffaf1;--ink:#35271e;--muted:#796657;--accent:#87552f;--line:#e5d7c5;font-family:Georgia,"Times New Roman",serif}
+    body[data-template=classic] .hero{text-align:center;padding:72px 0 50px}
+    body[data-template=classic] .description{margin:auto}
+    body[data-template=classic] .product{border-radius:4px}
+    body[data-template=minimal]{--bg:#fff;--surface:#fff;--ink:#171717;--muted:#777;--accent:#171717;--line:#e8e8e8}
+    body[data-template=minimal] .topbar{border-bottom:2px solid var(--ink)}
+    body[data-template=minimal] .product{border-radius:0;box-shadow:none}
+    body[data-template=minimal] .product-art{border-bottom:1px solid var(--line);background:#f5f5f5}
+    body[data-template=boutique]{--bg:#f7efeb;--surface:#fffaf8;--ink:#402e2b;--muted:#8a716c;--accent:#a35e58;--line:#eadbd6}
+    body[data-template=boutique] .hero{padding:76px 0 54px}
+    body[data-template=boutique] .product{border-radius:3px}
+    body[data-template=boutique] .product-art{height:190px;background:linear-gradient(145deg,#ead1ca,#f9ece7)}
+    body[data-template=tech]{color-scheme:dark;--bg:#0b1423;--surface:#111f33;--ink:#edf6ff;--muted:#a5b6cb;--accent:#39c8c2;--line:#243954}
+    body[data-template=tech] .product-art{background:linear-gradient(135deg,#163d5a,#145c67);color:#a5fff3}
+    body[data-template=tech] .topbar{background:var(--surface)}
+    body[data-template=tech] .search{color:var(--ink)}
+    body[data-template=tech] .empty{background:var(--surface)}
+    @media(max-width:620px){.hero{padding:38px 0 25px}.container{padding:0 16px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product-art{height:115px}.product-body{padding:12px}.product h3{font-size:15px}.toolbar{align-items:stretch}.search{min-width:100%}}
+  </style>
+</head>
+<body data-template="modern">
+  <header class="topbar">
+    <div class="brand">MMG <span>OQVELA</span></div>
+    <button class="lang" id="languageToggle" type="button">English</button>
+  </header>
+  <main class="container">
+    <section class="hero">
+      <div class="eyebrow" id="businessType"></div>
+      <h1 id="storeName">جارٍ تحميل المتجر...</h1>
+      <p class="description" id="storeDescription"></p>
+    </section>
+    <section>
+      <div class="toolbar">
+        <input class="search" id="search" type="search" placeholder="ابحث في المنتجات..." aria-label="ابحث في المنتجات">
+        <div class="filters" id="filters"></div>
+      </div>
+      <h2 class="section-title" id="productsHeading">المنتجات</h2>
+      <div class="grid" id="products"></div>
+      <div class="status" id="status" role="status" hidden></div>
+    </section>
+  </main>
+  <footer id="platformFooter">© 2026 MMG OQVELA — جميع الحقوق محفوظة</footer>
+  <script>
+    (() => {
+      const messages = {
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة"},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved"}
+      };
+      let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
+      let storeData = null;
+      let categoryFilter = "";
+      const $ = id => document.getElementById(id);
+      const t = key => messages[language][key] || key;
+      const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
+
+      function setLanguage(next) {
+        language = next;
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+        $("languageToggle").textContent = language === "ar" ? "English" : "العربية";
+        $("productsHeading").textContent = t("products");
+        $("search").placeholder = t("search");
+        $("search").setAttribute("aria-label",t("search"));
+        $("platformFooter").textContent = t("footer");
+        if (storeData) renderProducts();
+      }
+
+      function money(amount,currency) {
+        try {
+          return new Intl.NumberFormat(language === "ar" ? "ar" : "en", {
+            style:"currency",currency:currency || "USD",maximumFractionDigits:2
+          }).format(Number(amount || 0));
+        } catch {
+          return Number(amount || 0).toFixed(2) + " " + (currency || "USD");
+        }
+      }
+
+      function renderProducts() {
+        const container = $("products");
+        container.replaceChildren();
+        const query = $("search").value.trim().toLocaleLowerCase(language);
+        const filtered = storeData.products.filter(product => {
+          const categoryMatch = !categoryFilter || product.category_id === categoryFilter;
+          const searchMatch = !query || (product.name + " " + (product.description || "")).toLocaleLowerCase(language).includes(query);
+          return categoryMatch && searchMatch;
+        });
+        if (!filtered.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = t("empty");
+          container.append(empty);
+          return;
+        }
+        for (const product of filtered) {
+          const card = document.createElement("article");
+          card.className = "product";
+          const art = document.createElement("div");
+          art.className = "product-art";
+          art.setAttribute("aria-hidden","true");
+          art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
+          const body = document.createElement("div");
+          body.className = "product-body";
+          const name = document.createElement("h3");
+          name.textContent = product.name;
+          const description = document.createElement("p");
+          description.textContent = product.description || "";
+          const priceLine = document.createElement("div");
+          priceLine.className = "price";
+          priceLine.textContent = money(product.base_price,product.currency);
+          if (product.compare_at_price && product.compare_at_price > product.base_price) {
+            const compare = document.createElement("span");
+            compare.className = "compare";
+            compare.textContent = money(product.compare_at_price,product.currency);
+            priceLine.append(compare);
+          }
+          body.append(name);
+          if (product.is_featured) {
+            const featured = document.createElement("p");
+            featured.textContent = t("featured");
+            body.append(featured);
+          }
+          if (description.textContent) body.append(description);
+          body.append(priceLine);
+          if (product.variants?.length) {
+            const variants = document.createElement("div");
+            variants.className = "variants";
+            for (const variant of product.variants) {
+              const line = document.createElement("span");
+              line.textContent = variant.name + " · " + money(variant.price,product.currency);
+              variants.append(line);
+            }
+            body.append(variants);
+          }
+          card.append(art,body);
+          container.append(card);
+        }
+      }
+
+      function renderCategories() {
+        const filters = $("filters");
+        filters.replaceChildren();
+        const all = document.createElement("button");
+        all.className = "filter";
+        all.type = "button";
+        all.textContent = t("all");
+        all.setAttribute("aria-pressed",String(!categoryFilter));
+        all.addEventListener("click",() => {categoryFilter="";renderCategories();renderProducts();});
+        filters.append(all);
+        for (const category of storeData.categories) {
+          const button = document.createElement("button");
+          button.className = "filter";
+          button.type = "button";
+          button.textContent = category.name;
+          button.setAttribute("aria-pressed",String(categoryFilter === category.id));
+          button.addEventListener("click",() => {categoryFilter=category.id;renderCategories();renderProducts();});
+          filters.append(button);
+        }
+      }
+
+      async function load() {
+        try {
+          const response = await fetch("/api/public/stores/" + encodeURIComponent(slug),{headers:{"Accept":"application/json"}});
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            $("status").hidden = false;
+            $("status").textContent = response.status === 404 ? t("unavailable") : t("failed");
+            $("storeName").textContent = "";
+            return;
+          }
+          storeData = data;
+          document.title = data.store.name + " | MMG OQVELA";
+          document.body.dataset.template = ["modern","classic","minimal","boutique","tech"].includes(data.store.template_key) ? data.store.template_key : "modern";
+          $("businessType").textContent = data.store.business_type || "";
+          $("storeName").textContent = data.store.name;
+          $("storeDescription").textContent = data.store.description || "";
+          $("status").hidden = true;
+          renderCategories();
+          renderProducts();
+        } catch {
+          $("status").hidden = false;
+          $("status").textContent = t("failed");
+        }
+      }
+
+      $("languageToggle").addEventListener("click",() => setLanguage(language === "ar" ? "en" : "ar"));
+      $("search").addEventListener("input",renderProducts);
+      setLanguage(language);
+      $("storeName").textContent = t("loading");
+      load();
+    })();
+  </script>
+</body>
+</html>
