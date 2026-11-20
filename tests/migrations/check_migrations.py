@@ -80,7 +80,35 @@ def main():
     if not required_payment_columns.issubset(payment_columns):
         raise SystemExit("Required payment integrity columns are missing")
 
+    user_language_columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(users)")
+    }
+    if "preferred_language" not in user_language_columns:
+        raise SystemExit("User language preference column is missing")
+
     seed_identity(connection)
+    default_language = connection.execute(
+        "SELECT preferred_language FROM users WHERE id = 'user-1'"
+    ).fetchone()
+    if default_language != ("ar",):
+        raise SystemExit(f"New users must default to Arabic: {default_language}")
+
+    connection.execute(
+        "UPDATE users SET preferred_language = 'en' WHERE id = 'user-1'"
+    )
+    if connection.execute(
+        "SELECT preferred_language FROM users WHERE id = 'user-1'"
+    ).fetchone() != ("en",):
+        raise SystemExit("English language preference was not saved")
+
+    try:
+        connection.execute(
+            "UPDATE users SET preferred_language = 'fr' WHERE id = 'user-1'"
+        )
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise SystemExit("Unsupported language preference was accepted")
 
     # Verify a complete approval activates the subscription and pays its invoice.
     _, approval_subscription, approval_payment = create_pending_payment(connection, "approve")
