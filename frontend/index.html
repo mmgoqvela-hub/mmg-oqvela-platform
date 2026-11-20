@@ -1408,6 +1408,7 @@ footer{
     panel.className = "admin-panel";
     panel.hidden = true;
     let loaded = false;
+    let reportPeriod = "30d";
 
     async function refresh() {
       panel.replaceChildren();
@@ -2576,6 +2577,53 @@ footer{
           });
           panel.append(settingsHeading,form);
         }
+
+        const reportsHeading=document.createElement("h4");
+        reportsHeading.textContent="تقارير المتجر";
+        const reportToolbar=document.createElement("div");reportToolbar.className="notification-toolbar";
+        const periodSelect=document.createElement("select");
+        for(const [value,label] of [["7d","آخر 7 أيام"],["30d","آخر 30 يوماً"],["90d","آخر 90 يوماً"]]){
+          const option=document.createElement("option");option.value=value;option.textContent=label;option.selected=reportPeriod===value;periodSelect.append(option);
+        }
+        const refreshReport=document.createElement("button");refreshReport.type="button";refreshReport.className="secondary";refreshReport.textContent="تحديث التقرير";
+        const reportContent=document.createElement("div");reportContent.className="account-grid";
+        const reportMessage=document.createElement("p");reportMessage.className="muted";reportMessage.setAttribute("role","status");
+        async function loadReport(){
+          reportPeriod=periodSelect.value;refreshReport.disabled=true;reportContent.replaceChildren();reportMessage.textContent="";
+          try{
+            const report=(await api("/api/stores/"+encodeURIComponent(store.id)+"/reports?period="+encodeURIComponent(reportPeriod))).report;
+            const metric=(label,value)=>{
+              const item=document.createElement("article");item.className="account-card";
+              const name=document.createElement("p");name.className="muted";name.textContent=label;
+              const number=document.createElement("strong");number.textContent=formatNumber(value||0);
+              item.append(name,number);reportContent.append(item);
+            };
+            metric("عدد الطلبات",report.totals.total_orders);
+            metric("طلبات مكتملة",report.totals.completed_orders);
+            metric("طلبات مفتوحة",report.totals.open_orders);
+            metric("طلبات ملغاة",report.totals.cancelled_orders);
+            const revenueTitle=document.createElement("h5");revenueTitle.textContent="الإيرادات المؤكدة حسب العملة";reportContent.append(revenueTitle);
+            if(!report.paid_revenue.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا توجد إيرادات مؤكدة خلال الفترة.";reportContent.append(empty);}
+            for(const item of report.paid_revenue){
+              const line=document.createElement("p");line.className="muted";
+              line.textContent=item.currency+": "+formatNumber(item.paid_revenue)+" — "+formatNumber(item.paid_orders)+" طلب مدفوع";
+              reportContent.append(line);
+            }
+            const productsTitle=document.createElement("h5");productsTitle.textContent="أكثر المنتجات مبيعاً (مدفوعة)";reportContent.append(productsTitle);
+            if(!report.top_products.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا توجد مبيعات مدفوعة خلال الفترة.";reportContent.append(empty);}
+            for(const product of report.top_products){
+              const line=document.createElement("p");line.className="muted";
+              line.textContent=product.product_name+" — "+formatNumber(product.units_sold)+" وحدة";
+              reportContent.append(line);
+            }
+          }catch(error){reportMessage.textContent="تعذر تحميل التقرير: "+error.message;}
+          finally{refreshReport.disabled=false;}
+        }
+        periodSelect.addEventListener("change",loadReport);
+        refreshReport.addEventListener("click",loadReport);
+        reportToolbar.append(periodSelect,refreshReport);
+        panel.append(reportsHeading,reportToolbar,reportContent,reportMessage);
+        await loadReport();
 
         const ordersHeading = document.createElement("h4");
         ordersHeading.textContent = "أحدث الطلبات";
