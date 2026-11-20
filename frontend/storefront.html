@@ -168,6 +168,7 @@
       let categoryFilter = "";
       const cartStorageKey = "mmg_cart_" + slug;
       let cart = [];
+      let orderSubmitting = false;
       try {
         const saved = JSON.parse(localStorage.getItem(cartStorageKey) || "[]");
         if (Array.isArray(saved)) cart = saved.filter(item => item && typeof item.productId === "string" && Number.isInteger(item.quantity) && item.quantity > 0);
@@ -364,11 +365,14 @@
 
       async function submitOrder(event) {
         event.preventDefault();
-        if (!cart.length) return;
+        if (orderSubmitting || !cart.length) return;
         const currencies = new Set(cart.map(item => findCartProduct(item.productId)?.currency || "USD"));
         if (currencies.size > 1) { alert(t("mixedCurrency")); return; }
         const button = $("placeOrder");
+        orderSubmitting = true;
         button.disabled = true;
+        $("checkoutStart").disabled = true;
+        $("cartItems").querySelectorAll("button").forEach(control => { control.disabled = true; });
         button.textContent = t("placing");
         const body = {
           customer_name:$("customerName").value.trim(),
@@ -408,7 +412,10 @@
         } catch(error) {
           alert(error.message || t("orderFailed"));
         } finally {
+          orderSubmitting = false;
           button.disabled = false;
+          $("checkoutStart").disabled = false;
+          $("cartItems").querySelectorAll("button").forEach(control => { control.disabled = false; });
           button.textContent = t("placeOrder");
         }
       }
