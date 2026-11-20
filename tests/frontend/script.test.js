@@ -45,6 +45,6 @@ test("Arabic UI includes localized backend validation and authentication errors"
     "Account not found",
     "Unable to process subscription request"
   ]) {
-    assert.ok(html.includes(JSON.stringify(message)), \`missing Arabic translation for: \${message}\`);
+    assert.ok(html.includes(JSON.stringify(message)), "missing Arabic translation for: " + message);
   }
 });
