@@ -61,3 +61,14 @@ test("Public storefront page JavaScript parses and defines all five templates", 
   assert.ok(html.includes("/api/public/stores/"));
   assert.ok(html.includes("document.documentElement.dir"));
 });
+
+
+test("Store subscription panel displays trial expiry and renewal notices", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /if \(sub\.is_trial && sub\.expires_at\)/);
+  assert.match(html, /remainingDays <= 0 \|\| sub\.subscription_status === "expired"/);
+  assert.match(html, /تنبيه: بقي /);
+  assert.match(html, /أصبح المتجر مخفياً للزوار/);
+  assert.match(html, /إعادة تفعيله بعد موافقة الإدارة/);
+  assert.match(html, /The free trial has ended/);
+});
