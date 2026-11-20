@@ -106,9 +106,18 @@ export async function handlePublicStorefront(request, env) {
       variantsByProduct.set(variant.product_id,list);
     }
 
+    const orderSettings = await env.DB.prepare(`
+      SELECT cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions
+      FROM store_order_settings WHERE store_id=? LIMIT 1
+    `).bind(store.id).first() || {
+      cash_on_delivery_enabled:1,shamcash_enabled:0,
+      shamcash_recipient:null,shamcash_instructions:null
+    };
+
     return json({
       status:"ok",
       store,
+      order_settings:orderSettings,
       categories:categoriesResult.results || [],
       products:products.map(product => ({
         ...product,
