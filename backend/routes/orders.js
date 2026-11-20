@@ -62,9 +62,9 @@ async function createPublicOrder(request,env,slug){
   const b=parsed.body;
   const name=typeof b.customer_name==="string"?b.customer_name.trim():"";
   const phone=typeof b.customer_phone==="string"?b.customer_phone.trim():"";
-  const email=b.customer_email==null||b.customer_email===""?null:String(b.customer_email).trim();
-  const address=b.shipping_address==null||b.shipping_address===""?null:String(b.shipping_address).trim();
-  const notes=b.customer_notes==null||b.customer_notes===""?null:String(b.customer_notes).trim();
+  const email=b.customer_email==null||b.customer_email===""?null:typeof b.customer_email==="string"?b.customer_email.trim():undefined;
+  const address=b.shipping_address==null||b.shipping_address===""?null:typeof b.shipping_address==="string"?b.shipping_address.trim():undefined;
+  const notes=b.customer_notes==null||b.customer_notes===""?null:typeof b.customer_notes==="string"?b.customer_notes.trim():undefined;
   const method=b.payment_method;
   if(!validText(name,2,120)||!validText(phone,6,30)||
     (email!==null&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))||
@@ -148,6 +148,7 @@ async function createPublicOrder(request,env,slug){
   }catch(error){
     const message=String(error?.message||"");
     if(/stock|variant/i.test(message))return json({error:"Stock changed while placing the order. Please refresh your cart and try again."},409);
+    if(/unique|transaction_reference/i.test(message))return json({error:"This Sham Cash transaction number was already used for this store."},409);
     return json({error:"Unable to place order"},409);
   }
 }
