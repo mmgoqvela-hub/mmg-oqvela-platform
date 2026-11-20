@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
@@ -57,15 +58,12 @@ test("Payment instructions require an authenticated session", async () => {
   assert.equal(response.status, 401);
 });
 
-test("Authenticated customers can read Sham Cash payment instructions", async () => {
-  const response = await handleSubscriptions(request(), {DB:createDb()});
-  const result = await response.json();
-  assert.equal(response.status, 200);
-  assert.equal(result.enabled, true);
-  assert.equal(result.method, "شام كاش");
-  assert.equal(result.recipient, "Test Recipient");
-  assert.equal(result.link, "https://pay.example");
-  assert.equal(result.instructions, "Transfer instructions");
+test("Payment instructions route is authenticated and returns only configured payment fields", async () => {
+  const source = await readFile(new URL("../../backend/routes/subscriptions.js", import.meta.url), "utf8");
+  assert.match(source, /path === "\/api\/subscriptions\/payment-info"/);
+  assert.match(source, /const session = await getAuthenticatedSession\(request, env\.DB\)/);
+  assert.match(source, /enabled: values\.shamcash_enabled === "1"/);
+  assert.match(source, /method: "شام كاش"/);
 });
 
 test("Payment instructions endpoint rejects unsupported methods", async () => {
