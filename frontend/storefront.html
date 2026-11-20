@@ -451,7 +451,7 @@
           const art = document.createElement("div");
           art.className = "product-art";
           art.setAttribute("aria-hidden","true");
-          const productImages = Array.isArray(product.images) ? product.images.filter(item => item && typeof item.url === "string" && item.url.startsWith("/media/")) : [];
+          const productImages = Array.isArray(product.images) ? product.images.filter(item => item && typeof item.url === "string" && (item.url.startsWith("/media/") || /^https:\/\//i.test(item.url))) : [];
           let coverImage = null;
           const productImage = productImages[0];
           if (productImage) {
@@ -643,6 +643,8 @@
           const heroImage = $("storeHeroImage");
           if (typeof customization.heroImage === "string" && /^https?:/i.test(customization.heroImage)) {
             heroImage.src = customization.heroImage;
+            heroImage.loading = "lazy";
+            heroImage.decoding = "async";
             heroImage.hidden = false;
             heroImage.addEventListener("error",() => { heroImage.hidden = true; },{once:true});
           }
