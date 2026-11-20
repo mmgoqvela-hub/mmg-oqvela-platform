@@ -201,3 +201,27 @@ test("Language switching translates dynamic text in both directions", async () =
   assert.doesNotMatch(html, /currentLanguage === "en" \? translateText\(sourceText\) : sourceText/);
   assert.match(html, /return "\\u2068" \+ formatted \+ "\\u2069"/);
 });
+
+
+test("Platform footer exposes company, support, advertising and service request entry points", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  for (const label of ["من نحن","تواصل معنا","مركز الدعم","طلب إنشاء متجر","طلب تصميم موقع","طلب إعلان على مواقعنا"]) {
+    assert.ok(html.includes(label), "Missing footer entry: " + label);
+  }
+  assert.match(html, /id="publicServiceRequestForm"/);
+  assert.match(html, /id="serviceRequestModal"/);
+  assert.match(html, /id="aboutModal"/);
+});
+
+test("Admin dashboard includes service request review and update UI", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /id="platformServiceRequests"/);
+  assert.match(html, /api\/admin\/service-requests/);
+  assert.match(html, /api\/service-requests/);
+});
+
+test("Language switching translates original input attributes in both directions", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /const value = translateText\(originals\[attr\]\)/);
+  assert.doesNotMatch(html, /currentLanguage === "en" \? translateText\(originals\[attr\]\) : originals\[attr\]/);
+});
