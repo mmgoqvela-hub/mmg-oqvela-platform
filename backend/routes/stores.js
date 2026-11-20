@@ -187,8 +187,14 @@ export async function handleStores(request, env) {
       for (const key of allowedKeys) if (Object.prototype.hasOwnProperty.call(value, key)) customization[key] = value[key];
       customizationJson = JSON.stringify(customization);
       if (customizationJson.length > 15000) return json({ error: "Store customization is too large" }, 413);
-      if (customization.colors && (typeof customization.colors !== "object" || Array.isArray(customization.colors) || Object.values(customization.colors).some(v => typeof v !== "string" || v.length > 40))) return json({ error: "Invalid theme colors" }, 400);
+      if (customization.colors && (typeof customization.colors !== "object" || Array.isArray(customization.colors) || Object.values(customization.colors).some(v => typeof v !== "string" || !/^#[0-9a-f]{3,8}$/i.test(v)))) return json({ error: "Invalid theme colors" }, 400);
       if (customization.texts && (typeof customization.texts !== "object" || Array.isArray(customization.texts) || Object.values(customization.texts).some(v => typeof v !== "string" || v.length > 500))) return json({ error: "Invalid store texts" }, 400);
+      if (customization.fonts && (typeof customization.fonts !== "object" || Array.isArray(customization.fonts) || Object.values(customization.fonts).some(v => typeof v !== "string" || v.length > 40))) return json({ error: "Invalid store fonts" }, 400);
+      if (customization.sections && (typeof customization.sections !== "object" || Array.isArray(customization.sections) || Object.values(customization.sections).some(v => typeof v !== "boolean"))) return json({ error: "Invalid store sections" }, 400);
+      for (const key of ["logo", "heroImage"]) {
+        if (customization[key] !== undefined && (typeof customization[key] !== "string" || customization[key].length > 500 || (customization[key] !== "" && !/^https?:\/\//i.test(customization[key])))) return json({ error: "Invalid store image URL" }, 400);
+      }
+      if (customization.announcement !== undefined && (typeof customization.announcement !== "string" || customization.announcement.length > 180)) return json({ error: "Invalid store announcement" }, 400);
     }
     if (
       name.length < 2 ||
