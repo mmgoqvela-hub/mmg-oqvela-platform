@@ -7,7 +7,8 @@ const SETTINGS_KEYS = [
   "shamcash_instructions",
   "shamcash_enabled",
   "platform_footer_ar",
-  "platform_footer_en"
+  "platform_footer_en",
+  "platform_support_whatsapp"
 ];
 
 function json(data, status = 200) {
@@ -54,7 +55,8 @@ async function updateSettings(request, db, admin) {
     shamcash_instructions,
     shamcash_enabled,
     platform_footer_ar = "© 2026 MMG OQVELA — جميع الحقوق محفوظة",
-    platform_footer_en = "© 2026 MMG OQVELA — All rights reserved"
+    platform_footer_en = "© 2026 MMG OQVELA — All rights reserved",
+    platform_support_whatsapp = ""
   } = body || {};
 
   if (
@@ -66,7 +68,9 @@ async function updateSettings(request, db, admin) {
     shamcash_instructions.length > 5000 ||
     typeof shamcash_enabled !== "boolean" ||
     typeof platform_footer_ar !== "string" || platform_footer_ar.trim().length < 3 || platform_footer_ar.length > 500 ||
-    typeof platform_footer_en !== "string" || platform_footer_en.trim().length < 3 || platform_footer_en.length > 500
+    typeof platform_footer_en !== "string" || platform_footer_en.trim().length < 3 || platform_footer_en.length > 500 ||
+    typeof platform_support_whatsapp !== "string" || platform_support_whatsapp.length > 40 ||
+    (platform_support_whatsapp.trim() !== "" && !/^\+?[0-9\s().-]{8,24}$/.test(platform_support_whatsapp.trim()))
   ) {
     return json({ error: "Invalid settings data" }, 400);
   }
@@ -88,7 +92,8 @@ async function updateSettings(request, db, admin) {
     shamcash_instructions: shamcash_instructions.trim(),
     shamcash_enabled: shamcash_enabled ? "1" : "0",
     platform_footer_ar: platform_footer_ar.trim(),
-    platform_footer_en: platform_footer_en.trim()
+    platform_footer_en: platform_footer_en.trim(),
+    platform_support_whatsapp: platform_support_whatsapp.replace(/\D/g, "")
   };
 
   const statements = SETTINGS_KEYS.map(key =>
