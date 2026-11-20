@@ -550,6 +550,7 @@ footer{
     "مرحباً، ":"Hello, "
   };
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
+  let authenticated = false;
   const englishMessagesToArabic = {
     "Request body is too large":"حجم بيانات الطلب أكبر من المسموح.",
     "Content-Type must be application/json":"نوع محتوى الطلب غير صالح.",
@@ -711,10 +712,22 @@ footer{
   const languageObserver = new MutationObserver(() => applyLanguage());
   languageObserver.observe(document.body, {childList:true,subtree:true,characterData:true});
   document.addEventListener("DOMContentLoaded", applyLanguage);
-  document.getElementById("languageToggle")?.addEventListener("click", () => {
+  document.getElementById("languageToggle")?.addEventListener("click", async () => {
     currentLanguage = currentLanguage === "ar" ? "en" : "ar";
     localStorage.setItem("mmg_language", currentLanguage);
+    localStorage.setItem("mmg_language_user_selected", "1");
     applyLanguage();
+    if (authenticated) {
+      try {
+        await api("/api/auth/preferences", {
+          method: "PUT",
+          body: JSON.stringify({ language: currentLanguage })
+        });
+        localStorage.removeItem("mmg_language_user_selected");
+      } catch (error) {
+        showMessage(error.message, "error");
+      }
+    }
   });
   applyLanguage();
 
@@ -1409,9 +1422,27 @@ footer{
   async function checkSession() {
     try {
       const data = await api("/api/auth/me");
+      authenticated = true;
+      const savedLanguage = data.user?.preferredLanguage === "en" ? "en" : "ar";
+      if (localStorage.getItem("mmg_language_user_selected") === "1") {
+        try {
+          await api("/api/auth/preferences", {
+            method: "PUT",
+            body: JSON.stringify({ language: currentLanguage })
+          });
+          localStorage.removeItem("mmg_language_user_selected");
+        } catch {
+          // Keep the local selection and retry syncing on a later authenticated visit.
+        }
+      } else {
+        currentLanguage = savedLanguage;
+        localStorage.setItem("mmg_language", currentLanguage);
+      }
+      applyLanguage();
       renderDashboard(data);
       await loadAdminPanel();
     } catch {
+      authenticated = false;
       $("landing").classList.remove("hidden");
       $("dashboard").classList.add("hidden");
     }
