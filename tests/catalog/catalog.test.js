@@ -44,6 +44,8 @@ function createDb(options = {}) {
             },
             async all() {
               calls.push({sql, values});
+              if (sql.includes("FROM product_images")) return {results: options.images || []};
+              if (sql.includes("FROM product_variants")) return {results: options.variants || options.rows || []};
               return {results: options.rows || []};
             },
             async run() {
@@ -375,6 +377,24 @@ test("Catalog readers can load product details and tenant-scoped variants",async
   assert.equal(result.product.id,"product-1");
   assert.equal(result.variants.length,1);
   assert.match(db.calls.find(call=>call.sql.includes("FROM product_variants")).sql,/product_id = \? AND store_id = \?/);
+});
+
+test("Product detail includes its image gallery in display order",async()=>{
+  const db=createDb({
+    product:{id:"product-1",store_id:"store-001",name:"Bag"},
+    variants:[{id:"variant-1",name:"Large"}],
+    images:[
+      {id:"image-main",url:"/media/store-001/main.webp",alt_text:"Front",sort_order:0},
+      {id:"image-side",url:"/media/store-001/side.webp",alt_text:"Side",sort_order:1}
+    ]
+  });
+  const response=await handleCatalog(makeRequest("products/product-1"),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.deepEqual(result.images.map(image=>image.id),["image-main","image-side"]);
+  const query=db.calls.find(call=>call.sql.includes("FROM product_images"));
+  assert.ok(query.sql.includes("product_id = ? AND store_id = ?"));
+  assert.ok(query.sql.includes("ORDER BY sort_order ASC"));
 });
 
 test("Store members without catalog.read cannot inspect product variants",async()=>{
