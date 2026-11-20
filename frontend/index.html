@@ -428,6 +428,17 @@ footer{
 
   // Central Arabic/English localization for the complete platform interface.
   const translations = {
+    "تعديل المنتج":"Edit product",
+    "حفظ التعديلات":"Save changes",
+    "إلغاء":"Cancel",
+    "رمز SKU":"SKU",
+    "سعر المقارنة":"Compare-at price",
+    "مميز في المتجر":"Featured in store",
+    "الحالة":"Status",
+    "منتج مادي":"Physical product",
+    "منتج رقمي":"Digital product",
+    "خدمة":"Service",
+    "تعذر حفظ المنتج: ":"Unable to save product: ",
     "منصة الأعمال الذكية":"Smart Business Platform",
     "إلى":"to",
     "تجربة رقمية":"a digital experience",
@@ -1627,6 +1638,160 @@ footer{
               " — " + localizeCode(product.status) +
               (product.track_inventory ? " — " + "الكمية المتوفرة: " + formatNumber(product.stock_quantity) : " — المخزون غير متاح لهذا المنتج.");
             item.append(title,details);
+            if (canManage) {
+              const editToggle = document.createElement("button");
+              editToggle.type = "button";
+              editToggle.className = "secondary";
+              editToggle.textContent = "تعديل المنتج";
+              const editPanel = document.createElement("section");
+              editPanel.className = "admin-panel";
+              editPanel.hidden = true;
+              const editForm = document.createElement("form");
+              editForm.className = "admin-form";
+              const editName = document.createElement("input");
+              editName.required = true;
+              editName.minLength = 2;
+              editName.maxLength = 160;
+              editName.value = product.name || "";
+              const editDescription = document.createElement("textarea");
+              editDescription.maxLength = 10000;
+              editDescription.value = product.description || "";
+              const editSku = document.createElement("input");
+              editSku.maxLength = 100;
+              editSku.value = product.sku || "";
+              const editType = document.createElement("select");
+              for (const [value,labelText] of [["physical","منتج مادي"],["digital","منتج رقمي"],["service","خدمة"]]) {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = labelText;
+                option.selected = (product.product_type || "physical") === value;
+                editType.append(option);
+              }
+              const editPrice = document.createElement("input");
+              editPrice.type = "number";
+              editPrice.min = "0";
+              editPrice.step = "0.01";
+              editPrice.required = true;
+              editPrice.value = product.base_price;
+              const editComparePrice = document.createElement("input");
+              editComparePrice.type = "number";
+              editComparePrice.min = "0";
+              editComparePrice.step = "0.01";
+              editComparePrice.value = product.compare_at_price ?? "";
+              const editCurrency = document.createElement("input");
+              editCurrency.maxLength = 3;
+              editCurrency.pattern = "[A-Z]{3}";
+              editCurrency.required = true;
+              editCurrency.value = product.currency || "USD";
+              const editCategory = document.createElement("select");
+              const noCategory = document.createElement("option");
+              noCategory.value = "";
+              noCategory.textContent = "بدون تصنيف";
+              editCategory.append(noCategory);
+              for (const categoryItem of categories) {
+                const option = document.createElement("option");
+                option.value = categoryItem.id;
+                option.textContent = categoryItem.name;
+                option.dataset.noTranslate = "true";
+                option.selected = product.category_id === categoryItem.id;
+                editCategory.append(option);
+              }
+              const editStatus = document.createElement("select");
+              for (const value of ["draft","active","archived"]) {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = localizeCode(value);
+                option.selected = (product.status || "draft") === value;
+                editStatus.append(option);
+              }
+              const editTracking = document.createElement("input");
+              editTracking.type = "checkbox";
+              editTracking.checked = Boolean(product.track_inventory);
+              const editFeatured = document.createElement("input");
+              editFeatured.type = "checkbox";
+              editFeatured.checked = Boolean(product.is_featured);
+              const editFields = [
+                ["اسم المنتج",editName],
+                ["وصف المنتج",editDescription],
+                ["رمز SKU",editSku],
+                ["نوع المنتج",editType],
+                ["السعر الأساسي",editPrice],
+                ["سعر المقارنة",editComparePrice],
+                ["العملة (رمز من 3 أحرف)",editCurrency],
+                ["التصنيف",editCategory],
+                ["الحالة",editStatus]
+              ];
+              for (const [labelText,control] of editFields) {
+                const field = document.createElement("div");
+                field.className = "field" + (control === editDescription ? " wide" : "");
+                const label = document.createElement("label");
+                label.textContent = labelText;
+                field.append(label,control);
+                editForm.append(field);
+              }
+              for (const [labelText,control] of [["تتبع المخزون",editTracking],["مميز في المتجر",editFeatured]]) {
+                const field = document.createElement("div");
+                field.className = "field wide";
+                const label = document.createElement("label");
+                label.className = "toggle-row";
+                label.append(control,labelText);
+                field.append(label);
+                editForm.append(field);
+              }
+              const saveEdit = document.createElement("button");
+              saveEdit.type = "submit";
+              saveEdit.className = "primary";
+              saveEdit.textContent = "حفظ التعديلات";
+              const cancelEdit = document.createElement("button");
+              cancelEdit.type = "button";
+              cancelEdit.className = "secondary";
+              cancelEdit.textContent = "إلغاء";
+              const editMessage = document.createElement("p");
+              editMessage.className = "muted";
+              editForm.append(saveEdit,cancelEdit,editMessage);
+              editForm.addEventListener("submit",async event => {
+                event.preventDefault();
+                if (!editForm.reportValidity()) return;
+                const comparePrice = editComparePrice.value.trim();
+                if (comparePrice && Number(comparePrice) < 0) {
+                  editMessage.textContent = "سعر المقارنة يجب ألا يكون سالباً.";
+                  return;
+                }
+                saveEdit.disabled = true;
+                try {
+                  await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id),{
+                    method:"PUT",
+                    body:JSON.stringify({
+                      name:editName.value.trim(),
+                      description:editDescription.value.trim(),
+                      sku:editSku.value.trim(),
+                      product_type:editType.value,
+                      base_price:Number(editPrice.value),
+                      compare_at_price:comparePrice ? Number(comparePrice) : null,
+                      currency:editCurrency.value.trim().toUpperCase(),
+                      category_id:editCategory.value || null,
+                      status:editStatus.value,
+                      track_inventory:editTracking.checked,
+                      is_featured:editFeatured.checked
+                    })
+                  });
+                  await refresh();
+                } catch(error) {
+                  editMessage.textContent = "تعذر حفظ المنتج: " + error.message;
+                  saveEdit.disabled = false;
+                }
+              });
+              cancelEdit.addEventListener("click",() => {
+                editPanel.hidden = true;
+                editToggle.textContent = "تعديل المنتج";
+              });
+              editToggle.addEventListener("click",() => {
+                editPanel.hidden = !editPanel.hidden;
+                editToggle.textContent = editPanel.hidden ? "تعديل المنتج" : "إخفاء نموذج التعديل";
+              });
+              editPanel.append(editForm);
+              item.append(editToggle,editPanel);
+            }
             if (canManage && product.status !== "archived") {
               const publish = document.createElement("button");
               publish.type = "button";
