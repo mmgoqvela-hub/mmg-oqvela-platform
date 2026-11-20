@@ -40,6 +40,14 @@
     .add-cart{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
     .add-cart:disabled{opacity:.45;cursor:not-allowed}
     .cart-note{color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}
+    .checkout-form{display:grid;gap:11px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+    .checkout-form label{display:grid;gap:6px;font-size:13px;font-weight:650}
+    .checkout-form input,.checkout-form textarea,.checkout-form select{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}
+    .checkout-form textarea{min-height:76px;resize:vertical}
+    .checkout-form button{padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+    .checkout-form button:disabled{opacity:.55;cursor:wait}
+    .checkout-result{margin-top:14px;padding:14px;border-radius:10px;background:var(--bg);line-height:1.8;overflow-wrap:anywhere}
+    .checkout-result[hidden]{display:none}
     @media(max-width:620px){.cart-row{align-items:flex-start;flex-direction:column}.cart-actions{width:100%;justify-content:flex-end}}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
     .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
@@ -123,7 +131,23 @@
         <div class="cart-head"><h2 class="section-title" id="cartHeading">سلة المشتريات</h2><span class="cart-count" id="cartCount">0</span></div>
         <div class="cart-items" id="cartItems"></div>
         <div class="cart-total"><span id="cartTotalLabel">الإجمالي</span><span id="cartTotal">—</span></div>
-        <p class="cart-note" id="cartNote">تُحفظ السلة على هذا الجهاز. إتمام الطلب سيُتاح بعد تحديد خيارات الدفع والتسليم الخاصة بالمتجر.</p>
+        <p class="cart-note" id="cartNote">اختر المنتجات ثم أتمم طلبك.</p>
+        <button class="add-cart" id="checkoutStart" type="button" hidden>إتمام الشراء</button>
+        <form class="checkout-form" id="checkoutForm" hidden>
+          <label><span id="customerNameLabel">الاسم الكامل</span><input id="customerName" name="customer_name" required minlength="2" maxlength="120" autocomplete="name"></label>
+          <label><span id="customerPhoneLabel">رقم الهاتف</span><input id="customerPhone" name="customer_phone" required minlength="6" maxlength="30" autocomplete="tel"></label>
+          <label><span id="customerEmailLabel">البريد الإلكتروني (اختياري)</span><input id="customerEmail" name="customer_email" type="email" maxlength="254" autocomplete="email"></label>
+          <label><span id="addressLabel">عنوان التسليم (اختياري)</span><textarea id="shippingAddress" name="shipping_address" maxlength="1000" autocomplete="street-address"></textarea></label>
+          <label><span id="paymentMethodLabel">طريقة الدفع</span><select id="paymentMethod" name="payment_method" required></select></label>
+          <div id="shamcashFields" hidden>
+            <p id="shamcashInstructions" class="cart-note"></p>
+            <label><span id="senderNameLabel">اسم المرسل في شام كاش</span><input id="senderName" name="sender_name" minlength="2" maxlength="120"></label>
+            <label><span id="transactionReferenceLabel">رقم عملية شام كاش</span><input id="transactionReference" name="transaction_reference" minlength="3" maxlength="120"></label>
+          </div>
+          <label><span id="customerNotesLabel">ملاحظات للمتجر (اختياري)</span><textarea id="customerNotes" name="customer_notes" maxlength="1000"></textarea></label>
+          <button id="placeOrder" type="submit">تأكيد الطلب</button>
+        </form>
+        <div class="checkout-result" id="checkoutResult" role="status" hidden></div>
       </section>
       <h2 class="section-title" id="productsHeading">المنتجات</h2>
       <div class="grid" id="products"></div>
@@ -134,8 +158,8 @@
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"تُحفظ السلة على هذا الجهاز. إتمام الطلب سيُتاح بعد تحديد خيارات الدفع والتسليم الخاصة بالمتجر.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح."},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Your cart is saved on this device. Checkout will be enabled after this store's payment and delivery options are defined.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock."}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"عنوان التسليم (اختياري)",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح."},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Delivery address (optional)",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock."}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
@@ -164,6 +188,16 @@
         $("cartHeading").textContent = t("cart");
         $("cartTotalLabel").textContent = t("total");
         $("cartNote").textContent = t("cartNote");
+        $("checkoutStart").textContent = t("checkout");
+        $("customerNameLabel").textContent = t("customerName");
+        $("customerPhoneLabel").textContent = t("customerPhone");
+        $("customerEmailLabel").textContent = t("customerEmail");
+        $("addressLabel").textContent = t("address");
+        $("paymentMethodLabel").textContent = t("paymentMethod");
+        $("senderNameLabel").textContent = t("senderName");
+        $("transactionReferenceLabel").textContent = t("transactionReference");
+        $("customerNotesLabel").textContent = t("customerNotes");
+        $("placeOrder").textContent = t("placeOrder");
         if (storeData) { renderProducts(); renderCart(); }
       }
 
@@ -198,6 +232,8 @@
         if (valid.length !== cart.length) { cart = valid; saveCart(); }
         const count = cart.reduce((sum,item) => sum + item.quantity,0);
         $("cartCount").textContent = String(count);
+        $("checkoutStart").hidden = count === 0;
+        if (count === 0) $("checkoutForm").hidden = true;
         if (!cart.length) {
           const empty = document.createElement("p");
           empty.className = "cart-note";
@@ -272,6 +308,86 @@
         else cart.push({productId:product.id,variantId:key || null,quantity});
         saveCart();
         renderCart();
+      }
+
+      function renderCheckoutMethods() {
+        const select = $("paymentMethod");
+        select.replaceChildren();
+        const settings = storeData?.order_settings || {};
+        const methods = [];
+        if (settings.cash_on_delivery_enabled) methods.push(["cash_on_delivery",t("cod")]);
+        if (settings.shamcash_enabled && settings.shamcash_recipient) methods.push(["shamcash",t("shamcash")]);
+        for (const [value,label] of methods) {
+          const option = document.createElement("option");
+          option.value = value; option.textContent = label;
+          select.append(option);
+        }
+        if (!methods.length) {
+          const option = document.createElement("option");
+          option.value = ""; option.textContent = language === "ar" ? "لا توجد طريقة دفع مفعّلة حالياً" : "No payment method is currently enabled";
+          select.append(option);
+        }
+        updateShamcashFields();
+      }
+
+      function updateShamcashFields() {
+        const isShamcash = $("paymentMethod").value === "shamcash";
+        $("shamcashFields").hidden = !isShamcash;
+        $("senderName").required = isShamcash;
+        $("transactionReference").required = isShamcash;
+        const settings = storeData?.order_settings || {};
+        $("shamcashInstructions").textContent = isShamcash
+          ? t("shamcashPay") + " " + (settings.shamcash_recipient || "") + (settings.shamcash_instructions ? " — " + settings.shamcash_instructions : "")
+          : "";
+      }
+
+      async function submitOrder(event) {
+        event.preventDefault();
+        if (!cart.length) return;
+        const button = $("placeOrder");
+        button.disabled = true;
+        button.textContent = t("placing");
+        const body = {
+          customer_name:$("customerName").value.trim(),
+          customer_phone:$("customerPhone").value.trim(),
+          customer_email:$("customerEmail").value.trim() || null,
+          shipping_address:$("shippingAddress").value.trim() || null,
+          customer_notes:$("customerNotes").value.trim() || null,
+          payment_method:$("paymentMethod").value,
+          sender_name:$("senderName").value.trim(),
+          transaction_reference:$("transactionReference").value.trim(),
+          items:cart.map(item => ({product_id:item.productId,variant_id:item.variantId,quantity:item.quantity}))
+        };
+        try {
+          const response = await fetch("/api/public/stores/" + encodeURIComponent(slug) + "/orders", {
+            method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(body)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || t("orderFailed"));
+          cart = [];
+          saveCart();
+          renderCart();
+          $("checkoutForm").hidden = true;
+          const result = $("checkoutResult");
+          result.replaceChildren();
+          const heading = document.createElement("strong");
+          heading.textContent = t("orderSuccess") + " — " + t("orderNumber") + ": " + data.order.order_number;
+          const status = document.createElement("p");
+          status.textContent = t("orderPending");
+          result.append(heading,status);
+          if (data.order.shamcash) {
+            const pay = document.createElement("p");
+            pay.textContent = t("shamcashPay") + " " + data.order.shamcash.recipient +
+              (data.order.shamcash.instructions ? " — " + data.order.shamcash.instructions : "");
+            result.append(pay);
+          }
+          result.hidden = false;
+        } catch(error) {
+          alert(error.message || t("orderFailed"));
+        } finally {
+          button.disabled = false;
+          button.textContent = t("placeOrder");
+        }
       }
 
       function renderProducts() {
@@ -408,6 +524,7 @@
             return;
           }
           storeData = data;
+          renderCheckoutMethods();
           document.title = data.store.name + " | MMG OQVELA";
           document.body.dataset.template = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(data.store.template_key) ? data.store.template_key : "modern";
           $("businessType").textContent = data.store.business_type || "";
@@ -430,6 +547,9 @@
 
       $("languageToggle").addEventListener("click",() => setLanguage(language === "ar" ? "en" : "ar"));
       $("search").addEventListener("input",renderProducts);
+      $("checkoutStart").addEventListener("click",() => { renderCheckoutMethods(); $("checkoutForm").hidden = false; $("checkoutResult").hidden = true; $("customerName").focus(); });
+      $("paymentMethod").addEventListener("change",updateShamcashFields);
+      $("checkoutForm").addEventListener("submit",submitOrder);
       setLanguage(language);
       $("storeName").textContent = t("loading");
       load();
