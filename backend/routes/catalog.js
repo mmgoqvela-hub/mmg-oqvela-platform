@@ -130,6 +130,23 @@ async function handleCategories(request, env, storeId, userId, access, categoryI
   if (!existing) return json({ error: "Category not found" }, 404);
 
   if (method === "DELETE") {
+    const [productUsage, childUsage] = await Promise.all([
+      env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM products WHERE category_id = ? AND store_id = ?"
+      ).bind(categoryId, storeId).first(),
+      env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM categories WHERE parent_id = ? AND store_id = ?"
+      ).bind(categoryId, storeId).first()
+    ]);
+    const linkedProducts = Number(productUsage?.total || 0);
+    const childCategories = Number(childUsage?.total || 0);
+    if (linkedProducts || childCategories) {
+      return json({
+        error: "Category is in use. Move its products and child categories before deleting it.",
+        linked_products: linkedProducts,
+        child_categories: childCategories
+      }, 409);
+    }
     await env.DB.prepare("DELETE FROM categories WHERE id = ? AND store_id = ?")
       .bind(categoryId, storeId).run();
     return json({ status: "ok" });
