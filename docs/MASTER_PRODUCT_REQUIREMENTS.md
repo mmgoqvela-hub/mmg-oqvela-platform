@@ -132,13 +132,14 @@ Other detailed business modules (such as order processing, customer management, 
 - Central trial settings.
 - Platform-admin activity-log API and visible admin log.
 - Catalog/inventory tables and tenant-integrity triggers.
+- Tenant-scoped catalog APIs for category listing/creation/update/deletion, product listing/creation/update/archive, and inventory movement history/stock adjustments. Product creation records initial stock; stock changes are guarded against negative quantities and concurrent updates. Automated API tests cover tenant access, permissions and inventory integrity.
 - Role/permission tables and some cross-store integrity triggers.
 
 ### Partially implemented / requires audit or completion
 - Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migration 0013 has not yet been applied to production, and full browser/device verification remains pending.
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff, custom roles and permission-management screens/APIs.
-- Product/category/variant/image/inventory management end-to-end.
+- Product/category/variant/image/inventory management end-to-end: category and product APIs plus stock movements now exist, but there is no finished management UI; variant CRUD and R2-backed product image upload/management remain incomplete.
 - Subscription lifecycle notifications and renewal rules.
 - Platform-wide announcements/ads and mandatory footer.
 - WhatsApp contact configuration/links.
@@ -161,7 +162,7 @@ Do not represent these as finished until implemented and tested.
 2. Finish security and tenant-isolation audit for every existing API; add negative tests.
 3. Finish account/store lifecycle and reconcile store-creation authority.
 4. Complete roles, staff membership and server-enforced permissions.
-5. Complete catalog, variants, media and inventory workflows using the existing schema.
+5. Complete catalog management UI, variant CRUD, media upload/storage and inventory workflows using the existing schema.
 6. Build storefront routing and public store presentation at `/s/{slug}`.
 7. Specify and implement customer-facing order/business workflows only against approved requirements.
 8. Complete central administration, central ads/announcements, mandatory footer and WhatsApp contact.
