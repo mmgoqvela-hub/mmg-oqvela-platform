@@ -326,6 +326,19 @@ footer{
     <button class="secondary" id="logoutButton" type="button">تسجيل الخروج</button>
   </div>
 
+  <section class="admin-panel" id="notificationPanel" aria-labelledby="notificationHeading">
+    <div class="dashboard-top">
+      <div><h3 id="notificationHeading">الإشعارات</h3><p class="muted" id="notificationSummary">رسائلك وتنبيهات حسابك</p></div>
+      <span class="notification-count" id="notificationUnreadCount" aria-label="Unread notifications">0</span>
+    </div>
+    <div class="notification-toolbar">
+      <button class="secondary" id="refreshNotifications" type="button">تحديث الإشعارات</button>
+      <button class="secondary" id="readAllNotifications" type="button">تحديد الكل كمقروء</button>
+    </div>
+    <div class="notification-list" id="notificationList" aria-live="polite"></div>
+    <p class="muted" id="notificationMessage" role="status"></p>
+  </section>
+
   <div class="account-grid" id="accountGrid"></div>
 
   <section class="admin-panel hidden" id="adminPanel">
@@ -428,6 +441,16 @@ footer{
 
   // Central Arabic/English localization for the complete platform interface.
   const translations = {
+    "الإشعارات":"Notifications",
+    "رسائلك وتنبيهات حسابك":"Your messages and account alerts",
+    "تحديث الإشعارات":"Refresh notifications",
+    "تحديد الكل كمقروء":"Mark all as read",
+    "لا توجد إشعارات حالياً.":"There are no notifications yet.",
+    "مقروء":"Read",
+    "تحديد كمقروء":"Mark as read",
+    "تعذر تحميل الإشعارات.":"Unable to load notifications.",
+    "تعذر تحديث حالة الإشعار.":"Unable to update notification status.",
+    "الإشعارات غير المقروءة":"Unread notifications",
     "تعديل التصنيف":"Edit category",
     "حفظ التصنيف":"Save category",
     "حذف التصنيف":"Delete category",
@@ -1093,6 +1116,92 @@ footer{
 
     return data;
   }
+
+  function notificationText(value) {
+    const text = String(value || "");
+    return text;
+  }
+
+  function renderNotifications(data) {
+    const list = $("notificationList");
+    list.replaceChildren();
+    const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+    $("notificationUnreadCount").textContent = formatNumber(data.unread_count || 0);
+    $("notificationUnreadCount").setAttribute("aria-label",
+      currentLanguage === "ar" ? "الإشعارات غير المقروءة" : "Unread notifications");
+    $("notificationSummary").textContent = currentLanguage === "ar"
+      ? "لديك " + formatNumber(data.unread_count || 0) + " إشعار غير مقروء"
+      : formatNumber(data.unread_count || 0) + " unread notification(s)";
+    if (!notifications.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "لا توجد إشعارات حالياً.";
+      list.append(empty);
+      return;
+    }
+    for (const item of notifications) {
+      const card = document.createElement("article");
+      card.className = "notification-item" + (item.read_at ? "" : " unread");
+      const content = document.createElement("div");
+      const title = document.createElement("h4");
+      title.textContent = notificationText(item.title);
+      const message = document.createElement("p");
+      message.textContent = notificationText(item.message);
+      const time = document.createElement("time");
+      time.dateTime = item.created_at || "";
+      time.textContent = formatDateTime(item.created_at);
+      content.append(title, message, time);
+      card.append(content);
+      if (!item.read_at) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+        button.textContent = "تحديد كمقروء";
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          try {
+            await api("/api/notifications/" + encodeURIComponent(item.id) + "/read", {method:"POST"});
+            await loadNotifications();
+          } catch (error) {
+            $("notificationMessage").textContent = error.message;
+            button.disabled = false;
+          }
+        });
+        card.append(button);
+      } else {
+        const read = document.createElement("span");
+        read.className = "muted";
+        read.textContent = "مقروء";
+        card.append(read);
+      }
+      list.append(card);
+    }
+  }
+
+  async function loadNotifications() {
+    try {
+      const data = await api("/api/notifications?limit=30");
+      renderNotifications(data);
+      $("notificationMessage").textContent = "";
+    } catch (error) {
+      $("notificationList").replaceChildren();
+      $("notificationMessage").textContent = error.message || "تعذر تحميل الإشعارات.";
+    }
+  }
+
+  $("refreshNotifications").addEventListener("click", loadNotifications);
+  $("readAllNotifications").addEventListener("click", async () => {
+    const button = $("readAllNotifications");
+    button.disabled = true;
+    try {
+      await api("/api/notifications/read-all", {method:"POST"});
+      await loadNotifications();
+    } catch (error) {
+      $("notificationMessage").textContent = error.message || "تعذر تحديث حالة الإشعار.";
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   function renderDashboard(data) {
     $("landing").classList.add("hidden");
@@ -3267,7 +3376,7 @@ footer{
       }
       applyLanguage();
       renderDashboard(data);
-      await loadAdminPanel();
+      await Promise.all([loadNotifications(), loadAdminPanel()]);
     } catch {
       authenticated = false;
       $("landing").classList.remove("hidden");
@@ -3316,6 +3425,8 @@ footer{
       await api("/api/auth/logout", {method: "POST"});
       $("dashboard").classList.add("hidden");
       $("adminPanel").classList.add("hidden");
+      $("notificationList").replaceChildren();
+      $("notificationUnreadCount").textContent = "0";
       $("landing").classList.remove("hidden");
       $("email").value = "";
       $("password").value = "";
