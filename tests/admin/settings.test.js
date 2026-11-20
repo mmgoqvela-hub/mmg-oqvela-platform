@@ -45,10 +45,12 @@ function createDb(options = {}) {
                 return options.session ?? null;
               }
 
-              if (sql.includes("FROM platform_admins")) {
-                return options.admin ?? null;
-              }
-
+              if (sql.includes("COUNT(*) AS total FROM platform_admins")) return {total:options.superAdminCount ?? 1};
+              if (sql.includes("SELECT id FROM platform_admins")) return options.targetAdmin ?? null;
+              if (sql.includes("SELECT admin_level FROM platform_admins")) return options.existingPlatformAdmin ?? null;
+              if (sql.includes("FROM platform_admins")) return options.admin ?? null;
+              if (sql.includes("FROM users WHERE email")) return options.user ?? {id:"target-user",status:"active"};
+              if (sql.includes("FROM users WHERE id")) return options.targetUser ?? {id:"target-user",status:"active"};
               return null;
             },
 
@@ -62,7 +64,15 @@ function createDb(options = {}) {
               return {
                 results: sql.includes("FROM admin_activity_logs")
                   ? (options.activityLogs ?? [])
-                  : (options.settings ?? DEFAULT_SETTINGS)
+                  : sql.includes("FROM users u")
+                    ? (options.users ?? [])
+                    : sql.includes("FROM accounts a")
+                      ? (options.accounts ?? [])
+                      : sql.includes("FROM stores s")
+                        ? (options.stores ?? [])
+                        : sql.includes("FROM platform_admins pa")
+                          ? (options.platformAdmins ?? [])
+                          : (options.settings ?? DEFAULT_SETTINGS)
               };
             }
           };
@@ -76,7 +86,7 @@ function createDb(options = {}) {
         values: item.values
       })));
 
-      return [];
+      return statements.map(() => ({meta:{changes:1}}));
     }
   };
 
@@ -103,7 +113,7 @@ function makeRequest(method = "GET", body = undefined, options = {}) {
   });
 }
 
-const SUPER_ADMIN = {
+function makeAdminPathRequest(path,method="GET",body=undefined) {\n  const headers={Origin:"https://example.com",Cookie:"mmg_session="+TOKEN};\n  if(body!==undefined) headers["Content-Type"]="application/json";\n  return new Request("https://example.com"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});\n}\n\nconst SUPER_ADMIN = {
   user_id: USER_ID,
   admin_level: "super_admin",
   status: "active"
@@ -306,3 +316,58 @@ test("Super admins can read a bounded activity log", async () => {
   assert.ok(query);
   assert.equal(query.values[0], 100);
 });
+
+test("Super admins can read platform overview and user records",async()=>{
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN,users:[{id:"user-2",email:"user@example.test",status:"active"}]});
+  const overview=await handleAdmin(makeAdminPathRequest("/api/admin/overview"),{DB:db});
+  const overviewData=await overview.json();
+  assert.equal(overview.status,200);
+  assert.equal(overviewData.status,"ok");
+  const users=await handleAdmin(makeAdminPathRequest("/api/admin/users"),{DB:db});
+  const usersData=await users.json();
+  assert.equal(users.status,200);
+  assert.equal(usersData.users.length,1);
+});
+
+test("Normal platform admins cannot access central user management",async()=>{
+  const db=createDb({session:SESSION,admin:NORMAL_ADMIN});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/users"),{DB:db});
+  assert.equal(response.status,403);
+});
+
+test("Super admins can suspend a store with an audit entry",async()=>{
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/stores/store-1","PUT",{status:"suspended"}),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.status,"ok");
+  assert.ok(db.calls.some(call=>call.sql.includes("UPDATE stores SET status")));
+  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO admin_activity_logs")));
+});
+
+test("The last active super administrator cannot be suspended",async()=>{
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN,targetAdmin:{id:USER_ID},superAdminCount:1});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/users/"+USER_ID,"PUT",{status:"suspended"}),{DB:db});
+  assert.equal(response.status,409);
+  assert.equal(db.calls.some(call=>call.sql.includes("UPDATE users SET status")),false);
+});
+
+test("Super admins can add an existing active user as support",async()=>{
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN,user:{id:"support-user",status:"active"}});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/platform-admins","POST",{
+    email:"support@example.test",admin_level:"support"
+  }),{DB:db});
+  assert.equal(response.status,201);
+  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO platform_admins")));
+});
+
+test("Super-admin ownership can be transferred without leaving two active super admins",async()=>{
+  const db=createDb({session:SESSION,admin:SUPER_ADMIN,targetUser:{id:"new-super-admin",status:"active"},superAdminCount:1});
+  const response=await handleAdmin(makeAdminPathRequest("/api/admin/transfer-super-admin","POST",{user_id:"new-super-admin"}),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.status,"ok");
+  assert.ok(db.calls.some(call=>call.sql.includes("admin_level='admin'")));
+  assert.ok(db.calls.some(call=>call.sql.includes("admin_level='super_admin'")));
+});
+
