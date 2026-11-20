@@ -119,6 +119,7 @@
     <section class="hero">
       <div class="eyebrow" id="businessType"></div>
       <img id="storeLogo" alt="Store logo" hidden style="max-width:150px;max-height:90px;object-fit:contain;margin:0 0 14px">
+      <img id="storeHeroImage" alt="" hidden style="display:block;width:100%;max-height:300px;object-fit:cover;border-radius:18px;margin:0 0 22px">
       <h1 id="storeName">جارٍ تحميل المتجر...</h1>
       <p class="description" id="storeDescription"></p>
       <a class="whatsapp" id="whatsappContact" hidden target="_blank" rel="noopener noreferrer"></a>
@@ -581,6 +582,14 @@
             $("storeAnnouncement").textContent = customization.announcement.trim();
             $("storeAnnouncement").hidden = false;
           }
+          const heroImage = $("storeHeroImage");
+          if (typeof customization.heroImage === "string" && /^https?:/i.test(customization.heroImage)) {
+            heroImage.src = customization.heroImage;
+            heroImage.hidden = false;
+            heroImage.addEventListener("error",() => { heroImage.hidden = true; },{once:true});
+          }
+          const heroAlignment = customization.layout?.heroAlignment === "center" ? "center" : "right";
+          document.querySelector(".hero").style.textAlign = heroAlignment;
           const sections = customization.sections || {};
           $("storeProductsGridSection").hidden = sections.products === false;
           $("storeCartSection").hidden = sections.cart === false;
