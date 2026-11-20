@@ -206,12 +206,13 @@
           $("cartTotal").textContent = "—";
           return;
         }
-        let total = 0;
+        const totals = new Map();
         for (const item of cart) {
           const product = findCartProduct(item.productId);
           const variant = product?.variants?.find(option => option.id === item.variantId);
           const price = cartLinePrice(item);
-          total += price * item.quantity;
+          const currency = product.currency || "USD";
+          totals.set(currency, (totals.get(currency) || 0) + price * item.quantity);
           const row = document.createElement("div");
           row.className = "cart-row";
           const info = document.createElement("div");
@@ -242,8 +243,7 @@
           row.append(info,actions);
           container.append(row);
         }
-        const currency = findCartProduct(cart[0].productId)?.currency || "USD";
-        $("cartTotal").textContent = money(total,currency);
+        $("cartTotal").textContent = [...totals.entries()].map(([currency,total]) => money(total,currency)).join(" + ");
       }
 
       function changeCartQuantity(item,delta) {
