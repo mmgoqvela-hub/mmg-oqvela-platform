@@ -440,6 +440,7 @@ async function currentUser(request, env) {
           s.slug,
           s.business_type,
           s.template_key,
+          s.whatsapp_phone,
           s.status,
           COALESCE(GROUP_CONCAT(DISTINCT p.code), '') AS permissions
         FROM stores s
