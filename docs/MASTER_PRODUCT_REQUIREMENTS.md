@@ -212,5 +212,5 @@ A feature is complete only when:
 ### Order and inventory lifecycle hardening (2026-11-20)
 - Added migration `0022_order_lifecycle_guards.sql` with database-level guards for allowed order-status transitions and payment-status transitions.
 - D1 now independently prevents completing unpaid orders, progressing Sham Cash orders before payment approval, rejecting non-Sham-Cash payments, refunding a payment unless the order is cancelled, and reopening terminal/cancelled states through an invalid transition.
-- Existing stock reservation and cancellation-restoration triggers remain transactional; cancellation can restore reserved stock only on the first transition into `cancelled`.
+- Existing stock reservation and cancellation-restoration triggers remain transactional; cancellation now restores quantities from the actual `sale` reservation movements rather than the product's current tracking flag, so a fully reserved item is restored even if tracking was disabled after reservation. The terminal-state guard prevents a second cancellation/restoration.
 - Added regression assertions in `tests/orders/orders.test.js` for the new lifecycle guards. Migration is in the repository only; it has not been applied to production. Full D1/browser concurrency verification remains pending.
