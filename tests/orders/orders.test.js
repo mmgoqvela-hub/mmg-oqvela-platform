@@ -104,11 +104,12 @@ test("Public checkout creates a COD order using server-side prices and atomic D1
  assert.equal(result.order.payment_method,"cash_on_delivery");
  assert.equal(result.order.payment_status,"unpaid");
  assert.equal(result.order.total,25);
- assert.equal(database.calls.filter(call=>call.sql.includes("INSERT INTO store_orders")||call.sql.includes("INSERT INTO store_order_items")).length,2);
- assert.match(database.calls[0].sql,/INSERT INTO store_orders/);
- assert.match(database.calls[1].sql,/INSERT INTO store_order_items/);
- assert.equal(database.calls[1].values[8],2);
- assert.equal(database.calls[1].values[9],12.5);
+ const orderCalls=database.calls.filter(call=>call.sql.includes("INSERT INTO store_orders")||call.sql.includes("INSERT INTO store_order_items"));
+ assert.equal(orderCalls.length,2);
+ assert.match(orderCalls[0].sql,/INSERT INTO store_orders/);
+ assert.match(orderCalls[1].sql,/INSERT INTO store_order_items/);
+ assert.equal(orderCalls[1].values[8],2);
+ assert.equal(orderCalls[1].values[9],12.5);
 });
 
 test("Public checkout rate-limits each store and hashed client address",async()=>{
