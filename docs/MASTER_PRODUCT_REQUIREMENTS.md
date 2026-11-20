@@ -135,12 +135,12 @@ Other detailed business modules (such as order processing, customer management, 
 - Tenant-scoped catalog APIs for category listing/creation/update/deletion, product listing/creation/update/archive, product variant creation/update/deactivation, and inventory movement history/stock adjustments. Product and variant creation record initial stock; stock changes are guarded against negative quantities and concurrent updates. Automated API tests cover tenant access, permissions and inventory integrity.
 - Per-store storefront template selection persisted in D1 with five approved presets: modern, classic, minimal, boutique and tech. Owners/admins can choose a template and open the public store preview without changing catalog data.
 - Public storefront route `/s/{slug}` with a tenant-safe public API, subscription-active visibility check, category filters, product search, product/variant display, responsive layouts, Arabic/English and RTL/LTR.
-- Role/permission tables and some cross-store integrity triggers.
+- Role/permission tables, seeded catalog/inventory/team permission codes, store team API and bilingual team-management UI. Store owners/admins can add existing active platform accounts as staff, assign built-in or custom roles, update/suspend access, and create/edit/delete custom roles. Permissions are checked server-side for catalog and inventory endpoints; no employee-count cap is imposed.
 
 ### Partially implemented / requires audit or completion
 - Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migrations 0013 (language preference) and 0014 (storefront templates) have not yet been applied to production, and full browser/device verification remains pending.
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
-- Store staff, custom roles and permission-management screens/APIs.
+- Store staff and custom role management are now implemented for existing active platform accounts. Email-based invitation delivery, invitation acceptance, and adding users who do not yet have platform accounts remain incomplete; no email provider has been configured.
 - Product/category/variant/image/inventory management end-to-end: category, product and variant APIs plus stock movements and initial catalog UI now exist; richer variant editing, R2-backed product image upload/management and fuller inventory tools remain incomplete.
 - Storefronts: five selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
 - Subscription lifecycle notifications and renewal rules.
@@ -164,7 +164,7 @@ Do not represent these as finished until implemented and tested.
 1. Complete bilingual foundation with the per-user preference migration applied safely, then verify every visible/dynamic string, errors, RTL/LTR, persistence across devices and locale formatting.
 2. Finish security and tenant-isolation audit for every existing API; add negative tests.
 3. Finish account/store lifecycle and reconcile store-creation authority.
-4. Complete roles, staff membership and server-enforced permissions.
+4. Complete invitation/onboarding delivery and audit coverage for staff membership; the existing team and custom-role API/UI and catalog/inventory permission enforcement are implemented.
 5. Complete catalog management UI, variant CRUD, media upload/storage and inventory workflows using the existing schema.
 6. Finish storefront template previews, accessibility, product media, and public-store verification at `/s/{slug}`.
 7. Specify and implement customer-facing cart, checkout and order/business workflows only against approved requirements.
