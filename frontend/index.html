@@ -346,6 +346,16 @@ footer{
         <div class="message admin-status" id="trialAdminMessage" role="status"></div>
       </div>
     </form>
+    <hr><h3>طلبات الاشتراك المدفوعة</h3><div id="adminSubscriptionRequests" class="account-grid"></div>
+    <hr><h3>إنشاء باقة اشتراك</h3>
+    <form id="subscriptionPlanForm" class="admin-form">
+      <div class="field"><label for="planName">اسم الباقة</label><input id="planName" required minlength="2" maxlength="80"></div>
+      <div class="field"><label for="planPrice">السعر</label><input id="planPrice" type="number" min="0.01" step="0.01" required></div>
+      <div class="field"><label for="planCurrency">العملة</label><input id="planCurrency" value="USD" pattern="[A-Z]{3}" maxlength="3" required></div>
+      <div class="field"><label for="planDuration">المدة بالأيام</label><input id="planDuration" type="number" min="1" max="3650" value="30" required></div>
+      <div class="field wide"><label for="planDescription">وصف الباقة</label><textarea id="planDescription" maxlength="500"></textarea></div>
+      <div class="field wide"><button class="primary" id="createPlanButton" type="submit">إنشاء الباقة</button><div class="message admin-status" id="planMessage" role="status"></div></div>
+    </form>
   </section>
 </section>
 </main>
@@ -468,6 +478,7 @@ footer{
         card.append(line);
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
+          renderSubscriptionPanel(store, card);
         }
       }
 
@@ -580,6 +591,191 @@ footer{
     card.append(toggle, form);
   }
 
+
+  async function renderSubscriptionPanel(store, card) {
+    const panel = document.createElement("section");
+    panel.className = "admin-panel";
+    const heading = document.createElement("h3");
+    heading.textContent = "اشتراك المتجر";
+    const status = document.createElement("p");
+    status.className = "muted";
+    status.textContent = "جارٍ تحميل بيانات الاشتراك...";
+    panel.append(heading, status);
+    card.append(panel);
+    try {
+      const results = await Promise.all([
+        api("/api/subscriptions/payment-info"),
+        api("/api/subscriptions/plans"),
+        api("/api/subscriptions/store/" + encodeURIComponent(store.id))
+      ]);
+      const paymentInfo = results[0], plansData = results[1], subscriptionData = results[2];
+      const subscriptions = subscriptionData.subscriptions || [];
+      for (const sub of subscriptions.slice(0, 3)) {
+        const line = document.createElement("p");
+        line.className = "muted";
+        line.textContent = "الباقة: " + sub.plan_name + " — الاشتراك: " + sub.subscription_status + " — الدفع: " + (sub.payment_status || "—");
+        panel.append(line);
+      }
+      if (subscriptions.some(x => ["pending","active","suspended"].includes(x.subscription_status))) {
+        status.textContent = "يوجد اشتراك قيد المراجعة أو نشط أو معلّق؛ لا يمكن إنشاء طلب جديد.";
+        return;
+      }
+      if (!paymentInfo.enabled) {
+        status.textContent = "طلبات الاشتراك غير متاحة حالياً.";
+        return;
+      }
+      status.textContent = "حوّل قيمة الباقة عبر شام كاش ثم أدخل رقم العملية.";
+      const details = document.createElement("div");
+      details.className = "muted";
+      const recipient = document.createElement("p");
+      recipient.textContent = "المستفيد: " + (paymentInfo.recipient || "غير محدد");
+      details.append(recipient);
+      if (paymentInfo.link) {
+        const link = document.createElement("a");
+        link.href = paymentInfo.link;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "فتح رابط شام كاش";
+        details.append(link);
+      }
+      if (paymentInfo.instructions) {
+        const p = document.createElement("p");
+        p.textContent = paymentInfo.instructions;
+        details.append(p);
+      }
+      panel.append(details);
+      const form = document.createElement("form");
+      form.className = "admin-form";
+      const select = document.createElement("select");
+      select.required = true;
+      select.style.cssText = "width:100%;padding:12px;background:#0c1728;color:white;border:1px solid var(--border);border-radius:9px";
+      for (const plan of plansData.plans || []) {
+        const option = document.createElement("option");
+        option.value = plan.id;
+        option.textContent = plan.name + " — " + plan.price + " " + plan.currency + " / " + plan.duration_days + " يوم";
+        select.append(option);
+      }
+      const selectLabel = document.createElement("label");
+      selectLabel.textContent = "الباقة";
+      const selectWrap = document.createElement("div");
+      selectWrap.className = "field wide";
+      selectWrap.append(selectLabel, select);
+      const reference = document.createElement("input");
+      reference.required = true;
+      reference.minLength = 3;
+      reference.maxLength = 120;
+      reference.autocomplete = "off";
+      const refLabel = document.createElement("label");
+      refLabel.textContent = "رقم عملية التحويل";
+      const refWrap = document.createElement("div");
+      refWrap.className = "field wide";
+      refWrap.append(refLabel, reference);
+      const submit = document.createElement("button");
+      submit.type = "submit";
+      submit.className = "primary";
+      submit.textContent = "إرسال طلب الاشتراك";
+      const result = document.createElement("p");
+      result.className = "muted";
+      result.setAttribute("role", "status");
+      form.append(selectWrap, refWrap, submit, result);
+      panel.append(form);
+      if (!(plansData.plans || []).length) {
+        status.textContent = "لا توجد باقات مدفوعة متاحة حالياً.";
+        form.hidden = true;
+        return;
+      }
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+        submit.disabled = true;
+        try {
+          const response = await api("/api/subscriptions/request", {
+            method: "POST",
+            body: JSON.stringify({store_id:store.id,plan_id:select.value,transaction_reference:reference.value.trim()})
+          });
+          result.textContent = response.message || "تم إرسال الطلب.";
+          await renderSubscriptionPanel(store, card);
+        } catch (error) {
+          result.textContent = error.message;
+          submit.disabled = false;
+        }
+      });
+    } catch (error) {
+      status.textContent = "تعذر تحميل الاشتراكات: " + error.message;
+    }
+  }
+
+  async function loadAdminSubscriptionRequests() {
+    const container = $("adminSubscriptionRequests");
+    if (!container) return;
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/subscriptions/requests");
+      const requests = data.requests || [];
+      if (!requests.length) { container.textContent = "لا توجد طلبات اشتراك حتى الآن."; return; }
+      for (const request of requests) {
+        const item = document.createElement("article");
+        item.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = request.store_name + " — " + request.plan_name;
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = "العميل: " + (request.requester_name || request.account_name) + " | المبلغ: " + request.amount + " " + request.currency + " | رقم العملية: " + (request.transaction_reference || "—") + " | الحالة: " + request.payment_status;
+        item.append(title, details);
+        if (request.payment_status === "pending") {
+          const approve = document.createElement("button");
+          approve.type = "button";
+          approve.className = "primary";
+          approve.textContent = "تأكيد الدفع وتفعيل الاشتراك";
+          approve.addEventListener("click", async () => {
+            approve.disabled = true;
+            try {
+              const result = await api("/api/admin/subscriptions/" + encodeURIComponent(request.payment_id) + "/approve", {method:"POST",body:"{}"});
+              details.textContent = result.message || "تمت الموافقة.";
+              await loadAdminSubscriptionRequests();
+            } catch (error) { details.textContent = error.message; approve.disabled = false; }
+          });
+          const reject = document.createElement("button");
+          reject.type = "button";
+          reject.className = "secondary";
+          reject.textContent = "رفض الطلب";
+          reject.addEventListener("click", async () => {
+            const reason = window.prompt("اكتب سبب رفض الطلب:");
+            if (!reason) return;
+            reject.disabled = true;
+            try {
+              await api("/api/admin/subscriptions/" + encodeURIComponent(request.payment_id) + "/reject", {method:"POST",body:JSON.stringify({reason})});
+              await loadAdminSubscriptionRequests();
+            } catch (error) { details.textContent = error.message; reject.disabled = false; }
+          });
+          item.append(approve, reject);
+        }
+        container.append(item);
+      }
+    } catch (error) { container.textContent = "تعذر تحميل الطلبات: " + error.message; }
+  }
+
+  $("subscriptionPlanForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = $("createPlanButton"), message = $("planMessage");
+    button.disabled = true;
+    try {
+      const result = await api("/api/admin/subscription-plans", {method:"POST",body:JSON.stringify({
+        name:$("planName").value.trim(),price:Number($("planPrice").value),
+        currency:$("planCurrency").value.trim().toUpperCase(),
+        duration_days:Number($("planDuration").value),
+        description:$("planDescription").value.trim(),is_active:true
+      })});
+      message.textContent = result.message || "تم إنشاء الباقة.";
+      message.className = "message admin-status success";
+      $("subscriptionPlanForm").reset();
+      $("planCurrency").value = "USD";
+      $("planDuration").value = "30";
+    } catch (error) {
+      message.textContent = error.message;
+      message.className = "message admin-status error";
+    } finally { button.disabled = false; }
+  });
+
   function showAdminMessage(text, type) {
     const box = $("adminMessage");
     box.textContent = text;
@@ -658,6 +854,7 @@ footer{
       const trial = await api("/api/admin/trial-settings");
       $("trialEnabled").checked = Boolean(trial.settings?.enabled);
       $("trialDuration").value = trial.settings?.duration_days || 14;
+      await loadAdminSubscriptionRequests();
 
       panel.classList.remove("hidden");
     } catch (error) {
