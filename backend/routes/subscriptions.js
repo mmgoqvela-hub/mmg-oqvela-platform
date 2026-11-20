@@ -415,6 +415,7 @@ async function adminListRequests(db) {
       p.currency,
       p.payment_method,
       p.transaction_reference,
+      p.sender_name,
       p.status AS payment_status,
       p.rejection_reason,
       p.created_at AS requested_at,
