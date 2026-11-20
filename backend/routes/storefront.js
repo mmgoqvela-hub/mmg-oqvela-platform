@@ -83,17 +83,38 @@ export async function handlePublicStorefront(request, env) {
     const products = productsResult.results || [];
     const productIds = products.map(item => item.id);
     let variants = [];
+    let productImages = [];
     if (productIds.length) {
       const placeholders = productIds.map(() => "?").join(",");
-      const result = await env.DB.prepare(`
-        SELECT id, product_id, name, price, stock_quantity, attributes_json
-        FROM product_variants
-        WHERE store_id = ?
-          AND status = 'active'
-          AND product_id IN (${placeholders})
-        ORDER BY created_at ASC
-      `).bind(store.id, ...productIds).all();
-      variants = result.results || [];
+      const [variantResult, imageResult] = await Promise.all([
+        env.DB.prepare(`
+          SELECT id, product_id, name, price, stock_quantity, attributes_json
+          FROM product_variants
+          WHERE store_id = ?
+            AND status = 'active'
+            AND product_id IN (${placeholders})
+          ORDER BY created_at ASC
+        `).bind(store.id, ...productIds).all(),
+        env.DB.prepare(`
+          SELECT id, product_id, file_key, alt_text, sort_order
+          FROM product_images
+          WHERE store_id = ? AND product_id IN (${placeholders})
+          ORDER BY sort_order ASC, created_at ASC
+        `).bind(store.id, ...productIds).all()
+      ]);
+      variants = variantResult.results || [];
+      productImages = imageResult.results || [];
+    }
+
+    const imagesByProduct = new Map();
+    for (const image of productImages) {
+      const list = imagesByProduct.get(image.product_id) || [];
+      const expectedPrefix = "/media/" + store.id + "/";
+      if (typeof image.file_key === "string" && image.file_key.startsWith(expectedPrefix) &&
+          /^\/media\/[a-zA-Z0-9_-]+\/[a-f0-9-]+\.(?:jpg|png|webp|gif)$/i.test(image.file_key)) {
+        list.push({ id:image.id, url:image.file_key, alt_text:image.alt_text || "", sort_order:image.sort_order });
+      }
+      imagesByProduct.set(image.product_id, list);
     }
 
     const variantsByProduct = new Map();
@@ -126,6 +147,7 @@ export async function handlePublicStorefront(request, env) {
       categories:categoriesResult.results || [],
       products:products.map(product => ({
         ...product,
+        images:imagesByProduct.get(product.id) || [],
         variants:variantsByProduct.get(product.id) || []
       }))
     });
