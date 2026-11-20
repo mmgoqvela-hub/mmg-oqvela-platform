@@ -14,7 +14,7 @@ test("Password hash has the expected secure format", async () => {
   assert.equal(parts.length, 5);
   assert.equal(parts[0], "pbkdf2");
   assert.equal(parts[1], "sha-256");
-  assert.equal(Number(parts[2]), 310000);
+  assert.equal(Number(parts[2]), 100000);
   assert.equal(parts[3].length, 32);
   assert.equal(parts[4].length, 64);
 });

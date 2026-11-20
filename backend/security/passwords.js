@@ -3,7 +3,7 @@
 
 const ALGORITHM = "PBKDF2";
 const HASH_NAME = "SHA-256";
-const ITERATIONS = 310000;
+const ITERATIONS = 100000;
 const KEY_LENGTH = 256;
 
 function toHex(bytes) {
