@@ -960,7 +960,7 @@ export async function handleSubscriptions(request, env) {
           return json({ error: "Method not allowed" }, 405);
         }
 
-        const settings = await env.DB.prepare("
+        const settings = await env.DB.prepare(`
           SELECT setting_key, setting_value
           FROM platform_settings
           WHERE setting_key IN (
@@ -969,7 +969,7 @@ export async function handleSubscriptions(request, env) {
             'shamcash_recipient',
             'shamcash_instructions'
           )
-        ").all();
+        `).all();
 
         const values = Object.fromEntries(
           (settings.results || []).map(item => [
