@@ -145,3 +145,17 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     'shamcash'
   ]) assert.ok(html.includes(marker), "missing checkout behavior: " + marker);
 });
+
+
+test("Public checkout prevents duplicate submissions and cart mutation while pending",async()=>{
+ const html=await readFile(new URL("../../frontend/storefront.html",import.meta.url),"utf8");
+ const start=html.indexOf("<script>");
+ const end=html.indexOf("</script>",start+8);
+ const script=html.slice(start+8,end);
+ assert.match(script,/let orderSubmitting = false/);
+ assert.match(script,/if \\(orderSubmitting \\|\\| !cart\\.length\\) return/);
+ assert.match(script,/orderSubmitting = true;[\\s\\S]*?button\\.disabled = true/);
+ assert.match(script,/querySelectorAll\\(\"button\"\\)\\.forEach\\(control => \\{ control\\.disabled = true; \\}\\)/);
+ assert.match(script,/finally \\{[\\s\\S]*?orderSubmitting = false/);
+ assert.doesNotThrow(()=>new vm.Script(script));
+});
