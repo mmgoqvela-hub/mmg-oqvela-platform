@@ -59,7 +59,9 @@ function createDb(options = {}) {
 
             async all() {
               return {
-                results: options.settings ?? DEFAULT_SETTINGS
+                results: sql.includes("FROM admin_activity_logs")
+                  ? (options.activityLogs ?? [])
+                  : (options.settings ?? DEFAULT_SETTINGS)
               };
             }
           };
@@ -261,4 +263,45 @@ test("Unsupported methods are rejected", async () => {
   );
 
   assert.equal(response.status, 405);
+});
+
+
+test("Only super admins can read the activity log", async () => {
+  const db = createDb({ session: SESSION, admin: NORMAL_ADMIN });
+  const response = await handleAdmin(
+    new Request("https://example.com/api/admin/activity-logs", {
+      method: "GET",
+      headers: { Origin: "https://example.com", Cookie: `mmg_session=${TOKEN}` }
+    }),
+    { DB: db }
+  );
+  assert.equal(response.status, 403);
+});
+
+test("Super admins can read a bounded activity log", async () => {
+  const activityLogs = [{
+    id: "log-1",
+    action: "approve",
+    target_type: "subscription_payment",
+    target_id: "payment-1",
+    details: "{\"amount\":25}",
+    created_at: "2026-11-20 12:00:00",
+    admin_name: "Test Admin",
+    admin_email: "admin@example.com"
+  }];
+  const db = createDb({ session: SESSION, admin: SUPER_ADMIN, activityLogs });
+  const response = await handleAdmin(
+    new Request("https://example.com/api/admin/activity-logs?limit=999", {
+      method: "GET",
+      headers: { Origin: "https://example.com", Cookie: `mmg_session=${TOKEN}` }
+    }),
+    { DB: db }
+  );
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(result.logs.length, 1);
+  assert.equal(result.logs[0].action, "approve");
+  const query = db.calls.find(call => call.sql.includes("FROM admin_activity_logs"));
+  assert.ok(query);
+  assert.equal(query.values[0], 100);
 });
