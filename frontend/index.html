@@ -388,6 +388,9 @@ footer{
         </label>
       </div>
 
+      <hr><h3>دعم المنصة المركزي</h3>
+      <p class="muted">رقم واتساب رسمي للتواصل مع فريق دعم MMG OQVELA، يظهر في جميع المتاجر.</p>
+      <div class="field wide"><label for="platformSupportWhatsapp">رقم واتساب الدعم الدولي</label><input id="platformSupportWhatsapp" type="tel" inputmode="tel" maxlength="40" placeholder="+9639xxxxxxxx" dir="ltr"></div>
       <hr><h3>التذييل الإلزامي لجميع المتاجر</h3>
       <p class="muted">يُدار مركزياً ويظهر أسفل كل متجر ولا يمكن لصاحب المتجر إزالته.</p>
       <div class="field wide"><label for="platformFooterAr">التذييل بالعربية</label><input id="platformFooterAr" maxlength="500" required></div>
@@ -3556,6 +3559,7 @@ footer{
       $("shamcashEnabled").checked = settings.shamcash_enabled === "1";
       $("platformFooterAr").value = settings.platform_footer_ar || "© 2026 MMG OQVELA — جميع الحقوق محفوظة";
       $("platformFooterEn").value = settings.platform_footer_en || "© 2026 MMG OQVELA — All rights reserved";
+      $("platformSupportWhatsapp").value = settings.platform_support_whatsapp || "";
 
       const trial = await api("/api/admin/trial-settings");
       $("trialEnabled").checked = Boolean(trial.settings?.enabled);
@@ -3591,7 +3595,8 @@ footer{
       shamcash_instructions: $("shamcashInstructions").value.trim(),
       shamcash_enabled: $("shamcashEnabled").checked,
       platform_footer_ar: $("platformFooterAr").value.trim(),
-      platform_footer_en: $("platformFooterEn").value.trim()
+      platform_footer_en: $("platformFooterEn").value.trim(),
+      platform_support_whatsapp: $("platformSupportWhatsapp").value.trim()
     };
 
     try {
