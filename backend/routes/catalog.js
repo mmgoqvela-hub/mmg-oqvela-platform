@@ -478,6 +478,10 @@ async function handleProductImages(request, env, storeId, access, productId, ima
         altText.length > 250 || !Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 100000) {
       return json({ error: "Invalid product image data" }, 400);
     }
+    const imageCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM product_images WHERE product_id = ? AND store_id = ?"
+    ).bind(productId, storeId).first();
+    if ((imageCount?.total || 0) >= 5) return json({ error: "A product can have at most five images" }, 409);
     if (!env.STORE_MEDIA) return json({ error: "Image storage is not configured" }, 503);
     const object = await env.STORE_MEDIA.head(fileKey.slice("/media/".length));
     if (!object || object.customMetadata?.storeId !== storeId) {
@@ -493,12 +497,19 @@ async function handleProductImages(request, env, storeId, access, productId, ima
 
   if (request.method === "DELETE" && imageId) {
     const image = await env.DB.prepare(
-      "SELECT id FROM product_images WHERE id = ? AND product_id = ? AND store_id = ? LIMIT 1"
+      "SELECT id, file_key FROM product_images WHERE id = ? AND product_id = ? AND store_id = ? LIMIT 1"
     ).bind(imageId, productId, storeId).first();
     if (!image) return json({ error: "Product image not found" }, 404);
     await env.DB.prepare(
       "DELETE FROM product_images WHERE id = ? AND product_id = ? AND store_id = ?"
     ).bind(imageId, productId, storeId).run();
+    if (env.STORE_MEDIA && typeof image.file_key === "string" &&
+        image.file_key.startsWith("/media/" + storeId + "/")) {
+      const remaining = await env.DB.prepare(
+        "SELECT COUNT(*) AS total FROM product_images WHERE store_id = ? AND file_key = ?"
+      ).bind(storeId, image.file_key).first();
+      if (!remaining?.total) await env.STORE_MEDIA.delete(image.file_key.slice("/media/".length));
+    }
     return json({ status: "ok" });
   }
   return json({ error: "Method not allowed" }, 405);
