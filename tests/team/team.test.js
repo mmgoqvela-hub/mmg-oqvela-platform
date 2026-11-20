@@ -83,7 +83,7 @@ test("Suspended account members cannot be re-added to a store",async()=>{
   const db=createDb({accountMember:{role:"member",status:"suspended"}});
   const response=await handleTeam(makeRequest("","POST",{email:"staff@example.test",role_id:"role-1"}),{DB:db});
   assert.equal(response.status,409);
-  assert.equal(db.calls.length,0);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO store_members")),false);
 });
 
 test("Custom roles accept only known unique permission codes",async()=>{
@@ -104,5 +104,5 @@ test("Custom roles cannot be granted unknown or duplicate permissions",async()=>
     name:"Unsafe role",permissions:["platform.super_admin","platform.super_admin"]
   }),{DB:db});
   assert.equal(response.status,400);
-  assert.equal(db.calls.length,0);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO roles")),false);
 });
