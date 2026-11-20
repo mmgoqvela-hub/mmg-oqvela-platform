@@ -27,3 +27,5 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+      - name: Validate SQLite migrations
+        run: python tests/migrations/check_migrations.py
