@@ -114,4 +114,9 @@ test("Order API and migration enforce tenant scope, stock reservation, restorati
  assert.match(source,/trg_store_order_restore_variant_stock/);
  assert.match(source,/NEW\.order_status = 'cancelled'/);
  assert.match(source,/CREATE TABLE store_order_settings/);
+ assert.match(source,/idx_store_orders_unique_shamcash_reference/);
+ assert.match(source,/orders\\.read/);
+ assert.match(source,/orders\\.manage/);
+ assert.match(source,/trg_notify_store_order_created/);
+ assert.match(source,/store-order-created:/);
 });
