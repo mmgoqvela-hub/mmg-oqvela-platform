@@ -116,10 +116,12 @@ async function updateSettings(request, db, admin) {
   });
 }
 
+
 export async function handleAdmin(request, env) {
   const url = new URL(request.url);
+  const path = url.pathname;
 
-  if (url.pathname !== "/api/admin/settings") {
+  if (!["/api/admin/settings", "/api/admin/trial-settings"].includes(path)) {
     return null;
   }
 
@@ -138,15 +140,89 @@ export async function handleAdmin(request, env) {
   }
 
   try {
+    if (path === "/api/admin/settings") {
+      if (request.method === "GET") {
+        return json({
+          status: "ok",
+          settings: await getSettings(env.DB)
+        });
+      }
+
+      return await updateSettings(request, env.DB, admin);
+    }
+
     if (request.method === "GET") {
+      const settings = await env.DB.prepare(`
+        SELECT enabled, duration_days, updated_at
+        FROM platform_trial_settings
+        WHERE id = 1
+      `).first();
+
       return json({
         status: "ok",
-        settings: await getSettings(env.DB)
+        settings
       });
     }
 
-    return await updateSettings(request, env.DB, admin);
+    let body;
+
+    try {
+      const raw = await request.text();
+      if (raw.length > 5000) {
+        return json({ error: "Request too large" }, 413);
+      }
+      body = JSON.parse(raw);
+    } catch {
+      return json({ error: "Invalid JSON" }, 400);
+    }
+
+    if (
+      typeof body?.enabled !== "boolean" ||
+      !Number.isInteger(body?.duration_days) ||
+      body.duration_days < 1 ||
+      body.duration_days > 365
+    ) {
+      return json({ error: "Invalid trial settings" }, 400);
+    }
+
+    await env.DB.batch([
+      env.DB.prepare(`
+        UPDATE platform_trial_settings
+        SET enabled = ?,
+            duration_days = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1
+      `).bind(
+        body.enabled ? 1 : 0,
+        body.duration_days,
+        admin.user_id
+      ),
+
+      env.DB.prepare(`
+        INSERT INTO admin_activity_logs
+          (id, admin_user_id, action, target_type, details)
+        VALUES (?, ?, 'update', 'trial_settings', ?)
+      `).bind(
+        crypto.randomUUID(),
+        admin.user_id,
+        JSON.stringify({
+          enabled: body.enabled,
+          duration_days: body.duration_days
+        })
+      )
+    ]);
+
+    return json({
+      status: "ok",
+      message: "تم تحديث إعدادات الفترة التجريبية",
+      settings: {
+        enabled: body.enabled,
+        duration_days: body.duration_days
+      }
+    });
+
   } catch {
-    return json({ error: "Unable to process admin settings" }, 500);
+    return json({ error: "Unable to process admin request" }, 500);
   }
 }

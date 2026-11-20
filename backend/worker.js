@@ -1,5 +1,6 @@
 import { handleAuth } from "./routes/auth.js";
 import { handleAdmin } from "./routes/admin.js";
+import { handleTrial } from "./routes/trial.js";
 
 export default {
   async fetch(request, env) {
@@ -50,6 +51,12 @@ export default {
           database: { status: "error" }
         }, { status: 503 });
       }
+    }
+
+    const trialResponse = await handleTrial(request, env);
+
+    if (trialResponse) {
+      return trialResponse;
     }
 
     const adminResponse = await handleAdmin(request, env);

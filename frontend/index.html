@@ -326,6 +326,26 @@ footer{
         <div class="message admin-status" id="adminMessage" role="status"></div>
       </div>
     </form>
+
+    <hr>
+    <h3>الفترة التجريبية</h3>
+    <p class="muted">تُمنح مرة واحدة فقط لكل حساب.</p>
+    <form id="trialSettingsForm" class="admin-form">
+      <div class="field">
+        <label for="trialDuration">مدة التجربة بالأيام</label>
+        <input id="trialDuration" type="number" min="1" max="365" value="14" required>
+      </div>
+      <div class="field">
+        <label class="toggle-row">
+          <input id="trialEnabled" type="checkbox">
+          تفعيل الفترة التجريبية
+        </label>
+      </div>
+      <div class="field wide">
+        <button class="primary" id="saveTrialSettings" type="submit">حفظ إعدادات التجربة</button>
+        <div class="message admin-status" id="trialAdminMessage" role="status"></div>
+      </div>
+    </form>
   </section>
 </section>
 </main>
@@ -440,7 +460,24 @@ footer{
       count.textContent = "عدد المتاجر: " + stores.length;
 
       card.append(title, role, count);
-      grid.append(card);
+
+      for (const store of stores) {
+        const line = document.createElement("p");
+        line.className = "muted";
+        line.textContent = "المتجر: " + store.name;
+        card.append(line);
+      }
+
+      if (account.role === "owner") {
+        const status = document.createElement("p");
+        status.className = "muted";
+        status.textContent = "جارٍ التحقق من الفترة التجريبية...";
+        card.append(status);
+        grid.append(card);
+        loadAccountTrial(account, card, status);
+      } else {
+        grid.append(card);
+      }
     }
   }
 
@@ -448,6 +485,62 @@ footer{
     const box = $("adminMessage");
     box.textContent = text;
     box.className = "message admin-status " + type;
+  }
+
+  function showTrialAdminMessage(text, type) {
+    const box = $("trialAdminMessage");
+    box.textContent = text;
+    box.className = "message admin-status " + type;
+  }
+
+  async function loadAccountTrial(account, card, status) {
+    try {
+      const data = await api(
+        "/api/trial/status?account_id=" + encodeURIComponent(account.id)
+      );
+
+      if (data.has_used_trial) {
+        status.textContent = "تم استخدام الفترة التجريبية لهذا الحساب.";
+        return;
+      }
+
+      if (!data.trial_enabled) {
+        status.textContent = "الفترة التجريبية غير متاحة حالياً.";
+        return;
+      }
+
+      status.textContent =
+        "الفترة التجريبية متاحة لمدة " + data.duration_days + " يوماً.";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary";
+      button.textContent = "إنشاء المتجر وبدء التجربة";
+
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "جارٍ إنشاء المتجر...";
+
+        try {
+          await api("/api/trial/start", {
+            method: "POST",
+            body: JSON.stringify({
+              account_id: account.id,
+              store_name: account.name
+            })
+          });
+          await checkSession();
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+          button.textContent = "إعادة المحاولة";
+        }
+      });
+
+      card.append(button);
+    } catch {
+      status.textContent = "تعذر التحقق من حالة التجربة.";
+    }
   }
 
   async function loadAdminPanel() {
@@ -462,6 +555,10 @@ footer{
       $("shamcashRecipient").value = settings.shamcash_recipient || "";
       $("shamcashInstructions").value = settings.shamcash_instructions || "";
       $("shamcashEnabled").checked = settings.shamcash_enabled === "1";
+
+      const trial = await api("/api/admin/trial-settings");
+      $("trialEnabled").checked = Boolean(trial.settings?.enabled);
+      $("trialDuration").value = trial.settings?.duration_days || 14;
 
       panel.classList.remove("hidden");
     } catch (error) {
@@ -492,6 +589,39 @@ footer{
       showAdminMessage(result.message || "تم حفظ الإعدادات بنجاح", "success");
     } catch (error) {
       showAdminMessage(error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $("trialSettingsForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const button = $("saveTrialSettings");
+    const duration = Number($("trialDuration").value);
+
+    if (!Number.isInteger(duration) || duration < 1 || duration > 365) {
+      showTrialAdminMessage("أدخل مدة من يوم إلى 365 يوماً.", "error");
+      return;
+    }
+
+    button.disabled = true;
+
+    try {
+      const result = await api("/api/admin/trial-settings", {
+        method: "PUT",
+        body: JSON.stringify({
+          enabled: $("trialEnabled").checked,
+          duration_days: duration
+        })
+      });
+
+      showTrialAdminMessage(
+        result.message || "تم حفظ إعدادات التجربة.",
+        "success"
+      );
+    } catch (error) {
+      showTrialAdminMessage(error.message, "error");
     } finally {
       button.disabled = false;
     }
