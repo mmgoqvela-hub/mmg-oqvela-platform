@@ -18,6 +18,7 @@
     .eyebrow{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
     h1{font-size:clamp(32px,5vw,56px);line-height:1.12;margin:12px 0}
     .description{color:var(--muted);max-width:700px;line-height:1.9;margin:0}
+    .whatsapp{display:inline-flex;margin-top:20px;padding:11px 17px;border-radius:10px;background:#16875c;color:#fff;text-decoration:none;font-weight:700}
     .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 25px}
     .search{flex:1;min-width:210px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink)}
     .filters{display:flex;gap:8px;flex-wrap:wrap}
@@ -67,6 +68,7 @@
       <div class="eyebrow" id="businessType"></div>
       <h1 id="storeName">جارٍ تحميل المتجر...</h1>
       <p class="description" id="storeDescription"></p>
+      <a class="whatsapp" id="whatsappContact" hidden target="_blank" rel="noopener noreferrer"></a>
     </section>
     <section>
       <div class="toolbar">
@@ -82,8 +84,8 @@
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة"},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved"}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة"},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved"}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
@@ -102,6 +104,7 @@
         $("search").placeholder = t("search");
         $("search").setAttribute("aria-label",t("search"));
         $("platformFooter").textContent = t("footer");
+        $("whatsappContact").textContent = t("contact");
         if (storeData) renderProducts();
       }
 
@@ -213,6 +216,11 @@
           $("businessType").textContent = data.store.business_type || "";
           $("storeName").textContent = data.store.name;
           $("storeDescription").textContent = data.store.description || "";
+          const phone = String(data.store.whatsapp_phone || "").replace(/\\D/g,"");
+          if (/^\\d{8,15}$/.test(phone)) {
+            $("whatsappContact").href = "https://wa.me/" + phone;
+            $("whatsappContact").hidden = false;
+          }
           $("status").hidden = true;
           renderCategories();
           renderProducts();
