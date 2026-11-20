@@ -3,6 +3,7 @@ import { handleAdmin } from "./routes/admin.js";
 import { handleTrial } from "./routes/trial.js";
 import { handleStores } from "./routes/stores.js";
 import { handleCatalog } from "./routes/catalog.js";
+import { handlePublicStorefront } from "./routes/storefront.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 
 export default {
@@ -55,6 +56,18 @@ export default {
         }, { status: 503 });
       }
     }
+
+    const storefrontPath = url.pathname.match(/^\\/s\\/[^/]+\\/?$/);
+    if (storefrontPath && request.method === "GET") {
+      const assetUrl = new URL("/storefront.html", request.url);
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), {
+        method: "GET",
+        headers: request.headers
+      }));
+    }
+
+    const publicStoreResponse = await handlePublicStorefront(request, env);
+    if (publicStoreResponse) return publicStoreResponse;
 
     const subscriptionsResponse = await handleSubscriptions(request, env);
 
