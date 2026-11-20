@@ -19,6 +19,7 @@ function createDb(options={}) {
             if(sql.includes("FROM categories")) return {results:options.categories || []};
             if(sql.includes("FROM products")) return {results:options.products || []};
             if(sql.includes("FROM product_variants")) return {results:options.variants || []};
+            if(sql.includes("FROM platform_settings")) return {results:options.platformSettings || []};
             return {results:[]};
           }
         };
@@ -59,6 +60,21 @@ test("Public storefront returns its selected template and published catalog only
   assert.equal(result.products[0].variants[0].attributes.size,"L");
   assert.ok(db.calls.some(call=>call.sql.includes("ss.status = 'active'")));
   assert.ok(db.calls.some(call=>call.sql.includes("p.status = 'active'")));
+});
+
+test("Public storefront receives the centrally managed bilingual footer",async()=>{
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store"},
+  platformSettings:[
+   {setting_key:"platform_footer_ar",setting_value:"حقوق MMG محفوظة"},
+   {setting_key:"platform_footer_en",setting_value:"MMG rights reserved"}
+  ]
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.platform_footer.platform_footer_ar,"حقوق MMG محفوظة");
+ assert.equal(result.platform_footer.platform_footer_en,"MMG rights reserved");
 });
 
 test("Invalid slugs are rejected before database access",async()=>{
