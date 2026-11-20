@@ -41,10 +41,11 @@ function createDb(options = {}) {
               return null;
             },
             async all() {
+              calls.push({sql, values});
               return {results: options.rows || []};
             },
             async run() {
-              calls.push({sql, values});
+              if (!sql.includes("UPDATE auth_sessions")) calls.push({sql, values});
               return {meta:{changes:options.runChanges ?? 1}};
             }
           };
