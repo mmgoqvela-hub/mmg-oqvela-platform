@@ -3102,12 +3102,20 @@ footer{
     primaryColor.type = "color"; primaryColor.value = templatePalettes[selectedTemplate].primary;
     const backgroundColor = document.createElement("input");
     backgroundColor.type = "color"; backgroundColor.value = templatePalettes[selectedTemplate].background;
+    const textColor = document.createElement("input"); textColor.type = "color"; textColor.value = "#172033";
+    const surfaceColor = document.createElement("input"); surfaceColor.type = "color"; surfaceColor.value = "#ffffff";
+    const mutedColor = document.createElement("input"); mutedColor.type = "color"; mutedColor.value = "#68758a";
+    const borderColor = document.createElement("input"); borderColor.type = "color"; borderColor.value = "#e1e7f0";
     const headingText = document.createElement("input");
     headingText.type = "text"; headingText.maxLength = 120; headingText.value = store.name || "";
     const subtitleText = document.createElement("input");
     subtitleText.type = "text"; subtitleText.maxLength = 240; subtitleText.value = store.description || "";
     makeDesignField("اللون الأساسي",primaryColor);
     makeDesignField("لون الخلفية",backgroundColor);
+    makeDesignField("لون النصوص",textColor);
+    makeDesignField("لون البطاقات والأسطح",surfaceColor);
+    makeDesignField("لون النصوص الثانوية",mutedColor);
+    makeDesignField("لون الحدود والفواصل",borderColor);
     makeDesignField("عنوان الواجهة",headingText);
     makeDesignField("النص التعريفي",subtitleText);
     const productsTitleText = document.createElement("input"); productsTitleText.type = "text"; productsTitleText.maxLength = 80; productsTitleText.value = "المنتجات";
@@ -3183,6 +3191,13 @@ footer{
       previewButton.style.background = primaryColor.value;
       previewButton.style.color = "#ffffff";
       previewHeading.style.fontWeight = theme.weight;
+      livePreview.style.color = textColor.value;
+      previewHeader.style.background = surfaceColor.value;
+      previewToolbar.style.background = surfaceColor.value;
+      previewToolbar.style.borderTop = "1px solid " + borderColor.value;
+      previewProductsTitle.style.color = textColor.value;
+      previewSubtitle.style.color = mutedColor.value;
+      livePreview.style.borderColor = borderColor.value;
       livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
       const alignment = heroAlignment.value === "center" ? "center" : "right";
       previewHero.style.textAlign = alignment;
@@ -3273,6 +3288,10 @@ footer{
         loadedCustomization = saved && typeof saved === "object" ? saved : {};
         primaryColor.value = loadedCustomization.colors?.primary || templatePalettes[selectedTemplate].primary;
         backgroundColor.value = loadedCustomization.colors?.background || templatePalettes[selectedTemplate].background;
+        textColor.value = loadedCustomization.colors?.text || "#172033";
+        surfaceColor.value = loadedCustomization.colors?.surface || "#ffffff";
+        mutedColor.value = loadedCustomization.colors?.muted || "#68758a";
+        borderColor.value = loadedCustomization.colors?.border || "#e1e7f0";
         headingText.value = loadedCustomization.texts?.heroTitle || store.name || "";
         subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
         productsTitleText.value = loadedCustomization.texts?.productsTitle || "المنتجات";
@@ -3346,7 +3365,7 @@ footer{
               whatsapp_phone: whatsappInput.value.trim(),
               customization: {
                 ...loadedCustomization,
-                colors: { ...(loadedCustomization.colors || {}), primary: primaryColor.value, background: backgroundColor.value },
+                colors: { ...(loadedCustomization.colors || {}), primary: primaryColor.value, background: backgroundColor.value, text: textColor.value, surface: surfaceColor.value, muted: mutedColor.value, border: borderColor.value },
                 texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim(), productsTitle: productsTitleText.value.trim(), addToCart: addToCartText.value.trim() },
                 fonts: { ...(loadedCustomization.fonts || {}), family: fontSelect.value },
                 logo: logoUrl.value.trim(),
