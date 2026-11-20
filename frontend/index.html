@@ -132,7 +132,24 @@ input{
   outline:none;
   direction:rtl;
 }
-input:focus{border-color:var(--blue)}
+input:focus,textarea:focus{border-color:var(--blue)}
+textarea{
+  width:100%;min-height:110px;padding:14px;border-radius:9px;
+  border:1px solid var(--border);background:#0c1728;color:white;
+  outline:none;resize:vertical;font:inherit;line-height:1.8
+}
+.admin-panel{
+  margin-top:30px;padding:22px;background:var(--panel);
+  border:1px solid var(--border);border-radius:15px
+}
+.admin-panel h2{margin-top:0}
+.admin-form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.admin-form .field{margin:0}
+.admin-form .wide{grid-column:1/-1}
+.toggle-row{display:flex;align-items:center;gap:10px;color:#d7e1ef}
+.toggle-row input{width:20px;height:20px}
+.admin-status{margin-top:14px}
+@media(max-width:600px){.admin-form{grid-template-columns:1fr}.admin-form .wide{grid-column:auto}}
 .primary{
   width:100%;
   padding:14px;
@@ -270,6 +287,46 @@ footer{
   </div>
 
   <div class="account-grid" id="accountGrid"></div>
+
+  <section class="admin-panel hidden" id="adminPanel">
+    <div class="eyebrow">الإدارة المركزية</div>
+    <h2>إعدادات المنصة</h2>
+    <p class="muted">إدارة وسيلة الدفع وإعدادات استقبال طلبات الاشتراك.</p>
+
+    <form id="adminSettingsForm" class="admin-form">
+      <div class="field wide">
+        <label for="shamcashLink">رابط الدفع عبر شام كاش</label>
+        <input id="shamcashLink" type="url" maxlength="2000"
+          placeholder="https://..." dir="ltr">
+      </div>
+
+      <div class="field wide">
+        <label for="shamcashRecipient">اسم المستفيد</label>
+        <input id="shamcashRecipient" maxlength="200"
+          placeholder="اسم المستفيد">
+      </div>
+
+      <div class="field wide">
+        <label for="shamcashInstructions">تعليمات الدفع</label>
+        <textarea id="shamcashInstructions" maxlength="5000"
+          placeholder="اكتب تعليمات الدفع للعميل"></textarea>
+      </div>
+
+      <div class="field wide">
+        <label class="toggle-row">
+          <input id="shamcashEnabled" type="checkbox">
+          استقبال طلبات الدفع عبر شام كاش
+        </label>
+      </div>
+
+      <div class="field wide">
+        <button class="primary" id="saveAdminSettings" type="submit">
+          حفظ الإعدادات
+        </button>
+        <div class="message admin-status" id="adminMessage" role="status"></div>
+      </div>
+    </form>
+  </section>
 </section>
 </main>
 
@@ -387,10 +444,64 @@ footer{
     }
   }
 
+  function showAdminMessage(text, type) {
+    const box = $("adminMessage");
+    box.textContent = text;
+    box.className = "message admin-status " + type;
+  }
+
+  async function loadAdminPanel() {
+    const panel = $("adminPanel");
+    panel.classList.add("hidden");
+
+    try {
+      const data = await api("/api/admin/settings");
+      const settings = data.settings || {};
+
+      $("shamcashLink").value = settings.shamcash_link || "";
+      $("shamcashRecipient").value = settings.shamcash_recipient || "";
+      $("shamcashInstructions").value = settings.shamcash_instructions || "";
+      $("shamcashEnabled").checked = settings.shamcash_enabled === "1";
+
+      panel.classList.remove("hidden");
+    } catch (error) {
+      // المستخدم غير المدير لا يرى لوحة الإدارة.
+      panel.classList.add("hidden");
+    }
+  }
+
+  $("adminSettingsForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const button = $("saveAdminSettings");
+    button.disabled = true;
+
+    const payload = {
+      shamcash_link: $("shamcashLink").value.trim(),
+      shamcash_recipient: $("shamcashRecipient").value.trim(),
+      shamcash_instructions: $("shamcashInstructions").value.trim(),
+      shamcash_enabled: $("shamcashEnabled").checked
+    };
+
+    try {
+      const result = await api("/api/admin/settings", {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      });
+
+      showAdminMessage(result.message || "تم حفظ الإعدادات بنجاح", "success");
+    } catch (error) {
+      showAdminMessage(error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   async function checkSession() {
     try {
       const data = await api("/api/auth/me");
       renderDashboard(data);
+      await loadAdminPanel();
     } catch {
       $("landing").classList.remove("hidden");
       $("dashboard").classList.add("hidden");
@@ -437,6 +548,7 @@ footer{
     try {
       await api("/api/auth/logout", {method: "POST"});
       $("dashboard").classList.add("hidden");
+      $("adminPanel").classList.add("hidden");
       $("landing").classList.remove("hidden");
       $("email").value = "";
       $("password").value = "";
