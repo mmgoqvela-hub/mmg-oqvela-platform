@@ -4,6 +4,7 @@ import { webcrypto } from "node:crypto";
 import { readFile } from "node:fs/promises";
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 import {handleOrders} from "../../backend/routes/orders.js";
+const lifecycleMigration=await readFile(new URL("../../database/migrations/0022_order_lifecycle_guards.sql",import.meta.url),"utf8");
 
 const TOKEN="a".repeat(43);
 const STORE={id:"store-1",name:"Test Store",slug:"test-store"};
@@ -243,4 +244,17 @@ test("Order item and event history queries are constrained to the same tenant as
  assert.ok(eventQuery);
  assert.equal(itemQuery.values[0],"store-1");
  assert.equal(eventQuery.values[0],"store-1");
+});
+
+
+test("D1 enforces order and payment transitions even outside the HTTP route",()=>{
+ assert.match(lifecycleMigration,/CREATE TRIGGER trg_store_order_status_transition_guard/);
+ assert.match(lifecycleMigration,/OLD\.order_status = 'pending' AND NEW\.order_status IN \('confirmed','cancelled'\)/);
+ assert.match(lifecycleMigration,/OLD\.order_status = 'shipped' AND NEW\.order_status = 'completed'/);
+ assert.match(lifecycleMigration,/CREATE TRIGGER trg_store_payment_status_transition_guard/);
+ assert.match(lifecycleMigration,/OLD\.payment_status = 'pending' AND NEW\.payment_status = 'rejected'[\s\S]*?OLD\.payment_method = 'shamcash'/);
+ assert.match(lifecycleMigration,/OLD\.payment_status = 'paid' AND NEW\.payment_status = 'refunded'[\s\S]*?NEW\.order_status = 'cancelled'/);
+ assert.match(lifecycleMigration,/CREATE TRIGGER trg_store_order_payment_consistency_guard/);
+ assert.match(lifecycleMigration,/NEW\.order_status = 'completed' AND NEW\.payment_status != 'paid'/);
+ assert.match(lifecycleMigration,/NEW\.payment_method = 'shamcash'[\s\S]*?NEW\.payment_status != 'paid'/);
 });
