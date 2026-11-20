@@ -1,93 +1,453 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101827">
-  <meta name="description" content="MMG OQVELA - Multi-Store SaaS Platform">
-  <title>MMG OQVELA | منصة المتاجر الذكية</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #101827;
-      color: #f8fafc;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    main {
-      width: 100%;
-      max-width: 850px;
-      text-align: center;
-    }
-
-    .brand {
-      color: #60a5fa;
-      font-size: 15px;
-      letter-spacing: 4px;
-      direction: ltr;
-      margin-bottom: 35px;
-      font-weight: bold;
-    }
-
-    h1 {
-      font-size: clamp(30px, 6vw, 52px);
-      margin-bottom: 22px;
-      line-height: 1.4;
-    }
-
-    .description {
-      color: #aab7ca;
-      font-size: 18px;
-      line-height: 2;
-      max-width: 650px;
-      margin: auto;
-    }
-
-    .status {
-      display: inline-block;
-      margin-top: 38px;
-      padding: 12px 22px;
-      border: 1px solid #334155;
-      border-radius: 30px;
-      color: #93c5fd;
-      font-size: 14px;
-    }
-
-    footer {
-      margin-top: 65px;
-      color: #64748b;
-      font-size: 13px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<meta name="description" content="MMG OQVELA - منصة ذكية لإدارة المتاجر والأعمال">
+<title>MMG OQVELA | منصة الأعمال الذكية</title>
+<style>
+:root {
+  --bg:#0b1220;
+  --panel:#111c30;
+  --panel2:#16243b;
+  --blue:#4f8cff;
+  --cyan:#54d5e8;
+  --text:#f3f6fc;
+  --muted:#91a2bb;
+  --border:#263752;
+  --danger:#fb7185;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 15% 10%,#17365a 0,transparent 38%),
+    radial-gradient(ellipse at 90% 90%,#142b43 0,transparent 35%),
+    var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+button,input{font:inherit}
+button{cursor:pointer}
+header{
+  height:76px;
+  padding:0 7%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #ffffff12;
+}
+.logo{
+  direction:ltr;
+  font-size:21px;
+  font-weight:900;
+  letter-spacing:2px;
+  color:#fff;
+}
+.logo span{color:var(--cyan)}
+.header-label{color:var(--muted);font-size:13px}
+main{
+  width:min(1100px,92%);
+  margin:65px auto;
+}
+.hero{
+  display:grid;
+  grid-template-columns:1fr 430px;
+  gap:65px;
+  align-items:center;
+}
+.eyebrow{
+  color:var(--cyan);
+  font-size:13px;
+  font-weight:bold;
+  margin-bottom:20px;
+}
+h1{
+  font-size:clamp(32px,5vw,53px);
+  line-height:1.5;
+  margin:0 0 18px;
+}
+h1 span{
+  background:linear-gradient(90deg,var(--cyan),#72a4ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+.description{
+  color:var(--muted);
+  font-size:16px;
+  line-height:2;
+  max-width:510px;
+}
+.features{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:32px;
+}
+.feature{
+  padding:11px 15px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#ffffff06;
+  color:#cbd8eb;
+  font-size:13px;
+}
+.auth-card{
+  background:linear-gradient(145deg,#16243b,#101a2c);
+  border:1px solid var(--border);
+  border-radius:19px;
+  padding:29px;
+  box-shadow:0 25px 70px #0005;
+}
+.auth-card h2{font-size:23px;margin:0 0 8px}
+.subheading{color:var(--muted);font-size:13px;margin-bottom:25px}
+.tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  padding:4px;
+  background:#0b1424;
+  border-radius:10px;
+  margin-bottom:23px;
+}
+.tab{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  padding:11px;
+  border-radius:8px;
+}
+.tab.active{background:#233b5d;color:white}
+.field{margin-bottom:16px}
+label{display:block;font-size:13px;margin-bottom:8px;color:#d7e1ef}
+input{
+  width:100%;
+  padding:14px;
+  border-radius:9px;
+  border:1px solid var(--border);
+  background:#0c1728;
+  color:white;
+  outline:none;
+  direction:rtl;
+}
+input:focus{border-color:var(--blue)}
+.primary{
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:9px;
+  color:white;
+  font-weight:bold;
+  background:linear-gradient(100deg,#3678ed,#397be0);
+  margin-top:7px;
+}
+.primary:disabled{opacity:.6;cursor:wait}
+.message{
+  display:none;
+  margin-top:15px;
+  padding:12px;
+  border-radius:9px;
+  font-size:13px;
+  line-height:1.7;
+}
+.message.error{display:block;background:#7f1d2d33;color:#fda4af}
+.message.success{display:block;background:#14532d55;color:#86efac}
+.hidden{display:none!important}
+.dashboard{margin-top:35px}
+.dashboard-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  flex-wrap:wrap;
+}
+.secondary{
+  padding:10px 17px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  color:white;
+  background:var(--panel2);
+}
+.account-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:15px;
+  margin-top:25px;
+}
+.account-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  padding:20px;
+  border-radius:13px;
+}
+.account-card h3{margin-top:0}
+.muted{color:var(--muted);font-size:13px}
+footer{
+  text-align:center;
+  color:#667891;
+  padding:35px 15px;
+  font-size:12px;
+}
+@media(max-width:800px){
+  main{margin:38px auto}
+  .hero{grid-template-columns:1fr;gap:35px}
+  .hero-copy{text-align:center}
+  .description{margin:auto}
+  .features{justify-content:center}
+  .auth-card{width:100%;max-width:480px;margin:auto}
+}
+</style>
 </head>
 <body>
-  <main>
-    <div class="brand">MMG OQVELA</div>
+<header>
+  <div class="logo">MMG <span>OQVELA</span></div>
+  <div class="header-label">منصة الأعمال الذكية</div>
+</header>
 
-    <h1>مستقبل التجارة يبدأ من هنا</h1>
-
+<main>
+<section class="hero" id="landing">
+  <div class="hero-copy">
+    <div class="eyebrow">منظومة واحدة لإدارة أعمالك</div>
+    <h1>حوّل أفكارك التجارية<br>إلى <span>تجربة رقمية</span></h1>
     <p class="description">
-      منصة تقنية متكاملة لإدارة المتاجر والأعمال التجارية،
-      مصممة لتوفير تجربة ذكية ومرنة وقابلة للتوسع.
+      منصة متكاملة تمنحك القدرة على إدارة متاجرك وأعمالك
+      من مكان واحد، بمرونة وذكاء وتجربة مصممة للنمو.
     </p>
+    <div class="features">
+      <div class="feature">إدارة متاجر متعددة</div>
+      <div class="feature">تحكم مركزي</div>
+      <div class="feature">تقارير ذكية</div>
+      <div class="feature">صلاحيات مرنة</div>
+    </div>
+  </div>
 
-    <div class="status">
-      المنصة قيد التطوير
+  <section class="auth-card" id="authCard">
+    <h2 id="formTitle">مرحباً بعودتك</h2>
+    <p class="subheading" id="formSubtitle">سجّل الدخول لمتابعة أعمالك</p>
+
+    <div class="tabs">
+      <button class="tab active" id="loginTab" type="button">تسجيل الدخول</button>
+      <button class="tab" id="registerTab" type="button">حساب جديد</button>
     </div>
 
-    <footer>
-      © 2026 MMG OQVELA. جميع الحقوق محفوظة.
-    </footer>
-  </main>
+    <form id="authForm">
+      <div class="field hidden" id="nameField">
+        <label for="fullName">الاسم الكامل</label>
+        <input id="fullName" name="fullName" autocomplete="name" maxlength="100">
+      </div>
+
+      <div class="field">
+        <label for="email">البريد الإلكتروني</label>
+        <input id="email" name="email" type="email"
+          autocomplete="email" maxlength="254" required>
+      </div>
+
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password"
+          autocomplete="current-password" minlength="12"
+          maxlength="1024" required>
+      </div>
+
+      <button class="primary" id="submitButton" type="submit">
+        تسجيل الدخول
+      </button>
+      <div class="message" id="formMessage" role="status"></div>
+    </form>
+  </section>
+</section>
+
+<section class="dashboard hidden" id="dashboard">
+  <div class="dashboard-top">
+    <div>
+      <div class="eyebrow">مساحة العمل الخاصة بك</div>
+      <h2 id="welcomeTitle">مرحباً بك</h2>
+      <p class="muted" id="userEmail"></p>
+    </div>
+    <button class="secondary" id="logoutButton" type="button">تسجيل الخروج</button>
+  </div>
+
+  <div class="account-grid" id="accountGrid"></div>
+</section>
+</main>
+
+<footer>© 2026 MMG OQVELA — جميع الحقوق محفوظة</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  let mode = "login";
+  const form = $("authForm");
+  const message = $("formMessage");
+
+  function showMessage(text, type) {
+    message.textContent = text;
+    message.className = "message " + type;
+  }
+
+  function clearMessage() {
+    message.textContent = "";
+    message.className = "message";
+  }
+
+  function setMode(nextMode) {
+    mode = nextMode;
+    clearMessage();
+
+    const registering = mode === "register";
+
+    $("loginTab").classList.toggle("active", !registering);
+    $("registerTab").classList.toggle("active", registering);
+    $("nameField").classList.toggle("hidden", !registering);
+    $("fullName").required = registering;
+    $("password").autocomplete = registering
+      ? "new-password"
+      : "current-password";
+
+    $("formTitle").textContent = registering
+      ? "أنشئ حسابك"
+      : "مرحباً بعودتك";
+
+    $("formSubtitle").textContent = registering
+      ? "ابدأ بإدارة أعمالك من مكان واحد"
+      : "سجّل الدخول لمتابعة أعمالك";
+
+    $("submitButton").textContent = registering
+      ? "إنشاء الحساب"
+      : "تسجيل الدخول";
+  }
+
+  $("loginTab").addEventListener("click", () => setMode("login"));
+  $("registerTab").addEventListener("click", () => setMode("register"));
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      ...options,
+      headers: {
+        ...(options.body ? {"Content-Type": "application/json"} : {}),
+        ...options.headers
+      }
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "حدث خطأ، حاول مرة أخرى");
+    }
+
+    return data;
+  }
+
+  function renderDashboard(data) {
+    $("landing").classList.add("hidden");
+    $("dashboard").classList.remove("hidden");
+
+    $("welcomeTitle").textContent =
+      "مرحباً، " + data.user.fullName;
+
+    $("userEmail").textContent = data.user.email;
+
+    const grid = $("accountGrid");
+    grid.replaceChildren();
+
+    if (!data.accounts.length) {
+      const card = document.createElement("div");
+      card.className = "account-card";
+      const title = document.createElement("h3");
+      title.textContent = "لا توجد حسابات متاحة";
+      card.append(title);
+      grid.append(card);
+    }
+
+    for (const account of data.accounts) {
+      const card = document.createElement("div");
+      card.className = "account-card";
+
+      const title = document.createElement("h3");
+      title.textContent = account.name;
+
+      const role = document.createElement("p");
+      role.className = "muted";
+      role.textContent = "الصلاحية: " + account.role;
+
+      const stores = data.stores.filter(
+        store => store.account_id === account.id
+      );
+
+      const count = document.createElement("p");
+      count.className = "muted";
+      count.textContent = "عدد المتاجر: " + stores.length;
+
+      card.append(title, role, count);
+      grid.append(card);
+    }
+  }
+
+  async function checkSession() {
+    try {
+      const data = await api("/api/auth/me");
+      renderDashboard(data);
+    } catch {
+      $("landing").classList.remove("hidden");
+      $("dashboard").classList.add("hidden");
+    }
+  }
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    clearMessage();
+
+    const button = $("submitButton");
+    button.disabled = true;
+
+    const payload = {
+      email: $("email").value.trim(),
+      password: $("password").value
+    };
+
+    if (mode === "register") {
+      payload.fullName = $("fullName").value.trim();
+    }
+
+    try {
+      const endpoint = mode === "register"
+        ? "/api/auth/register"
+        : "/api/auth/login";
+
+      await api(endpoint, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      showMessage("تم بنجاح، جارٍ فتح حسابك...", "success");
+      await checkSession();
+
+    } catch (error) {
+      showMessage(error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $("logoutButton").addEventListener("click", async () => {
+    try {
+      await api("/api/auth/logout", {method: "POST"});
+      $("dashboard").classList.add("hidden");
+      $("landing").classList.remove("hidden");
+      $("email").value = "";
+      $("password").value = "";
+      setMode("login");
+    } catch (error) {
+      alert(error.message);
+    }
+  });
+
+  checkSession();
+})();
+</script>
 </body>
 </html>

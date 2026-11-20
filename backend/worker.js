@@ -1,3 +1,5 @@
+import { handleAuth } from "./routes/auth.js";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -35,7 +37,9 @@ export default {
             tables: tables.total
           }
         }, {
-          headers: { "Cache-Control": "no-store" }
+          headers: {
+            "Cache-Control": "no-store"
+          }
         });
 
       } catch {
@@ -45,6 +49,12 @@ export default {
           database: { status: "error" }
         }, { status: 503 });
       }
+    }
+
+    const authResponse = await handleAuth(request, env);
+
+    if (authResponse) {
+      return authResponse;
     }
 
     return env.ASSETS.fetch(request);
