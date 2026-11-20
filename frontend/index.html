@@ -827,6 +827,29 @@ footer{
     "Password must contain at least 12 characters":"يجب ألا تقل كلمة المرور عن 12 حرفاً.",
     "Account created successfully":"تم إنشاء الحساب بنجاح.",
     "An account with this email already exists":"يوجد حساب مسجل بهذا البريد الإلكتروني.",
+    "Subscription payment request submitted":"تم إرسال طلب دفع الاشتراك",
+    "Subscription payment approved":"تمت الموافقة على دفع الاشتراك",
+    "Subscription payment request rejected":"تم رفض طلب دفع الاشتراك",
+    "Free trial started":"بدأت الفترة التجريبية المجانية",
+    "Subscription expires in 3 days":"بقيت 3 أيام على انتهاء الاشتراك",
+    "Subscription expires tomorrow":"ينتهي الاشتراك غداً",
+    "Subscription has expired":"انتهى الاشتراك",
+    "Your subscription request for ":"تم إرسال طلب الاشتراك لمتجر ",
+    " has been submitted and is awaiting review.":"، وهو بانتظار مراجعة الإدارة.",
+    "Your payment for ":"تمت الموافقة على دفعتك لمتجر ",
+    " was approved. The subscription is now active.":"، وأصبح الاشتراك فعالاً الآن.",
+    "Your payment request for ":"تم رفض طلب الدفع لمتجر ",
+    " was rejected. Reason: ":"، وتم رفضه. السبب: ",
+    "Your free trial for ":"بدأت الفترة التجريبية المجانية لمتجر ",
+    " has started. You can manage your store during the trial period.":"، ويمكنك إدارة متجرك خلال مدة التجربة.",
+    "Your free trial for ":"بدأت الفترة التجريبية المجانية لمتجر ",
+    " expires in 3 days. Choose a paid plan and submit your Sham Cash payment to avoid interruption.":" تنتهي بعد 3 أيام. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش لتجنب توقف المتجر.",
+    "Your subscription for ":"اشتراك متجرك ",
+    " expires in 3 days. Submit a renewal request to avoid interruption.":" ينتهي بعد 3 أيام. أرسل طلب تجديد لتجنب توقف المتجر.",
+    " expires tomorrow. Choose a paid plan and submit your Sham Cash payment.":" تنتهي غداً. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش.",
+    " expires tomorrow. Submit a renewal request.":" ينتهي غداً. أرسل طلب تجديد.",
+    " has expired. Your public store is hidden. Choose a paid plan and submit your Sham Cash payment; it will return after approval.":" انتهت. أصبح متجرك مخفياً للزوار. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش ليعود المتجر بعد الموافقة.",
+    " has expired. Your public store is hidden. Submit a Sham Cash renewal request; it will return after approval.":" انتهى. أصبح متجرك مخفياً للزوار. أرسل طلب تجديد عبر شام كاش ليعود المتجر بعد الموافقة.",
     "Unable to create account":"تعذر إنشاء الحساب.",
     "Invalid email or password":"البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     "Too many login attempts. Try again in 15 minutes.":"محاولات تسجيل دخول كثيرة. حاول مجدداً بعد 15 دقيقة.",
@@ -1118,8 +1141,7 @@ footer{
   }
 
   function notificationText(value) {
-    const text = String(value || "");
-    return text;
+    return translateText(String(value || ""));
   }
 
   function renderNotifications(data) {
