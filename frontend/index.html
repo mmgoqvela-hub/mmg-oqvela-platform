@@ -326,6 +326,22 @@ footer{
     <div class="eyebrow">الإدارة المركزية</div>
     <h2>إعدادات المنصة</h2>
     <p class="muted">إدارة وسيلة الدفع وإعدادات استقبال طلبات الاشتراك.</p>
+    <hr><h3>نظرة عامة على المنصة</h3><div id="adminOverviewCards" class="account-grid"></div>
+    <hr><h3>إدارة المستخدمين</h3><div id="adminUsers" class="account-grid"></div>
+    <hr><h3>إدارة الحسابات</h3><div id="adminAccounts" class="account-grid"></div>
+    <hr><h3>إدارة المتاجر</h3><div id="adminStores" class="account-grid"></div>
+    <hr><h3>مديرو المنصة والدعم</h3>
+    <form id="platformAdminForm" class="admin-form">
+      <div class="field"><label for="platformAdminEmail">البريد الإلكتروني</label><input id="platformAdminEmail" type="email" required maxlength="254"></div>
+      <div class="field"><label for="platformAdminLevel">الصلاحية</label><select id="platformAdminLevel"><option value="admin">مدير</option><option value="support">دعم فني</option></select></div>
+      <div class="field wide"><button class="primary" type="submit">إضافة مدير أو دعم</button><p id="platformAdminMessage" class="muted" role="status"></p></div>
+    </form>
+    <div id="platformAdmins" class="account-grid"></div>
+    <hr><h3>نقل صلاحية المدير الرئيسي</h3>
+    <form id="transferSuperAdminForm" class="admin-form">
+      <div class="field wide"><label for="newSuperAdmin">المستخدم الجديد</label><select id="newSuperAdmin" required></select></div>
+      <div class="field wide"><button class="primary" type="submit">نقل صلاحية المدير الرئيسي</button><p id="transferAdminMessage" class="muted" role="status"></p></div>
+    </form>
 
     <form id="adminSettingsForm" class="admin-form">
       <div class="field wide">
@@ -643,7 +659,46 @@ footer{
     "معاينة المتجر":"View storefront",
     "تم حفظ القالب بنجاح.":"Store template saved successfully.",
     "القالب":"Template",
-    "إدارة فريق المتجر":"Manage store team",
+    "إدارة فريق المتجر":"Manage store team",,
+    "نظرة عامة على المنصة":"Platform overview",
+    "إدارة المستخدمين":"Manage users",
+    "إدارة الحسابات":"Manage accounts",
+    "إدارة المتاجر":"Manage stores",
+    "مديرو المنصة والدعم":"Platform administrators and support",
+    "إضافة مدير أو دعم":"Add administrator or support",
+    "دعم فني":"Support",
+    "مدير":"Administrator",
+    "نقل صلاحية المدير الرئيسي":"Transfer super administrator",
+    "المستخدم الجديد":"New administrator",
+    "المستخدمون":"Users",
+    "الحسابات":"Accounts",
+    "المتاجر":"Stores",
+    "إجمالي المستخدمين":"Total users",
+    "إجمالي الحسابات":"Total accounts",
+    "إجمالي المتاجر":"Total stores",
+    "الاشتراكات النشطة":"Active subscriptions",
+    "طلبات الدفع المعلقة":"Pending payment requests",
+    "إجمالي المدفوعات المعتمدة":"Approved payments",
+    "تفعيل":"Activate",
+    "إيقاف":"Suspend",
+    "إغلاق الحساب":"Close account",
+    "حالة المتجر":"Store status",
+    "البريد الإلكتروني":"Email address",
+    "صاحب الحساب":"Account owner",
+    "نوع النشاط":"Business type",
+    "حالة الاشتراك":"Subscription status",
+    "تحديث الحالة":"Update status",
+    "تم تحديث الحالة.":"Status updated.",
+    "تمت إضافة مدير المنصة.":"Platform administrator added.",
+    "تم نقل صلاحية المدير الرئيسي.":"Super administrator role transferred.",
+    "لا توجد بيانات لعرضها.":"No records to display.",
+    "قيد الانتظار":"Pending",
+    "معلق":"Suspended",
+    "مغلق":"Closed",
+    "صيانة":"Maintenance",
+    "المدير الرئيسي":"Super administrator",
+    "مدير المنصة":"Administrator",
+    "الدعم":"Support"
     "إضافة موظف":"Add employee",
     "بريد الموظف الإلكتروني":"Employee email address",
     "الدور":"Role",
