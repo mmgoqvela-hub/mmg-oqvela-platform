@@ -19,6 +19,7 @@ function createDb(options={}) {
             if(sql.includes("FROM categories")) return {results:options.categories || []};
             if(sql.includes("FROM products")) return {results:options.products || []};
             if(sql.includes("FROM product_variants")) return {results:options.variants || []};
+            if(sql.includes("FROM product_images")) return {results:options.productImages || []};
             if(sql.includes("FROM platform_settings")) return {results:options.platformSettings || []};
             if(sql.includes("FROM platform_announcements")) return {results:options.announcements || []};
             return {results:[]};
@@ -61,6 +62,29 @@ test("Public storefront returns its selected template and published catalog only
   assert.equal(result.products[0].variants[0].attributes.size,"L");
   assert.ok(db.calls.some(call=>call.sql.includes("ss.status = 'active'")));
   assert.ok(db.calls.some(call=>call.sql.includes("p.status = 'active'")));
+});
+
+test("Public storefront exposes only image paths belonging to the current store",async()=>{
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store"},
+  products:[{id:"product-1",name:"Bag",base_price:20,currency:"USD"}],
+  productImages:[
+   {id:"image-1",product_id:"product-1",file_key:"/media/store-1/123e4567-e89b-12d3-a456-426614174000.webp",alt_text:"Blue bag",sort_order:0},
+   {id:"image-2",product_id:"product-1",file_key:"/media/other-store/123e4567-e89b-12d3-a456-426614174000.webp",alt_text:"Foreign image",sort_order:1},
+   {id:"image-3",product_id:"product-1",file_key:"https://evil.example/image.png",alt_text:"External image",sort_order:2}
+  ]
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.deepEqual(result.products[0].images,[{
+  id:"image-1",
+  url:"/media/store-1/123e4567-e89b-12d3-a456-426614174000.webp",
+  alt_text:"Blue bag",
+  sort_order:0
+ }]);
+ const query=db.calls.find(call=>call.sql.includes("FROM product_images"));
+ assert.ok(query.sql.includes("store_id = ? AND product_id IN"));
 });
 
 test("Public storefront exposes saved per-store appearance settings",async()=>{
