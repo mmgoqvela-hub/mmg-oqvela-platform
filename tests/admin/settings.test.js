@@ -34,6 +34,20 @@ function createDb(options = {}) {
     prepare(sql) {
       return {
         sql,
+        async first() {
+          if (sql.includes("COUNT(*) AS total FROM platform_admins")) return {total:options.superAdminCount ?? 1};
+          if (sql.includes("COUNT(*) AS total")) return {total:0};
+          if (sql.includes("SELECT id FROM platform_admins")) return options.targetAdmin ?? null;
+          if (sql.includes("SELECT admin_level FROM platform_admins")) return options.existingPlatformAdmin ?? null;
+          if (sql.includes("FROM platform_admins")) return options.admin ?? null;
+          if (sql.includes("FROM users WHERE email")) return options.user ?? {id:"target-user",status:"active"};
+          if (sql.includes("FROM users WHERE id")) return options.targetUser ?? {id:"target-user",status:"active"};
+          return null;
+        },
+        async all() {
+          if (sql.includes("GROUP BY currency")) return {results:options.revenue ?? []};
+          return {results:[]};
+        },
 
         bind(...values) {
           return {
