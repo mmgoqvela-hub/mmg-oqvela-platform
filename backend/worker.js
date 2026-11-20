@@ -4,6 +4,7 @@ import { handleTrial } from "./routes/trial.js";
 import { handleStores } from "./routes/stores.js";
 import { handleCatalog } from "./routes/catalog.js";
 import { handlePublicStorefront } from "./routes/storefront.js";
+import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 
 export default {
@@ -74,6 +75,9 @@ export default {
     if (subscriptionsResponse) {
       return subscriptionsResponse;
     }
+
+    const teamResponse = await handleTeam(request, env);
+    if (teamResponse) return teamResponse;
 
     const catalogResponse = await handleCatalog(request, env);
 
