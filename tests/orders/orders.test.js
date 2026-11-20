@@ -108,6 +108,7 @@ test("Order API and migration enforce tenant scope, stock reservation, restorati
  const source=await readFile(new URL("../../database/migrations/0020_store_orders_checkout.sql",import.meta.url),"utf8");
  assert.match(source,/UNIQUE \(id, store_id\)/);
  assert.match(source,/FOREIGN KEY \(product_id, store_id\)/);
+ assert.match(source,/trg_order_item_validate_catalog/);
  assert.match(source,/trg_order_item_reserve_variant_stock/);
  assert.match(source,/trg_order_item_reserve_product_stock/);
  assert.match(source,/Insufficient variant stock/);
