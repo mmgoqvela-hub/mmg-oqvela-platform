@@ -2,6 +2,7 @@ import { handleAuth } from "./routes/auth.js";
 import { handleAdmin } from "./routes/admin.js";
 import { handleTrial } from "./routes/trial.js";
 import { handleStores } from "./routes/stores.js";
+import { handleCatalog } from "./routes/catalog.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 
 export default {
@@ -59,6 +60,12 @@ export default {
 
     if (subscriptionsResponse) {
       return subscriptionsResponse;
+    }
+
+    const catalogResponse = await handleCatalog(request, env);
+
+    if (catalogResponse) {
+      return catalogResponse;
     }
 
     const storesResponse = await handleStores(request, env);
