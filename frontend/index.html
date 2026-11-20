@@ -31,6 +31,13 @@ body{
 }
 button,input{font:inherit}
 button{cursor:pointer}
+.header-actions{display:flex;align-items:center;gap:14px}
+.language-toggle{padding:8px 13px;font-weight:bold;border-color:#397be0}
+html[dir="ltr"] body{text-align:left}
+html[dir="ltr"] input:not([dir]),html[dir="ltr"] textarea:not([dir]){direction:ltr;text-align:left}
+html[dir="rtl"] input:not([dir]),html[dir="rtl"] textarea:not([dir]){direction:rtl;text-align:right}
+html[dir="ltr"] .admin-form,html[dir="ltr"] .account-card{text-align:left}
+@media(max-width:600px){header{padding:0 4%}.header-actions{gap:8px}.header-label{font-size:11px}}
 header{
   height:76px;
   padding:0 7%;
@@ -221,7 +228,7 @@ footer{
 <body>
 <header>
   <div class="logo">MMG <span>OQVELA</span></div>
-  <div class="header-label">منصة الأعمال الذكية</div>
+  <div class="header-actions"><div class="header-label">منصة الأعمال الذكية</div><button class="secondary language-toggle" id="languageToggle" type="button" aria-label="Switch language">English</button></div>
 </header>
 
 <main>
@@ -370,6 +377,187 @@ footer{
 
 <script>
 (() => {
+
+  // Central Arabic/English localization for the complete platform interface.
+  const translations = {
+    "منصة الأعمال الذكية":"Smart Business Platform",
+    "منظومة واحدة لإدارة أعمالك":"One ecosystem to manage your business",
+    "حوّل أفكارك التجارية":"Turn your business ideas",
+    "إلى تجربة رقمية":"into a digital experience",
+    "منصة متكاملة تمنحك القدرة على إدارة متاجرك وأعمالك من مكان واحد، بمرونة وذكاء وتجربة مصممة للنمو.":"An integrated platform to manage your stores and business from one place, with flexibility, intelligence, and room to grow.",
+    "إدارة متاجر متعددة":"Multi-store management",
+    "تحكم مركزي":"Centralized control",
+    "تقارير ذكية":"Smart reports",
+    "صلاحيات مرنة":"Flexible permissions",
+    "مرحباً بعودتك":"Welcome back",
+    "سجّل الدخول لمتابعة أعمالك":"Sign in to continue managing your business",
+    "تسجيل الدخول":"Sign in",
+    "حساب جديد":"Create account",
+    "الاسم الكامل":"Full name",
+    "البريد الإلكتروني":"Email address",
+    "كلمة المرور":"Password",
+    "إنشاء حسابك":"Create your account",
+    "ابدأ بإدارة أعمالك من مكان واحد":"Start managing your business from one place",
+    "إنشاء الحساب":"Create account",
+    "حدث خطأ، حاول مرة أخرى":"Something went wrong. Please try again.",
+    "مساحة العمل الخاصة بك":"Your workspace",
+    "مرحباً بك":"Welcome",
+    "تسجيل الخروج":"Sign out",
+    "الإدارة المركزية":"Central administration",
+    "إعدادات المنصة":"Platform settings",
+    "إدارة وسيلة الدفع وإعدادات استقبال طلبات الاشتراك.":"Manage the payment method and subscription request settings.",
+    "رابط الدفع عبر شام كاش":"Sham Cash payment link",
+    "اسم المستفيد":"Recipient name",
+    "تعليمات الدفع":"Payment instructions",
+    "اكتب تعليمات الدفع للعميل":"Enter payment instructions for customers",
+    "استقبال طلبات الدفع عبر شام كاش":"Accept payments through Sham Cash",
+    "حفظ الإعدادات":"Save settings",
+    "الفترة التجريبية":"Free trial",
+    "تُمنح مرة واحدة فقط لكل حساب.":"Granted only once per account.",
+    "مدة التجربة بالأيام":"Trial duration (days)",
+    "تفعيل الفترة التجريبية":"Enable free trial",
+    "حفظ إعدادات التجربة":"Save trial settings",
+    "طلبات الاشتراك المدفوعة":"Paid subscription requests",
+    "الباقات الحالية":"Current plans",
+    "سجل عمليات الإدارة":"Admin activity log",
+    "آخر العمليات الإدارية المسجلة، للمتابعة والمراجعة.":"Recent administrative actions for monitoring and review.",
+    "تحديث السجل":"Refresh log",
+    "إنشاء باقة اشتراك":"Create subscription plan",
+    "اسم الباقة":"Plan name",
+    "السعر":"Price",
+    "العملة":"Currency",
+    "المدة بالأيام":"Duration (days)",
+    "وصف الباقة":"Plan description",
+    "إنشاء الباقة":"Create plan",
+    "لا توجد حسابات متاحة":"No accounts available",
+    "إنشاء متجر إضافي":"Create another store",
+    "اسم المتجر الجديد":"New store name",
+    "إنشاء المتجر":"Create store",
+    "المتجر الإضافي لا يحصل على فترة تجريبية جديدة؛ يلزم اختيار باقة مدفوعة.":"Additional stores do not receive another free trial; a paid plan is required.",
+    "إدارة بيانات المتجر":"Manage store details",
+    "اسم المتجر":"Store name",
+    "نوع النشاط":"Business type",
+    "وصف المتجر":"Store description",
+    "حفظ بيانات المتجر":"Save store details",
+    "إغلاق التعديل":"Close editor",
+    "جارٍ الحفظ...":"Saving...",
+    "تم الحفظ بنجاح":"Saved successfully",
+    "إعادة المحاولة":"Try again",
+    "اشتراك المتجر":"Store subscription",
+    "جارٍ تحميل بيانات الاشتراك...":"Loading subscription details...",
+    "يوجد اشتراك قيد المراجعة أو نشط أو معلّق؛ لا يمكن إنشاء طلب جديد.":"A subscription is pending, active, or suspended. A new request cannot be created.",
+    "طلبات الاشتراك غير متاحة حالياً.":"Subscription requests are currently unavailable.",
+    "حوّل قيمة الباقة عبر شام كاش ثم أدخل رقم العملية.":"Pay for the plan through Sham Cash, then enter the transaction number.",
+    "غير محدد":"Not specified",
+    "فتح رابط شام كاش":"Open Sham Cash link",
+    "الباقة":"Plan",
+    "رقم عملية التحويل":"Transfer transaction number",
+    "إرسال طلب الاشتراك":"Submit subscription request",
+    "لا توجد باقات مدفوعة متاحة حالياً.":"No paid plans are currently available.",
+    "تم إرسال الطلب.":"Request submitted.",
+    "لم تُنشأ باقات مدفوعة بعد.":"No paid plans have been created yet.",
+    "مفعّلة":"Active",
+    "متوقفة":"Inactive",
+    "إيقاف الباقة":"Deactivate plan",
+    "تفعيل الباقة":"Activate plan",
+    "لا توجد طلبات اشتراك حتى الآن.":"There are no subscription requests yet.",
+    "تأكيد الدفع وتفعيل الاشتراك":"Confirm payment and activate subscription",
+    "تمت الموافقة.":"Approved.",
+    "رفض الطلب":"Reject request",
+    "اكتب سبب رفض الطلب:":"Enter a reason for rejecting this request:",
+    "لا توجد عمليات إدارية مسجلة حتى الآن.":"No administrative actions have been recorded yet.",
+    "عملية":"Action",
+    "عام":"General",
+    "حساب إداري":"Administrator account",
+    "التفاصيل: ":"Details: ",
+    "المنفذ: ":"Performed by: ",
+    "التاريخ: ":"Date: ",
+    "تم إنشاء الباقة.":"Plan created.",
+    "تم استخدام الفترة التجريبية لهذا الحساب.":"This account has already used its free trial.",
+    "الفترة التجريبية غير متاحة حالياً.":"The free trial is currently unavailable.",
+    "إنشاء المتجر وبدء التجربة":"Create store and start trial",
+    "جارٍ إنشاء المتجر...":"Creating store...",
+    "تعذر التحقق من حالة التجربة.":"Unable to check trial status.",
+    "تم حفظ الإعدادات بنجاح":"Settings saved successfully",
+    "أدخل مدة من يوم إلى 365 يوماً.":"Enter a duration between 1 and 365 days.",
+    "تم حفظ إعدادات التجربة.":"Trial settings saved.",
+    "تم بنجاح، جارٍ فتح حسابك...":"Success. Opening your account...",
+    "حدث خطأ، حاول مرة أخرى":"An error occurred. Please try again.",
+    "تعذر تحميل الاشتراكات: ":"Unable to load subscriptions: ",
+    "تعذر تحميل الباقات: ":"Unable to load plans: ",
+    "تعذر تحميل الطلبات: ":"Unable to load requests: ",
+    "تعذر تحميل سجل العمليات: ":"Unable to load the activity log: ",
+    "تعذر التحقق من حالة التجربة.":"Unable to verify trial status.",
+    "جارٍ التحقق من الفترة التجريبية...":"Checking free trial status...",
+    "الفترة التجريبية متاحة لمدة ":"Free trial available for ",
+    " يوماً.":" days.",
+    "المستفيد: ":"Recipient: ",
+    "الباقة: ":"Plan: ",
+    " — الاشتراك: ":" — Subscription: ",
+    " — الدفع: ":" — Payment: ",
+    " يوم":" days",
+    " — ":" — ",
+    " — عدد الاشتراكات: ":" — Subscriptions: ",
+    "العميل: ":"Customer: ",
+    " | المبلغ: ":" | Amount: ",
+    " | رقم العملية: ":" | Transaction: ",
+    " | الحالة: ":" | Status: ",
+    "الصلاحية: ":"Role: ",
+    "عدد المتاجر: ":"Number of stores: ",
+    "المتجر: ":"Store: ",
+    "مرحباً، ":"Hello, "
+  };
+  let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
+  function translateText(value) {
+    if (currentLanguage !== "en" || !value) return value;
+    const trimmed = value.trim();
+    if (translations[trimmed]) return value.replace(trimmed, translations[trimmed]);
+    const prefixes = Object.keys(translations).filter(key => key.endsWith(" ") && trimmed.startsWith(key)).sort((a,b)=>b.length-a.length);
+    if (prefixes.length) {
+      const key = prefixes[0];
+      return value.replace(key, translations[key]);
+    }
+    return value;
+  }
+  function applyLanguage() {
+    document.documentElement.lang = currentLanguage;
+    document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
+    document.title = currentLanguage === "ar" ? "MMG OQVELA | منصة الأعمال الذكية" : "MMG OQVELA | Smart Business Platform";
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.content = currentLanguage === "ar" ? "MMG OQVELA - منصة ذكية لإدارة المتاجر والأعمال" : "MMG OQVELA - Smart platform for stores and business management";
+    const toggle = document.getElementById("languageToggle");
+    if (toggle) {
+      toggle.textContent = currentLanguage === "ar" ? "English" : "العربية";
+      toggle.setAttribute("aria-label", currentLanguage === "ar" ? "Switch to English" : "التبديل إلى العربية");
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      if (node.parentElement?.closest("script,style")) continue;
+      const translated = translateText(node.nodeValue);
+      if (translated !== node.nodeValue) node.nodeValue = translated;
+    }
+    document.querySelectorAll("[placeholder],[title],[aria-label]").forEach(element => {
+      for (const attr of ["placeholder","title","aria-label"]) {
+        if (element.hasAttribute(attr)) element.setAttribute(attr, translateText(element.getAttribute(attr)));
+      }
+    });
+    document.querySelectorAll("input:not([dir]),textarea:not([dir])").forEach(element => {
+      element.style.direction = currentLanguage === "ar" ? "rtl" : "ltr";
+      element.style.textAlign = currentLanguage === "ar" ? "right" : "left";
+    });
+  }
+  const languageObserver = new MutationObserver(() => applyLanguage());
+  languageObserver.observe(document.body, {childList:true,subtree:true,characterData:true});
+  document.addEventListener("DOMContentLoaded", applyLanguage);
+  document.getElementById("languageToggle")?.addEventListener("click", () => {
+    currentLanguage = currentLanguage === "ar" ? "en" : "ar";
+    localStorage.setItem("mmg_language", currentLanguage);
+    applyLanguage();
+  });
+  applyLanguage();
+
   const $ = id => document.getElementById(id);
 
   let mode = "login";
@@ -377,7 +565,7 @@ footer{
   const message = $("formMessage");
 
   function showMessage(text, type) {
-    message.textContent = text;
+    message.textContent = translateText(text);
     message.className = "message " + type;
   }
 
@@ -429,7 +617,7 @@ footer{
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || "حدث خطأ، حاول مرة أخرى");
+      throw new Error(translateText(data.error || "حدث خطأ، حاول مرة أخرى"));
     }
 
     return data;
@@ -911,7 +1099,7 @@ footer{
 
   function showAdminMessage(text, type) {
     const box = $("adminMessage");
-    box.textContent = text;
+    box.textContent = translateText(text);
     box.className = "message admin-status " + type;
   }
 
