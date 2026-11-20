@@ -182,3 +182,14 @@ test("Language translation disconnects its mutation observer during DOM updates"
   assert.match(applyLanguage, /languageObserver\.observe\(document\.body/);
   assert.ok(applyLanguage.indexOf("languageObserver.disconnect()") < applyLanguage.indexOf("languageObserver.observe("));
 });
+
+
+test("Admin dashboard is full-width and readable on mobile", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /\.dashboard\{width:100%;min-width:0\}/);
+  assert.match(html, /\.admin-panel\{width:100%;max-width:100%;min-width:0/);
+  assert.match(html, /grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(html, /ar-EG-u-nu-latn/);
+  assert.match(html, /activity-details/);
+  assert.match(html, /Changed fields/);
+});
