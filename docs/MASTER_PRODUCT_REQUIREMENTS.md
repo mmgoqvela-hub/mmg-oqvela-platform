@@ -133,13 +133,16 @@ Other detailed business modules (such as order processing, customer management, 
 - Platform-admin activity-log API and visible admin log.
 - Catalog/inventory tables and tenant-integrity triggers.
 - Tenant-scoped catalog APIs for category listing/creation/update/deletion, product listing/creation/update/archive, product variant creation/update/deactivation, and inventory movement history/stock adjustments. Product and variant creation record initial stock; stock changes are guarded against negative quantities and concurrent updates. Automated API tests cover tenant access, permissions and inventory integrity.
+- Per-store storefront template selection persisted in D1 with five approved presets: modern, classic, minimal, boutique and tech. Owners/admins can choose a template and open the public store preview without changing catalog data.
+- Public storefront route `/s/{slug}` with a tenant-safe public API, subscription-active visibility check, category filters, product search, product/variant display, responsive layouts, Arabic/English and RTL/LTR.
 - Role/permission tables and some cross-store integrity triggers.
 
 ### Partially implemented / requires audit or completion
 - Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migration 0013 has not yet been applied to production, and full browser/device verification remains pending.
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff, custom roles and permission-management screens/APIs.
-- Product/category/variant/image/inventory management end-to-end: category, product and variant APIs plus stock movements now exist, but there is no finished management UI; R2-backed product image upload/management remains incomplete.
+- Product/category/variant/image/inventory management end-to-end: category, product and variant APIs plus stock movements and initial catalog UI now exist; richer variant editing, R2-backed product image upload/management and fuller inventory tools remain incomplete.
+- Storefronts: five selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
 - Subscription lifecycle notifications and renewal rules.
 - Platform-wide announcements/ads and mandatory footer.
 - WhatsApp contact configuration/links.
@@ -149,7 +152,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Tenant-isolation regression tests now cover cross-store category parents, product categories, variants, images and staff-role assignment at database level, plus cross-account store-creation rejection. Broader API coverage for every future module remains required.
 
 ### Not evidenced as implemented
-- Fully featured storefront pages at `/s/{slug}`.
+- Customer shopping, cart, checkout and order workflows end-to-end at `/s/{slug}`.
 - End-to-end customer shopping/order workflows.
 - Store-side business reports/analytics.
 - A complete staff invitation/onboarding workflow.
@@ -163,8 +166,8 @@ Do not represent these as finished until implemented and tested.
 3. Finish account/store lifecycle and reconcile store-creation authority.
 4. Complete roles, staff membership and server-enforced permissions.
 5. Complete catalog management UI, variant CRUD, media upload/storage and inventory workflows using the existing schema.
-6. Build storefront routing and public store presentation at `/s/{slug}`.
-7. Specify and implement customer-facing order/business workflows only against approved requirements.
+6. Finish storefront template previews, accessibility, product media, and public-store verification at `/s/{slug}`.
+7. Specify and implement customer-facing cart, checkout and order/business workflows only against approved requirements.
 8. Complete central administration, central ads/announcements, mandatory footer and WhatsApp contact.
 9. Complete subscription lifecycle alerts, renewal controls and notification preferences.
 10. Implement R2 file management and quotas.
