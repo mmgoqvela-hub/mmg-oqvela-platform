@@ -151,3 +151,22 @@ BEGIN
           AND p.store_id = NEW.store_id AND p.track_inventory = 1
       );
 END;
+
+
+-- Notify the store owner when a customer places an order.
+CREATE TRIGGER trg_notify_store_order_created
+AFTER INSERT ON store_orders
+BEGIN
+    INSERT OR IGNORE INTO user_notifications
+      (id,user_id,notification_type,title,message,entity_type,entity_id,dedupe_key)
+    SELECT lower(hex(randomblob(16))), a.owner_user_id, 'store_order',
+      'طلب جديد في متجرك',
+      CASE WHEN NEW.payment_method = 'shamcash'
+        THEN 'تم استلام طلب جديد عبر شام كاش ويحتاج إلى مراجعة رقم العملية.'
+        ELSE 'تم استلام طلب جديد بالدفع عند الاستلام.'
+      END,
+      'store_order', NEW.id, 'store-order-created:' || NEW.id
+    FROM stores s
+    JOIN accounts a ON a.id = s.account_id
+    WHERE s.id = NEW.store_id;
+END;
