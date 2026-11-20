@@ -283,6 +283,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   ).bind(productId, storeId).first();
   if (!product) return json({ error: "Product not found" }, 404);
   if (method === "GET") {
+    if (!canRead(access, "catalog.read")) return json({ error: "Store read permission required" }, 403);
     const variants = await env.DB.prepare(
       "SELECT id, name, sku, price, stock_quantity, attributes_json, status FROM product_variants WHERE product_id = ? AND store_id = ? ORDER BY created_at ASC"
     ).bind(productId, storeId).all();
