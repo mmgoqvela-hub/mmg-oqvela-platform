@@ -231,3 +231,11 @@ A feature is complete only when:
 - Added footer entry points, an about-us dialog, a bilingual service request form and a central-admin review list.
 - These changes are committed to the repository and require CI, remote D1 migration, deployment and live browser verification before they are active in production.
 - WhatsApp and email delivery are not yet integrated; the initial release stores requests in the central admin inbox.
+
+
+### Public service request abuse protection — 2026-11-20
+- Added migration 0025 with a dedicated public service-request rate-limit table.
+- The public request endpoint allows five submissions per client IP hash per ten-minute window and returns HTTP 429 after the limit.
+- Only SHA-256 IP hashes are persisted; scheduled cleanup removes expired records older than two days.
+- Automated test coverage verifies the sixth request is rejected. CI passed 176 tests and validated the full SQLite migration set.
+- Production rollout is pending a manual deployment workflow run after this commit.
