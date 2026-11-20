@@ -930,8 +930,8 @@ footer{
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
           renderSubscriptionPanel(store, card);
-          renderCatalogPanel(store, card, account.role);
         }
+        renderCatalogPanel(store, card, account.role);
       }
 
       if (account.role === "owner") {
