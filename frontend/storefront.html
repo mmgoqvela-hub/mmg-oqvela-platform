@@ -562,7 +562,7 @@
           document.body.dataset.template = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(data.store.template_key) ? data.store.template_key : "modern";
           const customization = data.store.customization && typeof data.store.customization === "object" ? data.store.customization : {};
           const colors = customization.colors || {};
-          const safeColor = value => typeof value === "string" && /^(#[0-9a-f]{3,8}|rgb\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*\\)|hsl\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}%\\s*,\\s*\\d{1,3}%\\s*\\))$/i.test(value);
+          const safeColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
           if (safeColor(colors.primary)) document.documentElement.style.setProperty("--accent",colors.primary);
           if (safeColor(colors.background)) document.documentElement.style.setProperty("--bg",colors.background);
           const fonts = {system:'system-ui,-apple-system,"Segoe UI",sans-serif',cairo:'Cairo,system-ui,sans-serif',tajawal:'Tajawal,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif'};
