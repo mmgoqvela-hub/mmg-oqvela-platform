@@ -81,7 +81,7 @@ This document is the working source of truth for preserving previously agreed re
 - Delivery channels, scheduling, user targeting, consent and message templates require detailed design before implementation.
 
 ### 2.7 Security, privacy and operations
-- Secure authentication and session handling.
+- Secure authentication and session handling. Login attempts are persistently throttled per normalized email/IP pair after five failed attempts in a 15-minute window; automated tests now cover the lockout response, Retry-After header and cross-origin rejection.
 - Password protection and login abuse/rate limiting.
 - Strict tenant isolation.
 - Server-side role/permission checks.
