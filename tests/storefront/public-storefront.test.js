@@ -63,6 +63,25 @@ test("Public storefront returns its selected template and published catalog only
   assert.ok(db.calls.some(call=>call.sql.includes("p.status = 'active'")));
 });
 
+test("Public storefront exposes saved per-store appearance settings",async()=>{
+ const customization={colors:{primary:"#123456"},texts:{heroTitle:"Welcome"},layout:{heroAlignment:"center"},heroImage:"https://example.com/hero.jpg"};
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store",template_key:"modern",customization_json:JSON.stringify(customization)}
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.deepEqual(result.store.customization,customization);
+});
+
+test("Malformed saved storefront customization safely falls back to defaults",async()=>{
+ const db=createDb({store:{id:"store-1",name:"Test Store",slug:"test-store",customization_json:"not-json"}});
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.deepEqual(result.store.customization,{});
+});
+
 test("Public storefront receives the centrally managed bilingual footer",async()=>{
  const db=createDb({
   store:{id:"store-1",name:"Test Store",slug:"test-store"},
