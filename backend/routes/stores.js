@@ -80,6 +80,7 @@ export async function handleStores(request, env) {
         s.business_type,
         s.description,
         s.template_key,
+        s.whatsapp_phone,
         s.status,
         s.created_at,
         s.updated_at,
@@ -169,6 +170,12 @@ export async function handleStores(request, env) {
         ? body.template_key.trim()
         : null;
     const allowedTemplates = ["modern", "classic", "minimal", "boutique", "tech"];
+    const whatsappRaw = body?.whatsapp_phone == null
+      ? (store.whatsapp_phone || "")
+      : typeof body.whatsapp_phone === "string"
+        ? body.whatsapp_phone.trim()
+        : null;
+    const whatsappPhone = whatsappRaw === null ? null : whatsappRaw.replace(/[\\s()+.-]/g, "");
 
     if (
       name.length < 2 ||
@@ -177,7 +184,9 @@ export async function handleStores(request, env) {
       businessType.length > 80 ||
       description === null ||
       description.length > 1000 ||
-      !allowedTemplates.includes(templateKey)
+      !allowedTemplates.includes(templateKey) ||
+      whatsappPhone === null ||
+      (whatsappPhone !== "" && !/^\\d{8,15}$/.test(whatsappPhone))
     ) {
       return json({
         error: "تحقق من البيانات: الاسم 2-100 حرف، ونوع النشاط 80، والوصف 1000 حرف كحد أقصى."
@@ -191,6 +200,7 @@ export async function handleStores(request, env) {
         business_type = ?,
         description = ?,
         template_key = ?,
+        whatsapp_phone = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND account_id = ?
@@ -199,6 +209,7 @@ export async function handleStores(request, env) {
       businessType || null,
       description || null,
       templateKey,
+      whatsappPhone || null,
       storeId,
       store.account_id
     ).run();
@@ -210,7 +221,7 @@ export async function handleStores(request, env) {
     return json({
       status: "ok",
       message: "تم تحديث بيانات المتجر بنجاح",
-      store: { id: storeId, template_key: templateKey }
+      store: { id: storeId, template_key: templateKey, whatsapp_phone: whatsappPhone || null }
     });
 
   } catch {
