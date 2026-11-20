@@ -138,7 +138,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Role/permission tables and some cross-store integrity triggers.
 
 ### Partially implemented / requires audit or completion
-- Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migration 0013 has not yet been applied to production, and full browser/device verification remains pending.
+- Arabic/English switch and translation coverage are substantially implemented and have automated coverage for visible Arabic text, dynamic authentication/validation messages, RTL/LTR, and locale formatting. Per-user language preference API and migration 0013 are now in the repository; migrations 0013 (language preference) and 0014 (storefront templates) have not yet been applied to production, and full browser/device verification remains pending.
 - Multi-store workflows and the unresolved distinction between platform-created stores and account-owner-created stores.
 - Store staff, custom roles and permission-management screens/APIs.
 - Product/category/variant/image/inventory management end-to-end: category, product and variant APIs plus stock movements and initial catalog UI now exist; richer variant editing, R2-backed product image upload/management and fuller inventory tools remain incomplete.
