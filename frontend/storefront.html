@@ -563,6 +563,7 @@
             return;
           }
           storeData = data;
+          $("productsHeading").textContent = t("products");
           renderAnnouncements();
           renderCheckoutMethods();
           document.title = data.store.name + " | MMG OQVELA";
