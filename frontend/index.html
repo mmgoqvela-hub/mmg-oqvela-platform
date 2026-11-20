@@ -419,6 +419,18 @@ footer{
         <div class="message admin-status" id="trialAdminMessage" role="status"></div>
       </div>
     </form>
+    <hr><h3>الإعلانات المركزية لجميع المتاجر</h3>
+    <form id="announcementForm" class="admin-form">
+      <div class="field"><label for="announcementTitleAr">عنوان الإعلان بالعربية</label><input id="announcementTitleAr" maxlength="160" required></div>
+      <div class="field"><label for="announcementTitleEn">Announcement title</label><input id="announcementTitleEn" maxlength="160" required dir="ltr"></div>
+      <div class="field wide"><label for="announcementMessageAr">نص الإعلان بالعربية</label><textarea id="announcementMessageAr" maxlength="1000" required></textarea></div>
+      <div class="field wide"><label for="announcementMessageEn">Announcement message</label><textarea id="announcementMessageEn" maxlength="1000" required dir="ltr"></textarea></div>
+      <div class="field"><label for="announcementType">النوع</label><select id="announcementType"><option value="info">معلومة</option><option value="success">نجاح</option><option value="warning">تحذير</option><option value="urgent">عاجل</option></select></div>
+      <div class="field"><label for="announcementStarts">يبدأ في (اختياري)</label><input id="announcementStarts" type="datetime-local"></div>
+      <div class="field"><label for="announcementEnds">ينتهي في (اختياري)</label><input id="announcementEnds" type="datetime-local"></div>
+      <div class="field wide"><button class="primary" id="createAnnouncement" type="submit">نشر الإعلان</button><p id="announcementMessage" class="muted" role="status"></p></div>
+    </form>
+    <div id="adminAnnouncements" class="account-grid"></div>
     <hr><h3>طلبات الاشتراك المدفوعة</h3><div id="adminSubscriptionRequests" class="account-grid"></div>
     <hr><h3>الباقات الحالية</h3><div id="adminSubscriptionPlans" class="account-grid"></div>
     <hr><h3>سجل عمليات الإدارة</h3>
@@ -3120,6 +3132,40 @@ footer{
 
   $("refreshAdminLogs").addEventListener("click", loadAdminActivityLogs);
 
+  async function loadAdminAnnouncements() {
+    const container=$("adminAnnouncements");
+    if(!container)return;
+    container.replaceChildren();
+    try {
+      const data=await api("/api/admin/announcements");
+      for(const announcement of data.announcements || []) {
+        const item=document.createElement("article"); item.className="account-card";
+        const title=document.createElement("h4"); title.textContent=announcement.title_ar+" / "+announcement.title_en;
+        const message=document.createElement("p"); message.textContent=announcement.message_ar;
+        const status=document.createElement("p"); status.className="muted"; status.textContent=(announcement.is_active?"مفعّل":"متوقف")+" — "+announcement.announcement_type;
+        const toggle=document.createElement("button"); toggle.type="button"; toggle.className="secondary"; toggle.textContent=announcement.is_active?"إيقاف الإعلان":"تفعيل الإعلان";
+        toggle.addEventListener("click",async()=>{toggle.disabled=true;try{await api("/api/admin/announcements/"+encodeURIComponent(announcement.id),{method:"PATCH",body:JSON.stringify({is_active:!announcement.is_active})});await loadAdminAnnouncements();}catch(error){status.textContent=error.message;toggle.disabled=false;}});
+        item.append(title,message,status,toggle); container.append(item);
+      }
+      if(!(data.announcements||[]).length)container.textContent="لا توجد إعلانات بعد.";
+    } catch(error){container.textContent="تعذر تحميل الإعلانات: "+error.message;}
+  }
+
+  $("announcementForm").addEventListener("submit",async event=>{
+    event.preventDefault();
+    const button=$("createAnnouncement"),message=$("announcementMessage");button.disabled=true;
+    const dateValue=id=>$(id).value?new Date($(id).value).toISOString():null;
+    try {
+      await api("/api/admin/announcements",{method:"POST",body:JSON.stringify({
+        title_ar:$("announcementTitleAr").value.trim(),title_en:$("announcementTitleEn").value.trim(),
+        message_ar:$("announcementMessageAr").value.trim(),message_en:$("announcementMessageEn").value.trim(),
+        announcement_type:$("announcementType").value,starts_at:dateValue("announcementStarts"),ends_at:dateValue("announcementEnds")
+      })});
+      $("announcementForm").reset();message.textContent="تم نشر الإعلان.";await loadAdminAnnouncements();
+    } catch(error){message.textContent=error.message;} finally{button.disabled=false;}
+  });
+
+
   $("subscriptionPlanForm").addEventListener("submit", async event => {
     event.preventDefault();
     const button = $("createPlanButton"), message = $("planMessage");
@@ -3510,7 +3556,8 @@ footer{
         loadPlatformAdmins(),
         loadAdminSubscriptionRequests(),
         loadAdminSubscriptionPlans(),
-        loadAdminActivityLogs()
+        loadAdminActivityLogs(),
+        loadAdminAnnouncements()
       ]);
 
       panel.classList.remove("hidden");
