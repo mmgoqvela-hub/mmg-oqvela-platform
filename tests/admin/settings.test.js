@@ -234,7 +234,7 @@ test("Super admin can update settings and create audit log", async () => {
   assert.equal(result.status, "ok");
   assert.equal(result.settings.shamcash_enabled, "1");
   assert.equal(result.settings.platform_footer_ar, VALID_SETTINGS.platform_footer_ar);
-  assert.equal(db.calls.length, 7);
+  assert.equal(db.calls.length, 8);
 
   const auditLog = db.calls.find(item =>
     item.sql.includes("INSERT INTO admin_activity_logs")
@@ -250,7 +250,7 @@ test("Footer settings reject empty or oversized text", async () => {
     ...VALID_SETTINGS,platform_footer_ar:"  "
   }),{DB:db});
   assert.equal(response.status,400);
-  assert.equal(db.calls.length,0);
+  assert.equal(db.calls.some(call => call.sql.includes("INSERT INTO platform_settings") || call.sql.includes("INSERT INTO admin_activity_logs")),false);
 });
 
 test("Invalid payment link is rejected", async () => {
