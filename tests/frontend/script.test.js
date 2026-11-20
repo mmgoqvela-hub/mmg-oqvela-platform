@@ -72,3 +72,13 @@ test("Store subscription panel displays trial expiry and renewal notices", async
   assert.match(html, /إعادة تفعيله بعد موافقة الإدارة/);
   assert.match(html, /The free trial has ended/);
 });
+
+
+test("Store subscription panel warns before and after paid subscription expiry", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /sub\.expires_at && \["active", "expired"\]\.includes\(sub\.subscription_status\)/);
+  assert.match(html, /sub\.is_trial\s*\? "انتهت الفترة التجريبية[\s\S]*?: "انتهى الاشتراك المدفوع/);
+  assert.match(html, /انتهى الاشتراك المدفوع\. أصبح المتجر مخفياً للزوار/);
+  assert.match(html, /يوم على انتهاء الاشتراك المدفوع/);
+  assert.match(html, /Your paid subscription has expired/);
+});
