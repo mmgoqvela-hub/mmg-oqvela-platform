@@ -10,6 +10,10 @@ const migration = await readFile(
   new URL("../../database/migrations/0012_paid_approval_atomicity.sql", import.meta.url),
   "utf8"
 );
+const senderMigration = await readFile(
+  new URL("../../database/migrations/0017_shamcash_sender_name.sql", import.meta.url),
+  "utf8"
+);
 
 function functionSource(name, nextName) {
   const start = route.indexOf(`async function ${name}(`);
@@ -96,4 +100,12 @@ test("Subscription payment UI collects and displays the sender name", async () =
   assert.match(html, /sender_name:senderName\.value\.trim\(\)/);
   assert.match(html, /request\.sender_name/);
   assert.match(html, /اسم المرسل/);
+});
+
+
+test("Sender name is stored and protected as immutable payment evidence", () => {
+  assert.match(senderMigration, /ADD COLUMN sender_name TEXT/);
+  assert.match(senderMigration, /DROP TRIGGER IF EXISTS trg_payment_financial_fields_guard/);
+  assert.match(senderMigration, /NEW\.sender_name IS NOT OLD\.sender_name/);
+  assert.match(route, /sender_name: senderName/);
 });
