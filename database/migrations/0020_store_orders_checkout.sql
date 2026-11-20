@@ -34,11 +34,13 @@ CREATE TABLE store_orders (
     subtotal REAL NOT NULL CHECK (subtotal >= 0),
     total REAL NOT NULL CHECK (total >= 0),
     currency TEXT NOT NULL,
+    updated_by TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (store_id, order_number),
     UNIQUE (id, store_id),
     FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
     CHECK (payment_method != 'shamcash' OR (transaction_reference IS NOT NULL AND sender_name IS NOT NULL)),
     CHECK (payment_method != 'cash_on_delivery' OR transaction_reference IS NULL)
 );
@@ -64,6 +66,48 @@ CREATE TABLE store_order_items (
 
 CREATE INDEX idx_store_orders_store_created ON store_orders(store_id, created_at DESC);
 CREATE INDEX idx_store_orders_store_status ON store_orders(store_id, order_status, payment_status);
+CREATE TABLE store_order_events (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    store_id TEXT NOT NULL,
+    actor_user_id TEXT,
+    event_type TEXT NOT NULL CHECK (event_type IN ('created','order_status','payment_status')),
+    from_value TEXT,
+    to_value TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id, store_id) REFERENCES store_orders(id, store_id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_store_order_events_order ON store_order_events(store_id, order_id, created_at);
+
+CREATE TRIGGER trg_store_order_created_event
+AFTER INSERT ON store_orders
+BEGIN
+    INSERT INTO store_order_events
+      (id,order_id,store_id,event_type,to_value)
+    VALUES (lower(hex(randomblob(16))),NEW.id,NEW.store_id,'created',NEW.order_status);
+END;
+
+CREATE TRIGGER trg_store_order_status_event
+AFTER UPDATE OF order_status ON store_orders
+WHEN OLD.order_status != NEW.order_status
+BEGIN
+    INSERT INTO store_order_events
+      (id,order_id,store_id,actor_user_id,event_type,from_value,to_value)
+    VALUES (lower(hex(randomblob(16))),NEW.id,NEW.store_id,NEW.updated_by,
+      'order_status',OLD.order_status,NEW.order_status);
+END;
+
+CREATE TRIGGER trg_store_payment_status_event
+AFTER UPDATE OF payment_status ON store_orders
+WHEN OLD.payment_status != NEW.payment_status
+BEGIN
+    INSERT INTO store_order_events
+      (id,order_id,store_id,actor_user_id,event_type,from_value,to_value)
+    VALUES (lower(hex(randomblob(16))),NEW.id,NEW.store_id,NEW.updated_by,
+      'payment_status',OLD.payment_status,NEW.payment_status);
+END;
+
 CREATE INDEX idx_store_order_items_order ON store_order_items(store_id, order_id);
 CREATE UNIQUE INDEX idx_store_orders_unique_shamcash_reference
     ON store_orders(store_id, transaction_reference)
