@@ -161,3 +161,12 @@ test("Public checkout prevents duplicate submissions and cart mutation while pen
  ]) assert.ok(script.includes(marker),"missing checkout protection: "+marker);
  assert.doesNotThrow(()=>new vm.Script(script));
 });
+
+
+test("Frontend API requests have a finite timeout and show a retryable message", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /new AbortController\(\)/);
+  assert.match(html, /setTimeout\(\(\) => controller\.abort\(\), 12000\)/);
+  assert.match(html, /clearTimeout\(timeoutId\)/);
+  assert.match(html, /انتهت مهلة الاتصال بالخادم/);
+});
