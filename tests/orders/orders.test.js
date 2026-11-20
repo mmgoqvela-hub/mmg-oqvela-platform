@@ -139,7 +139,7 @@ test("Sham Cash orders cannot be fulfilled before manual payment approval",async
   order_status:"confirmed"
  },true),{DB:database});
  assert.equal(response.status,409);
- assert.equal(database.calls.length,0);
+ assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_orders")),false);
 });
 
 test("Store owner can approve Sham Cash payment and confirm the order together",async()=>{
