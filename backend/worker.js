@@ -10,6 +10,7 @@ import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
 import { handleOrders } from "./routes/orders.js";
 import { handlePublicServiceRequests } from "./routes/service_requests.js";
+import { handleStoreMedia } from "./routes/store_media.js";
 
 export default {
   async scheduled(controller, env, ctx) {
@@ -22,6 +23,9 @@ export default {
 
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    const mediaResponse = await handleStoreMedia(request, env);
+    if (mediaResponse) return mediaResponse;
 
     if (url.pathname === "/api/health") {
       if (request.method !== "GET") {
