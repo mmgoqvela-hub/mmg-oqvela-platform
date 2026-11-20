@@ -208,6 +208,7 @@ test("Store owner can update store details", async () => {
     VALID_DATA.description,
     STORE.template_key,
     null,
+    "{}",
     STORE.id,
     STORE.account_id
   ]);
@@ -387,3 +388,38 @@ test("Unknown storefront templates are rejected",async()=>{
   assert.equal(db.calls.some(item=>item.sql.includes("UPDATE stores")),false);
 });
 
+
+test("Store owner can save persistent visual customization", async () => {
+  const db = createDb({
+    session: SESSION,
+    store: { ...STORE, account_role: "owner", customization_json: "{}" }
+  });
+  const customization = {
+    colors: { primary: "#123456", background: "#ffffff" },
+    texts: { heroTitle: "Welcome to our store" },
+    fonts: { heading: "Cairo" },
+    sections: { featured: true, testimonials: false }
+  };
+  const response = await handleStores(
+    makeRequest("PUT", { ...VALID_DATA, customization }),
+    { DB: db }
+  );
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(result.store.customization, customization);
+  const update = db.calls.find(item => item.sql.includes("UPDATE stores"));
+  assert.equal(update.values[5], JSON.stringify(customization));
+});
+
+test("Invalid customization values are rejected", async () => {
+  const db = createDb({
+    session: SESSION,
+    store: { ...STORE, account_role: "owner", customization_json: "{}" }
+  });
+  const response = await handleStores(
+    makeRequest("PUT", { ...VALID_DATA, customization: { colors: { primary: 42 } } }),
+    { DB: db }
+  );
+  assert.equal(response.status, 400);
+  assert.equal(db.calls.some(item => item.sql.includes("UPDATE stores")), false);
+});
