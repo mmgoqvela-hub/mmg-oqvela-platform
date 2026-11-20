@@ -71,18 +71,28 @@ test("Public storefront exposes same-store media and safe HTTPS image URLs only"
   productImages:[
    {id:"image-1",product_id:"product-1",file_key:"/media/store-1/123e4567-e89b-12d3-a456-426614174000.webp",alt_text:"Blue bag",sort_order:0},
    {id:"image-2",product_id:"product-1",file_key:"/media/other-store/123e4567-e89b-12d3-a456-426614174000.webp",alt_text:"Foreign image",sort_order:1},
-   {id:"image-3",product_id:"product-1",file_key:"https://evil.example/image.png",alt_text:"External image",sort_order:2}
+   {id:"image-3",product_id:"product-1",file_key:"https://cdn.example.com/image.png",alt_text:"External image",sort_order:2},
+    {id:"image-4",product_id:"product-1",file_key:"http://cdn.example.com/insecure.png",alt_text:"Insecure image",sort_order:3},
+    {id:"image-5",product_id:"product-1",file_key:"https://user:pass@cdn.example.com/private.png",alt_text:"Credential URL",sort_order:4}
   ]
  });
  const response=await handlePublicStorefront(request(),{DB:db});
  const result=await response.json();
  assert.equal(response.status,200);
- assert.deepEqual(result.products[0].images,[{
-  id:"image-1",
-  url:"/media/store-1/123e4567-e89b-12d3-a456-426614174000.webp",
-  alt_text:"Blue bag",
-  sort_order:0
- }]);
+ assert.deepEqual(result.products[0].images,[
+  {
+   id:"image-1",
+   url:"/media/store-1/123e4567-e89b-12d3-a456-426614174000.webp",
+   alt_text:"Blue bag",
+   sort_order:0
+  },
+  {
+   id:"image-3",
+   url:"https://cdn.example.com/image.png",
+   alt_text:"External image",
+   sort_order:2
+  }
+ ]);
  const query=db.calls.find(call=>call.sql.includes("FROM product_images"));
  assert.ok(query.sql.includes("store_id = ? AND product_id IN"));
 });
