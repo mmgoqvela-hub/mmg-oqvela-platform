@@ -456,3 +456,30 @@ test("Central support WhatsApp accepts optional international numbers and reject
  assert.equal(invalid.status,400);
  assert.equal(invalidDb.calls.some(call=>call.sql.includes("INSERT INTO platform_settings")),false);
 });
+
+
+test("Super admins can list public service requests",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN,serviceRequests:[{id:"request-1",request_type:"advertising",full_name:"A User",status:"new"}]});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/service-requests"),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.status,"ok");
+ assert.equal(result.requests.length,1);
+});
+
+test("Super admins can update service request status with audit history",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/service-requests/request-1","PATCH",{status:"reviewing",admin_notes:"Contact the requester"}),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.status,"ok");
+ assert.ok(db.calls.some(call=>call.sql.includes("UPDATE platform_service_requests")));
+ assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO admin_activity_logs")));
+});
+
+test("Service request status rejects unsupported values",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/service-requests/request-1","PATCH",{status:"deleted"}),{DB:db});
+ assert.equal(response.status,400);
+ assert.equal(db.calls.some(call=>call.sql.includes("UPDATE platform_service_requests")),false);
+});
