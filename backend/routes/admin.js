@@ -202,7 +202,7 @@ async function listAdminResource(db,resource,url) {
   return null;
 }
 
-async function logAdminChange(db,admin,action,targetType,targetId,details) {
+function logAdminChange(db,admin,action,targetType,targetId,details) {
   return db.prepare(`
     INSERT INTO admin_activity_logs (id,admin_user_id,action,target_type,target_id,details)
     VALUES (?,?,?,?,?,?)
