@@ -80,6 +80,7 @@ export async function handleStores(request, env) {
         s.business_type,
         s.description,
         s.template_key,
+        s.customization_json,
         s.whatsapp_phone,
         s.status,
         s.created_at,
@@ -177,6 +178,18 @@ export async function handleStores(request, env) {
         : null;
     const whatsappPhone = whatsappRaw === null ? null : whatsappRaw.replace(/[\s()+.-]/g, "");
 
+    let customizationJson = store.customization_json || "{}";
+    if (Object.prototype.hasOwnProperty.call(body || {}, "customization")) {
+      const value = body.customization;
+      if (!value || typeof value !== "object" || Array.isArray(value)) return json({ error: "Invalid store customization" }, 400);
+      const allowedKeys = ["colors", "texts", "fonts", "sections", "logo", "heroImage", "announcement"];
+      const customization = {};
+      for (const key of allowedKeys) if (Object.prototype.hasOwnProperty.call(value, key)) customization[key] = value[key];
+      customizationJson = JSON.stringify(customization);
+      if (customizationJson.length > 15000) return json({ error: "Store customization is too large" }, 413);
+      if (customization.colors && (typeof customization.colors !== "object" || Array.isArray(customization.colors) || Object.values(customization.colors).some(v => typeof v !== "string" || v.length > 40))) return json({ error: "Invalid theme colors" }, 400);
+      if (customization.texts && (typeof customization.texts !== "object" || Array.isArray(customization.texts) || Object.values(customization.texts).some(v => typeof v !== "string" || v.length > 500))) return json({ error: "Invalid store texts" }, 400);
+    }
     if (
       name.length < 2 ||
       name.length > 100 ||
@@ -201,6 +214,7 @@ export async function handleStores(request, env) {
         description = ?,
         template_key = ?,
         whatsapp_phone = ?,
+        customization_json = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND account_id = ?
@@ -210,6 +224,7 @@ export async function handleStores(request, env) {
       description || null,
       templateKey,
       whatsappPhone || null,
+      customizationJson,
       storeId,
       store.account_id
     ).run();
@@ -221,7 +236,7 @@ export async function handleStores(request, env) {
     return json({
       status: "ok",
       message: "تم تحديث بيانات المتجر بنجاح",
-      store: { id: storeId, template_key: templateKey, whatsapp_phone: whatsappPhone || null }
+      store: { id: storeId, template_key: templateKey, whatsapp_phone: whatsappPhone || null, customization: JSON.parse(customizationJson) }
     });
 
   } catch {
