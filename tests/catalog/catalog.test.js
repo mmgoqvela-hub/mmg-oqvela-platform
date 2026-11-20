@@ -550,3 +550,24 @@ test("Members without inventory.manage cannot create inventory movements",async(
   assert.equal(db.calls.some(call=>call.sql.includes("UPDATE products") || call.sql.includes("INSERT INTO inventory_movements")),false);
 });
 
+
+test("Product image registration accepts a safe external HTTPS URL without R2", async () => {
+  const db = createDb({ product:{id:"product-1",store_id:"store-001"} });
+  const response = await handleCatalog(makeRequest("products/product-1/images","POST",{
+    url:"https://cdn.example.com/products/blue-bag.webp",
+    alt_text:"Blue bag"
+  }),{DB:db});
+  const result = await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.image.url,"https://cdn.example.com/products/blue-bag.webp");
+  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO product_images")));
+});
+
+test("Product image registration rejects non-HTTPS external URLs", async () => {
+  const db = createDb({ product:{id:"product-1",store_id:"store-001"} });
+  const response = await handleCatalog(makeRequest("products/product-1/images","POST",{
+    url:"http://cdn.example.com/products/blue-bag.webp"
+  }),{DB:db});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO product_images")),false);
+});
