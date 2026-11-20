@@ -69,7 +69,7 @@ This document is the working source of truth for preserving previously agreed re
 - Store owner/admin can submit a subscription request; ordinary members cannot.
 - Enforce at most one pending/active/suspended subscription per store. Expired/cancelled/rejected requests may be followed by a new request.
 - Approval/rejection must be atomic and auditable; rejection requires a reason.
-- Subscription alerts must cover pending/expiry/suspension/renewal states. Authenticated store subscription UI warns the owner up to three days before both trial and paid-subscription expiry, and displays a blocking expiry notice directing the owner to submit a new Sham Cash payment request after expiry. A persistent, authenticated per-user notification inbox now stores notifications, unread state and read timestamps, with per-user authorization and deduplication support. Renewal remains manual; no automatic charges are made.
+- Subscription alerts must cover pending/expiry/suspension/renewal states. Authenticated store subscription UI warns the owner up to three days before both trial and paid-subscription expiry, and displays a blocking expiry notice directing the owner to submit a new Sham Cash payment request after expiry. A persistent, authenticated per-user notification inbox now stores notifications, unread state and read timestamps, with per-user authorization and deduplication support. The dashboard now displays the inbox in Arabic/English, shows unread counts, supports refresh, marks individual notifications read, and can mark all as read. Renewal remains manual; no automatic charges are made.
 - Automatic renewal behavior was requested as a capability/notification topic, but payment authorization and operational rules need to be specified before enabling automatic charges. Do not charge automatically or represent it as enabled without explicit approval.
 - No real payments, paid-plan activation, or production financial changes during tests.
 
@@ -161,7 +161,7 @@ Other detailed business modules (such as order processing, customer management, 
 - End-to-end customer shopping/order workflows.
 - Store-side business reports/analytics.
 - A complete staff invitation/onboarding workflow.
-- Persistent notification inbox storage and authenticated read/unread API are implemented; lifecycle event generation, scheduled expiry reminders, inbox UI, external delivery integrations and notification preferences remain incomplete.
+- Persistent notification inbox storage, authenticated read/unread API and bilingual dashboard UI are implemented; lifecycle event generation, scheduled expiry reminders, external delivery integrations and notification preferences remain incomplete.
 Do not represent these as finished until implemented and tested.
 
 ## 6. Delivery order (preserve dependencies)
