@@ -1220,16 +1220,30 @@ footer{
   $("registerTab").addEventListener("click", () => setMode("register"));
 
   async function api(path, options = {}) {
-    const response = await fetch(path, {
-      credentials: "same-origin",
-      ...options,
-      headers: {
-        ...(options.body ? {"Content-Type": "application/json"} : {}),
-        ...options.headers
-      }
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    let response;
+    let data;
 
-    const data = await response.json().catch(() => ({}));
+    try {
+      response = await fetch(path, {
+        credentials: "same-origin",
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...(options.body ? {"Content-Type": "application/json"} : {}),
+          ...options.headers
+        }
+      });
+      data = await response.json().catch(() => ({}));
+    } catch (error) {
+      if (error.name === "AbortError") {
+        throw new Error(translateText("انتهت مهلة الاتصال بالخادم. تحقق من الإنترنت ثم أعد المحاولة."));
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       throw new Error(translateText(data.error || "حدث خطأ، حاول مرة أخرى"));
