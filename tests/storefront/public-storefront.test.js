@@ -20,6 +20,7 @@ function createDb(options={}) {
             if(sql.includes("FROM products")) return {results:options.products || []};
             if(sql.includes("FROM product_variants")) return {results:options.variants || []};
             if(sql.includes("FROM platform_settings")) return {results:options.platformSettings || []};
+            if(sql.includes("FROM platform_announcements")) return {results:options.announcements || []};
             return {results:[]};
           }
         };
@@ -75,6 +76,21 @@ test("Public storefront receives the centrally managed bilingual footer",async()
  assert.equal(response.status,200);
  assert.equal(result.platform_footer.platform_footer_ar,"حقوق MMG محفوظة");
  assert.equal(result.platform_footer.platform_footer_en,"MMG rights reserved");
+});
+
+test("Public storefront exposes only currently active platform announcements",async()=>{
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store"},
+  announcements:[{id:"a1",title_ar:"تنبيه",title_en:"Notice",message_ar:"رسالة",message_en:"Message",announcement_type:"warning"}]
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.announcements.length,1);
+ const query=db.calls.find(call=>call.sql.includes("FROM platform_announcements"));
+ assert.ok(query.sql.includes("is_active=1"));
+ assert.ok(query.sql.includes("starts_at<=CURRENT_TIMESTAMP"));
+ assert.ok(query.sql.includes("ends_at>CURRENT_TIMESTAMP"));
 });
 
 test("Invalid slugs are rejected before database access",async()=>{
