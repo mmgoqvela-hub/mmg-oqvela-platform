@@ -51,14 +51,13 @@ test("Arabic UI includes localized backend validation and authentication errors"
 
 test("Public storefront page JavaScript parses and defines all five templates", async () => {
   const html = await readFile(new URL("../../frontend/storefront.html", import.meta.url), "utf8");
-  const scripts = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/gi)];
-  assert.ok(scripts.length > 0, "storefront script must exist");
-  for (const match of scripts) {
-    assert.doesNotThrow(() => new vm.Script(match[1]), "storefront JavaScript must parse");
-  }
+  const start = html.indexOf("<script>");
+  const end = html.indexOf("</script>", start + 8);
+  assert.ok(start >= 0 && end > start, "storefront script must exist");
+  assert.doesNotThrow(() => new vm.Script(html.slice(start + 8, end)), "storefront JavaScript must parse");
   for (const template of ["modern","classic","minimal","boutique","tech"]) {
     assert.ok(html.includes(`data-template="${template}"`) || html.includes(`"${template}"`), "missing template: " + template);
   }
-  assert.match(html,/api\\/public\\/stores\\//);
-  assert.match(html,/document\\.documentElement\\.dir/);
+  assert.ok(html.includes("/api/public/stores/"));
+  assert.ok(html.includes("document.documentElement.dir"));
 });
