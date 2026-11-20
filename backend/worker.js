@@ -1,6 +1,8 @@
 import { handleAuth } from "./routes/auth.js";
 import { handleAdmin } from "./routes/admin.js";
 import { handleTrial } from "./routes/trial.js";
+import { handleStores } from "./routes/stores.js";
+import { handleSubscriptions } from "./routes/subscriptions.js";
 
 export default {
   async fetch(request, env) {
@@ -51,6 +53,18 @@ export default {
           database: { status: "error" }
         }, { status: 503 });
       }
+    }
+
+    const subscriptionsResponse = await handleSubscriptions(request, env);
+
+    if (subscriptionsResponse) {
+      return subscriptionsResponse;
+    }
+
+    const storesResponse = await handleStores(request, env);
+
+    if (storesResponse) {
+      return storesResponse;
     }
 
     const trialResponse = await handleTrial(request, env);

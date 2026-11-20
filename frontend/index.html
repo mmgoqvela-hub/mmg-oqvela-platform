@@ -466,6 +466,9 @@ footer{
         line.className = "muted";
         line.textContent = "المتجر: " + store.name;
         card.append(line);
+        if (["owner", "admin"].includes(account.role)) {
+          renderStoreEditor(store, card);
+        }
       }
 
       if (account.role === "owner") {
@@ -479,6 +482,102 @@ footer{
         grid.append(card);
       }
     }
+  }
+
+  function renderStoreEditor(store, card) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary";
+    toggle.textContent = "إدارة بيانات المتجر";
+
+    const form = document.createElement("form");
+    form.className = "admin-form";
+    form.hidden = true;
+
+    const nameField = document.createElement("div");
+    nameField.className = "field";
+    const nameLabel = document.createElement("label");
+    nameLabel.textContent = "اسم المتجر";
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.required = true;
+    nameInput.minLength = 2;
+    nameInput.maxLength = 100;
+    nameInput.value = store.name || "";
+    nameField.append(nameLabel, nameInput);
+
+    const typeField = document.createElement("div");
+    typeField.className = "field";
+    const typeLabel = document.createElement("label");
+    typeLabel.textContent = "نوع النشاط";
+    const typeInput = document.createElement("input");
+    typeInput.type = "text";
+    typeInput.maxLength = 80;
+    typeInput.value = store.business_type || "";
+    typeField.append(typeLabel, typeInput);
+
+    const descriptionField = document.createElement("div");
+    descriptionField.className = "field wide";
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.textContent = "وصف المتجر";
+    const descriptionInput = document.createElement("textarea");
+    descriptionInput.maxLength = 1000;
+    descriptionInput.rows = 3;
+    descriptionInput.value = store.description || "";
+    descriptionField.append(descriptionLabel, descriptionInput);
+
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.className = "primary";
+    save.textContent = "حفظ بيانات المتجر";
+
+    const message = document.createElement("p");
+    message.className = "muted";
+    message.setAttribute("role", "status");
+
+    form.append(
+      nameField,
+      typeField,
+      descriptionField,
+      save,
+      message
+    );
+
+    toggle.addEventListener("click", () => {
+      form.hidden = !form.hidden;
+      toggle.textContent = form.hidden
+        ? "إدارة بيانات المتجر"
+        : "إغلاق التعديل";
+    });
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      save.disabled = true;
+      save.textContent = "جارٍ الحفظ...";
+
+      try {
+        const result = await api(
+          "/api/stores/" + encodeURIComponent(store.id),
+          {
+            method: "PUT",
+            body: JSON.stringify({
+              name: nameInput.value,
+              business_type: typeInput.value,
+              description: descriptionInput.value
+            })
+          }
+        );
+
+        message.textContent = result.message || "تم الحفظ بنجاح";
+        await checkSession();
+      } catch (error) {
+        message.textContent = error.message;
+        save.disabled = false;
+        save.textContent = "إعادة المحاولة";
+      }
+    });
+
+    card.append(toggle, form);
   }
 
   function showAdminMessage(text, type) {
