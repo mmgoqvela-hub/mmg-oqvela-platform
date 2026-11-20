@@ -79,6 +79,7 @@ export async function handleStores(request, env) {
         s.slug,
         s.business_type,
         s.description,
+        s.template_key,
         s.status,
         s.created_at,
         s.updated_at,
@@ -153,13 +154,21 @@ export async function handleStores(request, env) {
         ? body.description.trim()
         : null;
 
+    const templateKey = body?.template_key == null
+      ? store.template_key
+      : typeof body.template_key === "string"
+        ? body.template_key.trim()
+        : null;
+    const allowedTemplates = ["modern", "classic", "minimal", "boutique", "tech"];
+
     if (
       name.length < 2 ||
       name.length > 100 ||
       businessType === null ||
       businessType.length > 80 ||
       description === null ||
-      description.length > 1000
+      description.length > 1000 ||
+      !allowedTemplates.includes(templateKey)
     ) {
       return json({
         error: "تحقق من البيانات: الاسم 2-100 حرف، ونوع النشاط 80، والوصف 1000 حرف كحد أقصى."
@@ -172,6 +181,7 @@ export async function handleStores(request, env) {
         name = ?,
         business_type = ?,
         description = ?,
+        template_key = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
         AND account_id = ?
@@ -179,6 +189,7 @@ export async function handleStores(request, env) {
       name,
       businessType || null,
       description || null,
+      templateKey,
       storeId,
       store.account_id
     ).run();
@@ -189,7 +200,8 @@ export async function handleStores(request, env) {
 
     return json({
       status: "ok",
-      message: "تم تحديث بيانات المتجر بنجاح"
+      message: "تم تحديث بيانات المتجر بنجاح",
+      store: { id: storeId, template_key: templateKey }
     });
 
   } catch {
