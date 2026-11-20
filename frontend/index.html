@@ -656,6 +656,18 @@ footer{
     "مظهر دافئ وفاخر للمنتجات والعلامات المميزة.":"A warm, premium look for distinctive products and brands.",
     "تقني":"Tech",
     "واجهة داكنة حديثة للمنتجات والخدمات التقنية.":"A modern dark interface for technology products and services.",
+    "سوق متنوع":"Marketplace",
+    "تصميم حيوي مناسب للبقالة والمنتجات اليومية.":"A lively design for groceries and everyday products.",
+    "مطعم ومقهى":"Restaurant & Cafe",
+    "واجهة دافئة لقوائم الطعام والمشروبات والعروض.":"A warm layout for menus, drinks and special offers.",
+    "أزياء وموضة":"Fashion",
+    "تصميم تحريري أنيق للأزياء والإكسسوارات.":"An editorial style for fashion and accessories.",
+    "إلكترونيات":"Electronics",
+    "واجهة منظمة للمواصفات والأجهزة والمنتجات الرقمية.":"A structured layout for specifications, devices and digital products.",
+    "جمال وعناية":"Beauty & Care",
+    "ألوان ناعمة لمنتجات التجميل والعناية الشخصية.":"Soft colors for beauty and personal-care products.",
+    "فاخر":"Luxury",
+    "مظهر راقٍ داكن ولمسات ذهبية للعلامات الفاخرة.":"A refined dark look with gold accents for premium brands.",
     "معاينة المتجر":"View storefront",
     "تم حفظ القالب بنجاح.":"Store template saved successfully.",
     "القالب":"Template",
@@ -1882,14 +1894,20 @@ footer{
     templateHint.textContent = "اختر التصميم الذي يناسب نشاط متجرك.";
     const templatePicker = document.createElement("div");
     templatePicker.className = "template-picker";
-    let selectedTemplate = ["modern","classic","minimal","boutique","tech"].includes(store.template_key)
+    let selectedTemplate = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(store.template_key)
       ? store.template_key : "modern";
     const templates = [
       ["modern","عصري","تصميم عصري مرن يناسب أغلب الأنشطة."],
       ["classic","كلاسيكي","مظهر تقليدي أنيق مع إبراز واضح للمحتوى."],
       ["minimal","بسيط","تصميم هادئ ونظيف يركز على المنتجات."],
       ["boutique","متجر أنيق","مظهر دافئ وفاخر للمنتجات والعلامات المميزة."],
-      ["tech","تقني","واجهة داكنة حديثة للمنتجات والخدمات التقنية."]
+      ["tech","تقني","واجهة داكنة حديثة للمنتجات والخدمات التقنية."],
+      ["market","سوق متنوع","تصميم حيوي مناسب للبقالة والمنتجات اليومية."],
+      ["restaurant","مطعم ومقهى","واجهة دافئة لقوائم الطعام والمشروبات والعروض."],
+      ["fashion","أزياء وموضة","تصميم تحريري أنيق للأزياء والإكسسوارات."],
+      ["electronics","إلكترونيات","واجهة منظمة للمواصفات والأجهزة والمنتجات الرقمية."],
+      ["beauty","جمال وعناية","ألوان ناعمة لمنتجات التجميل والعناية الشخصية."],
+      ["luxury","فاخر","مظهر راقٍ داكن ولمسات ذهبية للعلامات الفاخرة."]
     ];
     const templateButtons = [];
     for (const [key,labelText,descriptionText] of templates) {
