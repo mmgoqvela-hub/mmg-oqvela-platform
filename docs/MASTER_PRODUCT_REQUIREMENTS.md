@@ -214,3 +214,11 @@ A feature is complete only when:
 - D1 now independently prevents completing unpaid orders, progressing Sham Cash orders before payment approval, rejecting non-Sham-Cash payments, refunding a payment unless the order is cancelled, and reopening terminal/cancelled states through an invalid transition.
 - Existing stock reservation and cancellation-restoration triggers remain transactional; cancellation now restores quantities from the actual `sale` reservation movements rather than the product's current tracking flag, so a fully reserved item is restored even if tracking was disabled after reservation. The terminal-state guard prevents a second cancellation/restoration.
 - Added regression assertions in `tests/orders/orders.test.js` for the new lifecycle guards. Migration is in the repository only; it has not been applied to production. Full D1/browser concurrency verification remains pending.
+
+
+### Public checkout audit hardening — 2026-11-20
+- Audited public storefront checkout, API validation, server-side price calculation, tenant scoping, payment configuration, stock reservation and lifecycle enforcement.
+- Fixed a browser race: repeated form submissions are now ignored while a checkout is in flight, and cart controls are temporarily disabled so cart changes cannot be lost when the response clears the submitted cart.
+- Added a regression test for in-flight submission protection and cart-control locking.
+- Remaining gap: public checkout has no dedicated abuse/rate limiting or durable idempotency key. Repeated cash-on-delivery requests can still create separate orders; do not mark abuse protection complete.
+- No production migration or deployment performed.
