@@ -228,7 +228,10 @@
       function renderCart() {
         const container = $("cartItems");
         container.replaceChildren();
-        const valid = cart.filter(item => findCartProduct(item.productId));
+        const valid = cart.filter(item => {
+          const product = findCartProduct(item.productId);
+          return product && (!item.variantId || product.variants?.some(variant => variant.id === item.variantId));
+        });
         if (valid.length !== cart.length) { cart = valid; saveCart(); }
         const count = cart.reduce((sum,item) => sum + item.quantity,0);
         $("cartCount").textContent = String(count);
