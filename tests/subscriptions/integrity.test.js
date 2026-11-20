@@ -67,3 +67,14 @@ test("Store subscription history reports expired active records as expired", asy
   );
   assert.match(route, /ss\.status AS stored_subscription_status/);
 });
+
+
+test("Subscription billing details are restricted to store owners and admins", () => {
+  const source = functionSource("getStoreSubscription", "createSubscriptionRequest");
+  const storeLookup = source.indexOf("const store = await getMemberStore");
+  const roleGuard = source.indexOf('if (!["owner", "admin"].includes(store.account_role)) return null;');
+  const billingQuery = source.indexOf("FROM store_subscriptions ss");
+  assert.ok(storeLookup >= 0, "store membership must be verified");
+  assert.ok(roleGuard > storeLookup, "billing role guard must follow store lookup");
+  assert.ok(billingQuery > roleGuard, "billing data must only be queried after role guard");
+});
