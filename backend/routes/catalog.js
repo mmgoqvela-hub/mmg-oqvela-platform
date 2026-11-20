@@ -467,8 +467,9 @@ async function handleProductImages(request, env, storeId, access, productId, ima
     const altText = typeof body.alt_text === "string" ? body.alt_text.trim() : "";
     const sortOrder = body.sort_order === undefined ? 0 : body.sort_order;
     const prefix = "/media/" + storeId + "/";
-    const validPath = new RegExp("^/media/" + storeId.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\async function handleInventory(request, env, storeId, userId, access) {") + "/[a-f0-9-]+\\.(?:jpg|png|webp|gif)$","i");
-    if (!fileKey.startsWith(prefix) || !validPath.test(fileKey) ||
+    const validPath = /^[a-zA-Z0-9_-]{3,80}$/.test(storeId) &&
+      new RegExp("^/media/" + storeId + "/[a-f0-9-]+\\.(?:jpg|png|webp|gif)$","i").test(fileKey);
+    if (!fileKey.startsWith(prefix) || !validPath ||
         altText.length > 250 || !Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 100000) {
       return json({ error: "Invalid product image data" }, 400);
     }
