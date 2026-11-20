@@ -571,8 +571,17 @@
           const customization = data.store.customization && typeof data.store.customization === "object" ? data.store.customization : {};
           const colors = customization.colors || {};
           const safeColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
-          if (safeColor(colors.primary)) document.body.style.setProperty("--accent",colors.primary);
-          if (safeColor(colors.background)) document.body.style.setProperty("--bg",colors.background);
+          const colorVariables = {
+            primary: "--accent",
+            background: "--bg",
+            text: "--ink",
+            surface: "--surface",
+            muted: "--muted",
+            border: "--line"
+          };
+          for (const [key, variable] of Object.entries(colorVariables)) {
+            if (safeColor(colors[key])) document.body.style.setProperty(variable, colors[key]);
+          }
           const fonts = {system:'system-ui,-apple-system,"Segoe UI",sans-serif',cairo:'Cairo,system-ui,sans-serif',tajawal:'Tajawal,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif'};
           document.body.style.fontFamily = fonts[customization.fonts?.family] || fonts.system;
           $("businessType").textContent = data.store.business_type || "";
