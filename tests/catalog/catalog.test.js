@@ -97,6 +97,34 @@ test("Product image registration verifies the R2 object and scopes the record to
   assert.ok(insert.values.includes("product-1"));
 });
 
+test("Product gallery order updates only a complete gallery belonging to the product", async () => {
+  const db=createDb({
+    product:{id:"product-1",store_id:"store-001"},
+    images:[{id:"image-1"},{id:"image-2"}]
+  });
+  const response=await handleCatalog(makeRequest("products/product-1/images/order","PUT",{
+    image_ids:["image-2","image-1"]
+  }),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.deepEqual(result.image_ids,["image-2","image-1"]);
+  const updates=db.calls.filter(call=>call.sql.includes("UPDATE product_images SET sort_order"));
+  assert.equal(updates.length,2);
+  assert.deepEqual(updates.map(call=>call.values[0]),[0,1]);
+});
+
+test("Product gallery order rejects IDs from another gallery", async () => {
+  const db=createDb({
+    product:{id:"product-1",store_id:"store-001"},
+    images:[{id:"image-1"},{id:"image-2"}]
+  });
+  const response=await handleCatalog(makeRequest("products/product-1/images/order","PUT",{
+    image_ids:["image-1","foreign-image"]
+  }),{DB:db});
+  assert.equal(response.status,409);
+  assert.equal(db.calls.some(call=>call.sql.includes("UPDATE product_images SET sort_order")),false);
+});
+
 test("Product gallery rejects a sixth image even when the client bypasses the UI", async () => {
   const db=createDb({product:{id:"product-1",store_id:"store-001"},imageCount:5});
   const response=await handleCatalog(makeRequest("products/product-1/images","POST",{
