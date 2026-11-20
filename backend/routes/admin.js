@@ -325,6 +325,57 @@ async function handleAdminManagement(request,env,admin,path,url) {
   return json({error:"Method not allowed"},405);
 }
 
+async function handleServiceRequests(request, db, admin, url) {
+  const match = url.pathname.match(/^\/api\/admin\/service-requests(?:\/([^/]+))?$/);
+  const id = match?.[1] ? decodeURIComponent(match[1]) : null;
+
+  if (request.method === "GET" && !id) {
+    const requestedLimit = Number(url.searchParams.get("limit") || 50);
+    const limit = Number.isInteger(requestedLimit) ? Math.max(1, Math.min(200, requestedLimit)) : 50;
+    const status = url.searchParams.get("status");
+    const type = url.searchParams.get("type");
+    const conditions = [];
+    const values = [];
+    if (status && ["new","reviewing","accepted","rejected","completed"].includes(status)) {
+      conditions.push("status = ?");
+      values.push(status);
+    }
+    if (type && ["support","advertising","store_setup","website_design","contact"].includes(type)) {
+      conditions.push("request_type = ?");
+      values.push(type);
+    }
+    const where = conditions.length ? "WHERE " + conditions.join(" AND ") : "";
+    const result = await db.prepare(`
+      SELECT id,request_type,full_name,email,phone,message,language,status,admin_notes,created_at,updated_at
+      FROM platform_service_requests ${where}
+      ORDER BY CASE status WHEN 'new' THEN 0 WHEN 'reviewing' THEN 1 ELSE 2 END, created_at DESC
+      LIMIT ?
+    `).bind(...values,limit).all();
+    return json({status:"ok",requests:result.results || []});
+  }
+
+  if (request.method !== "PATCH" || !id) return json({error:"Method not allowed"},405);
+  const parsed = await readAdminBody(request);
+  if (parsed.error) return json({error:parsed.error},parsed.status);
+  const nextStatus = parsed.body.status;
+  const notes = parsed.body.admin_notes;
+  if (!["new","reviewing","accepted","rejected","completed"].includes(nextStatus) ||
+      (notes !== undefined && (typeof notes !== "string" || notes.length > 3000))) {
+    return json({error:"Invalid request update"},400);
+  }
+  const result = await db.prepare(`
+    UPDATE platform_service_requests
+    SET status=?,admin_notes=?,updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
+  `).bind(nextStatus,notes === undefined ? "" : notes.trim(),id).run();
+  if (!result.meta?.changes) return json({error:"Service request not found"},404);
+  await db.prepare(`
+    INSERT INTO admin_activity_logs (id,admin_user_id,action,target_type,target_id,details)
+    VALUES (?,?,'update','platform_service_request',?,?)
+  `).bind(crypto.randomUUID(),admin.user_id,id,JSON.stringify({status:nextStatus})).run();
+  return json({status:"ok",message:"Service request updated"});
+}
+
 async function handleAnnouncements(request, db, admin, url) {
   const match = url.pathname.match(/^\/api\/admin\/announcements(?:\/([0-9a-f-]{36}))?$/i);
   const id = match?.[1] || null;
@@ -378,12 +429,13 @@ export async function handleAdmin(request, env) {
   const path = url.pathname;
 
   const isAnnouncements = /^\/api\/admin\/announcements(?:\/[^/]+)?$/.test(path);
+  const isServiceRequests = /^\/api\/admin\/service-requests(?:\/[^/]+)?$/.test(path);
   const isActivityLogs = path === "/api/admin/activity-logs";
   const isOverview = path === "/api/admin/overview";
   const isTransfer = path === "/api/admin/transfer-super-admin";
   const isManagement = /^\/api\/admin\/(users|accounts|stores|platform-admins)(?:\/[^/]+)?$/.test(path);
   const isSettings = ["/api/admin/settings", "/api/admin/trial-settings"].includes(path);
-  if (!isSettings && !isAnnouncements && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
+  if (!isSettings && !isAnnouncements && !isServiceRequests && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
 
   if (isActivityLogs && request.method !== "GET") return json({ error: "Method not allowed" }, 405);
   if (isSettings && !["GET", "PUT"].includes(request.method)) return json({ error: "Method not allowed" }, 405);
@@ -407,6 +459,7 @@ export async function handleAdmin(request, env) {
     }
     if (isTransfer) return await transferSuperAdmin(request,env,admin);
     if (isAnnouncements) return await handleAnnouncements(request,env.DB,admin,url);
+    if (isServiceRequests) return await handleServiceRequests(request,env.DB,admin,url);
 
     if (isActivityLogs) {
       const requestedLimit = Number(new URL(request.url).searchParams.get("limit") || 50);
