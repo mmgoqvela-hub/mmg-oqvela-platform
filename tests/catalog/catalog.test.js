@@ -66,6 +66,64 @@ function makeRequest(path, method = "GET", body, options = {}) {
   });
 }
 
+test("Owners can update product details within their own store", async () => {
+  const db = createDb({
+    product:{id:"product-1",store_id:"store-001",track_inventory:1,stock_quantity:0}
+  });
+  const response = await handleCatalog(makeRequest("products/product-1","PUT",{
+    name:"Updated product",description:"Updated description",sku:"SKU-UPDATED",
+    product_type:"physical",status:"active",base_price:19.5,
+    compare_at_price:24,currency:"USD",track_inventory:true,
+    is_featured:true,category_id:null
+  }),{DB:db});
+  assert.equal(response.status,200);
+  const update = db.calls.find(call => call.sql.includes("UPDATE products"));
+  assert.ok(update);
+  assert.match(update.sql,/WHERE id = \? AND store_id = \?/);
+  assert.ok(update.values.includes("SKU-UPDATED"));
+  assert.ok(update.values.includes("product-1"));
+  assert.ok(update.values.includes("store-001"));
+});
+
+test("Catalog readers without catalog.manage cannot edit products", async () => {
+  const db = createDb({
+    access:{...MEMBER,permissions:"catalog.read"},
+    product:{id:"product-1",store_id:"store-001",track_inventory:1,stock_quantity:0}
+  });
+  const response = await handleCatalog(makeRequest("products/product-1","PUT",{
+    name:"Attempted change",base_price:10
+  }),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.some(call => call.sql.includes("UPDATE products")),false);
+});
+
+test("Product updates reject a category from another tenant", async () => {
+  const db = createDb({
+    product:{id:"product-1",store_id:"store-001",track_inventory:1,stock_quantity:0},
+    category:null
+  });
+  const response = await handleCatalog(makeRequest("products/product-1","PUT",{
+    name:"Updated product",description:"",product_type:"physical",status:"draft",
+    base_price:10,currency:"USD",sku:"",track_inventory:true,
+    is_featured:false,category_id:"foreign-category"
+  }),{DB:db});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(call => call.sql.includes("UPDATE products")),false);
+});
+
+test("Archiving a product preserves its database record and stock history", async () => {
+  const db = createDb({
+    product:{id:"product-1",store_id:"store-001",track_inventory:1,stock_quantity:6}
+  });
+  const response = await handleCatalog(makeRequest("products/product-1","DELETE"),{DB:db});
+  assert.equal(response.status,200);
+  const archive = db.calls.find(call => call.sql.includes("UPDATE products"));
+  assert.ok(archive);
+  assert.match(archive.sql,/SET status = 'archived'/);
+  assert.match(archive.sql,/WHERE id = \? AND store_id = \?/);
+  assert.equal(db.calls.some(call => call.sql.includes("DELETE FROM products")),false);
+});
+
 test("Catalog endpoints require an authenticated account member", async () => {
   const db = createDb({session:null});
   const response = await handleCatalog(makeRequest("products", "GET", undefined, {auth:false}), {DB:db});
