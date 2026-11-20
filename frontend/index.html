@@ -2282,6 +2282,103 @@ footer{
               editPanel.hidden = true;
               const editForm = document.createElement("form");
               editForm.className = "admin-form";
+              const gallerySection = document.createElement("section");
+              gallerySection.className = "field wide";
+              const galleryHeading = document.createElement("h5");
+              galleryHeading.textContent = "صور المنتج";
+              const galleryList = document.createElement("div");
+              galleryList.className = "account-grid";
+              const galleryUpload = document.createElement("input");
+              galleryUpload.type = "file";
+              galleryUpload.accept = "image/jpeg,image/png,image/webp,image/gif";
+              galleryUpload.multiple = true;
+              const galleryUploadButton = document.createElement("button");
+              galleryUploadButton.type = "button";
+              galleryUploadButton.className = "secondary";
+              galleryUploadButton.textContent = "رفع صور إضافية";
+              const galleryMessage = document.createElement("p");
+              galleryMessage.className = "muted";
+              gallerySection.append(galleryHeading,galleryList,galleryUpload,galleryUploadButton,galleryMessage);
+              let galleryImages = [];
+              let galleryLoaded = false;
+              const renderGallery = () => {
+                galleryList.replaceChildren();
+                if (!galleryImages.length) {
+                  const emptyGallery = document.createElement("p");
+                  emptyGallery.className = "muted";
+                  emptyGallery.textContent = "لا توجد صور مضافة لهذا المنتج.";
+                  galleryList.append(emptyGallery);
+                }
+                for (const image of galleryImages) {
+                  const imageCard = document.createElement("div");
+                  imageCard.className = "account-card";
+                  const preview = document.createElement("img");
+                  preview.src = image.url;
+                  preview.alt = image.alt_text || product.name;
+                  preview.loading = "lazy";
+                  preview.style.width = "100%";
+                  preview.style.maxHeight = "130px";
+                  preview.style.objectFit = "cover";
+                  preview.style.borderRadius = "10px";
+                  const removeImage = document.createElement("button");
+                  removeImage.type = "button";
+                  removeImage.className = "secondary";
+                  removeImage.textContent = "حذف الصورة";
+                  removeImage.addEventListener("click",async () => {
+                    removeImage.disabled = true;
+                    try {
+                      await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/images/" + encodeURIComponent(image.id),{method:"DELETE"});
+                      galleryImages = galleryImages.filter(entry => entry.id !== image.id);
+                      renderGallery();
+                      galleryMessage.textContent = "تم حذف الصورة.";
+                    } catch(error) {
+                      galleryMessage.textContent = error.message;
+                      removeImage.disabled = false;
+                    }
+                  });
+                  imageCard.append(preview,removeImage);
+                  galleryList.append(imageCard);
+                }
+              };
+              const loadGallery = async () => {
+                try {
+                  const detail = await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id));
+                  galleryImages = Array.isArray(detail.images) ? detail.images : [];
+                  galleryLoaded = true;
+                  renderGallery();
+                } catch(error) {
+                  galleryMessage.textContent = error.message;
+                }
+              };
+              galleryUploadButton.addEventListener("click",async () => {
+                const files = Array.from(galleryUpload.files || []);
+                if (!files.length) { galleryMessage.textContent = "اختر صورة واحدة على الأقل."; return; }
+                if (galleryImages.length + files.length > 5) { galleryMessage.textContent = "الحد الأقصى خمس صور للمنتج الواحد."; return; }
+                if (files.some(file => file.size > 5 * 1024 * 1024)) { galleryMessage.textContent = "يجب ألا يتجاوز حجم كل صورة 5 ميغابايت."; return; }
+                galleryUploadButton.disabled = true;
+                try {
+                  for (let index = 0; index < files.length; index++) {
+                    const upload = new FormData();
+                    upload.append("store_id",store.id);
+                    upload.append("file",files[index]);
+                    const response = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:upload});
+                    const uploaded = await response.json().catch(()=>({}));
+                    if (!response.ok) throw new Error(uploaded.error || "تعذر رفع إحدى الصور.");
+                    await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/images",{
+                      method:"POST",
+                      body:JSON.stringify({url:uploaded.url,alt_text:product.name + (galleryImages.length + index ? " - " + (galleryImages.length + index + 1) : ""),sort_order:galleryImages.length + index})
+                    });
+                  }
+                  galleryUpload.value = "";
+                  await loadGallery();
+                  galleryMessage.textContent = "تمت إضافة الصور.";
+                } catch(error) {
+                  galleryMessage.textContent = error.message;
+                  await loadGallery();
+                } finally {
+                  galleryUploadButton.disabled = false;
+                }
+              });
               const editName = document.createElement("input");
               editName.required = true;
               editName.minLength = 2;
@@ -2382,7 +2479,7 @@ footer{
               cancelEdit.textContent = "إلغاء";
               const editMessage = document.createElement("p");
               editMessage.className = "muted";
-              editForm.append(saveEdit,cancelEdit,editMessage);
+              editForm.append(gallerySection,saveEdit,cancelEdit,editMessage);
               editForm.addEventListener("submit",async event => {
                 event.preventDefault();
                 if (!editForm.reportValidity()) return;
@@ -2422,6 +2519,7 @@ footer{
               editToggle.addEventListener("click",() => {
                 editPanel.hidden = !editPanel.hidden;
                 editToggle.textContent = editPanel.hidden ? "تعديل المنتج" : "إخفاء نموذج التعديل";
+                if (!editPanel.hidden && !galleryLoaded) loadGallery();
               });
               editPanel.append(editForm);
               item.append(editToggle,editPanel);
