@@ -1828,6 +1828,31 @@ footer{
             option.textContent = product.name;
             productSelect.append(option);
           }
+          const variantSelect = document.createElement("select");
+          async function loadInventoryVariants() {
+            variantSelect.replaceChildren();
+            const baseOption = document.createElement("option");
+            baseOption.value = "";
+            baseOption.textContent = "المخزون الأساسي للمنتج";
+            variantSelect.append(baseOption);
+            try {
+              const detail = await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(productSelect.value));
+              for (const variant of (detail.variants || []).filter(item => item.status === "active")) {
+                const option = document.createElement("option");
+                option.value = variant.id;
+                option.textContent = variant.name + " — " + formatNumber(variant.stock_quantity);
+                option.dataset.noTranslate = "true";
+                variantSelect.append(option);
+              }
+            } catch {}
+          }
+          productSelect.addEventListener("change",loadInventoryVariants);
+          await loadInventoryVariants();
+          const variantField = document.createElement("div");
+          variantField.className = "field";
+          const variantLabel = document.createElement("label");
+          variantLabel.textContent = "الخيار / المقاس / اللون";
+          variantField.append(variantLabel,variantSelect);
           const movementType = document.createElement("select");
           for (const [value,label] of [["purchase","شراء"],["sale","بيع"],["return","مرتجع"],["adjustment","تسوية"],["damage","تالف"]]) {
             const option = document.createElement("option");
@@ -1867,7 +1892,7 @@ footer{
           movementSubmit.textContent = "تسجيل حركة المخزون";
           const movementMessage = document.createElement("p");
           movementMessage.className = "muted";
-          movementForm.append(productField,typeField,quantityField,notesField,movementSubmit,movementMessage);
+          movementForm.append(productField,variantField,typeField,quantityField,notesField,movementSubmit,movementMessage);
           movementForm.addEventListener("submit", async event => {
             event.preventDefault();
             const entered = Number(quantity.value);
@@ -1884,6 +1909,7 @@ footer{
                 method:"POST",
                 body:JSON.stringify({
                   product_id:productSelect.value,
+                  variant_id:variantSelect.value || null,
                   movement_type:typeValue,
                   quantity_change:signedQuantity,
                   notes:notes.value.trim()
@@ -1907,7 +1933,7 @@ footer{
           for (const movement of movements.slice(0,20)) {
             const line = document.createElement("p");
             line.className = "muted";
-            line.textContent = movement.product_name + " — " +
+            line.textContent = movement.product_name + (movement.variant_name ? " / " + movement.variant_name : "") + " — " +
               localizeCode(movement.movement_type) + " — " +
               formatNumber(movement.quantity_change) + " — " +
               formatDateTime(movement.created_at);
