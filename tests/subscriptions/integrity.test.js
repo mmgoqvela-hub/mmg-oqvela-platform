@@ -54,3 +54,16 @@ test("Approval prepares invoice, history and audit before payment approval", () 
   assert.match(migration, /CREATE TRIGGER trg_paid_approval_guard/);
   assert.match(migration, /CREATE TRIGGER trg_paid_approval_complete/);
 });
+
+
+test("Store subscription history reports expired active records as expired", async () => {
+  const route = await readFile(
+    new URL("../../backend/routes/subscriptions.js", import.meta.url),
+    "utf8"
+  );
+  assert.match(
+    route,
+    /WHEN ss\.status = 'active'[\s\S]*?ss\.expires_at IS NOT NULL[\s\S]*?ss\.expires_at <= CURRENT_TIMESTAMP[\s\S]*?THEN 'expired'/
+  );
+  assert.match(route, /ss\.status AS stored_subscription_status/);
+});
