@@ -248,6 +248,9 @@ test("Order item and event history queries are constrained to the same tenant as
 
 
 test("D1 enforces order and payment transitions even outside the HTTP route",()=>{
+ assert.match(lifecycleMigration,/DROP TRIGGER IF EXISTS trg_store_order_restore_variant_stock/);
+ assert.match(lifecycleMigration,/im\.reference_id = NEW\.id[\s\S]*?im\.movement_type = 'sale'[\s\S]*?SUM\(-im\.quantity_change\)/);
+ assert.match(lifecycleMigration,/movement_type,quantity_change,reference_id,notes\)[\s\S]*?'return',SUM\(-im\.quantity_change\),NEW\.id/);
  assert.match(lifecycleMigration,/CREATE TRIGGER trg_store_order_status_transition_guard/);
  assert.match(lifecycleMigration,/OLD\.order_status = 'pending' AND NEW\.order_status IN \('confirmed','cancelled'\)/);
  assert.match(lifecycleMigration,/OLD\.order_status = 'shipped' AND NEW\.order_status = 'completed'/);
