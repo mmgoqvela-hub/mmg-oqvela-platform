@@ -18,9 +18,10 @@ jobs:
 
       - name: Inspect existing schema (read only)
         run: |
-          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT type, name, sql FROM sqlite_master WHERE name IN ('platform_settings', 'admin_activity_logs', 'payments', 'd1_migrations') ORDER BY type, name" 
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT type, name, sql FROM sqlite_master WHERE name IN ('platform_settings', 'admin_activity_logs', 'payments', 'd1_migrations', 'idx_admin_activity_logs_created', 'idx_admin_activity_logs_admin') ORDER BY type, name"
           npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "PRAGMA table_info(platform_settings)"
           npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "PRAGMA table_info(payments)"
+          npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT setting_key, setting_value FROM platform_settings ORDER BY setting_key"
           npx --yes wrangler@4 d1 execute mmg-oqvela-db --remote --command "SELECT name, applied_at FROM d1_migrations ORDER BY name"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
