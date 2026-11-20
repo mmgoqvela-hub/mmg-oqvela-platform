@@ -6,6 +6,7 @@ import { handleCatalog } from "./routes/catalog.js";
 import { handlePublicStorefront } from "./routes/storefront.js";
 import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
+import { handleNotifications } from "./routes/notifications.js";
 
 export default {
   async fetch(request, env) {
@@ -69,6 +70,9 @@ export default {
 
     const publicStoreResponse = await handlePublicStorefront(request, env);
     if (publicStoreResponse) return publicStoreResponse;
+
+    const notificationsResponse = await handleNotifications(request, env);
+    if (notificationsResponse) return notificationsResponse;
 
     const subscriptionsResponse = await handleSubscriptions(request, env);
 
