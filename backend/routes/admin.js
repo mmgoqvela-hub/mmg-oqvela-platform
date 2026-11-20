@@ -299,7 +299,7 @@ async function handleAdminManagement(request,env,admin,path,url) {
   if(path==="/api/admin/overview" && request.method==="GET") {
     return json({status:"ok",overview:await adminOverview(env.DB)});
   }
-  const match=path.match(/^\\/api\\/admin\\/(users|accounts|stores|platform-admins)(?:\\/([^/]+))?$/);
+  const match=path.match(/^\/api\/admin\/(users|accounts|stores|platform-admins)(?:\/([^/]+))?$/);
   if(!match) return null;
   const resource=match[1];
   const id=match[2]?decodeURIComponent(match[2]):null;
@@ -315,17 +315,16 @@ export async function handleAdmin(request, env) {
   const path = url.pathname;
 
   const isActivityLogs = path === "/api/admin/activity-logs";
-  if (!["/api/admin/settings", "/api/admin/trial-settings"].includes(path) && !isActivityLogs) {
-    return null;
-  }
+  const isOverview = path === "/api/admin/overview";
+  const isTransfer = path === "/api/admin/transfer-super-admin";
+  const isManagement = /^\\/api\\/admin\\/(users|accounts|stores|platform-admins)(?:\\/[^/]+)?$/.test(path);
+  const isSettings = ["/api/admin/settings", "/api/admin/trial-settings"].includes(path);
+  if (!isSettings && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
 
-  if (isActivityLogs && request.method !== "GET") {
-    return json({ error: "Method not allowed" }, 405);
-  }
-
-  if (!isActivityLogs && !["GET", "PUT"].includes(request.method)) {
-    return json({ error: "Method not allowed" }, 405);
-  }
+  if (isActivityLogs && request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+  if (isSettings && !["GET", "PUT"].includes(request.method)) return json({ error: "Method not allowed" }, 405);
+  if (isOverview && request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+  if (isTransfer && request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   if (!validOrigin(request)) {
     return json({ error: "Invalid origin" }, 403);
@@ -338,6 +337,12 @@ export async function handleAdmin(request, env) {
   }
 
   try {
+    if (isOverview || isManagement) {
+      const managed = await handleAdminManagement(request,env,admin,path,url);
+      if (managed) return managed;
+    }
+    if (isTransfer) return await transferSuperAdmin(request,env,admin);
+
     if (isActivityLogs) {
       const requestedLimit = Number(new URL(request.url).searchParams.get("limit") || 50);
       const limit = Number.isInteger(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 50;
