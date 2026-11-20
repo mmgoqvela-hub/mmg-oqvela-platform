@@ -190,6 +190,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   if (!productId) {
     if (!["GET", "POST"].includes(method)) return json({ error: "Method not allowed" }, 405);
     if (method === "GET") {
+      if (!canRead(access, "catalog.read")) return json({ error: "Store read permission required" }, 403);
       const url = new URL(request.url);
       const query = (url.searchParams.get("q") || "").trim().slice(0, 100);
       const categoryId = url.searchParams.get("category_id");
