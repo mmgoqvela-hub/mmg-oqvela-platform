@@ -324,8 +324,6 @@ test("Product creation records initial stock in the same database batch", async 
   assert.equal(db.calls.length,2);
   assert.ok(db.calls[0].sql.includes("INSERT INTO products"));
   assert.ok(db.calls[1].sql.includes("INSERT INTO inventory_movements"));
-  assert.ok(db.calls[1].values.includes("SUPPLIER-INV-204"));
-  assert.ok(db.calls[1].values.includes("Restock"));
 });
 
 test("Product listing is scoped to the selected store", async () => {
@@ -368,6 +366,8 @@ test("Valid inventory movements update stock and create a movement record atomic
   assert.equal(db.calls.length,2);
   assert.ok(db.calls[0].sql.includes("UPDATE products"));
   assert.ok(db.calls[1].sql.includes("INSERT INTO inventory_movements"));
+  assert.ok(db.calls[1].values.includes("SUPPLIER-INV-204"));
+  assert.ok(db.calls[1].values.includes("Restock"));
 });
 
 
