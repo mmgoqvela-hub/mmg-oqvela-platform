@@ -118,6 +118,22 @@ VALUES
   (lower(hex(randomblob(16))),'orders.read','Read customer orders and checkout records'),
   (lower(hex(randomblob(16))),'orders.manage','Update customer order and payment statuses');
 
+-- Revalidate catalog availability inside the order transaction to close the
+-- gap between public price/stock reads and the final insert batch.
+CREATE TRIGGER trg_order_item_validate_catalog
+BEFORE INSERT ON store_order_items
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM products p
+      WHERE p.id = NEW.product_id AND p.store_id = NEW.store_id AND p.status = 'active'
+    ) THEN RAISE(ABORT, 'Order product is unavailable') END;
+    SELECT CASE WHEN NEW.variant_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM product_variants v
+      WHERE v.id = NEW.variant_id AND v.product_id = NEW.product_id
+        AND v.store_id = NEW.store_id AND v.status = 'active'
+    ) THEN RAISE(ABORT, 'Invalid order variant') END;
+END;
+
 -- Enforce product/variant ownership and reserve tracked stock in the same transaction
 -- that creates the order. Any insufficient stock aborts the complete D1 batch.
 CREATE TRIGGER trg_order_item_reserve_variant_stock
