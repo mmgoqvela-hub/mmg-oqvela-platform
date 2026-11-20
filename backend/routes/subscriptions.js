@@ -111,7 +111,14 @@ async function getStoreSubscription(db, storeId, userId) {
   const result = await db.prepare(`
     SELECT
       ss.id AS subscription_id,
-      ss.status AS subscription_status,
+      CASE
+        WHEN ss.status = 'active'
+          AND ss.expires_at IS NOT NULL
+          AND ss.expires_at <= CURRENT_TIMESTAMP
+        THEN 'expired'
+        ELSE ss.status
+      END AS subscription_status,
+      ss.status AS stored_subscription_status,
       ss.starts_at,
       ss.expires_at,
       ss.created_at AS subscription_created_at,
