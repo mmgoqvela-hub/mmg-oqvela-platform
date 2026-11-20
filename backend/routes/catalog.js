@@ -306,6 +306,114 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   return json({ status: "ok" });
 }
 
+async function handleVariants(request, env, storeId, userId, access, productId, variantId) {
+  const product = await env.DB.prepare(
+    "SELECT id, track_inventory FROM products WHERE id = ? AND store_id = ? LIMIT 1"
+  ).bind(productId, storeId).first();
+  if (!product) return json({ error: "Product not found" }, 404);
+
+  if (!variantId) {
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
+    const parsed = await readBody(request);
+    if (parsed.error) return json({ error: parsed.error }, parsed.status);
+    const body = parsed.body;
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const sku = typeof body.sku === "string" ? body.sku.trim() : "";
+    const price = body.price;
+    const stock = body.stock_quantity === undefined ? 0 : body.stock_quantity;
+    const attributes = body.attributes == null ? {} : body.attributes;
+    if (!validName(name) || name.length > 100 ||
+        (sku && sku.length > 100) ||
+        typeof price !== "number" || !Number.isFinite(price) || price < 0 ||
+        !Number.isInteger(stock) || stock < 0 || stock > 1000000000 ||
+        !attributes || typeof attributes !== "object" || Array.isArray(attributes) ||
+        JSON.stringify(attributes).length > 4000) {
+      return json({ error: "Invalid product variant data" }, 400);
+    }
+    if (!product.track_inventory && stock > 0) {
+      return json({ error: "Inventory tracking is disabled for this product" }, 409);
+    }
+    const id = crypto.randomUUID();
+    const statements = [
+      env.DB.prepare(`
+        INSERT INTO product_variants (
+          id, product_id, store_id, name, sku, price,
+          stock_quantity, attributes_json, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+      `).bind(id, productId, storeId, name, sku || null, price, stock, JSON.stringify(attributes))
+    ];
+    if (stock > 0) {
+      statements.push(env.DB.prepare(`
+        INSERT INTO inventory_movements (
+          id, store_id, product_id, variant_id, movement_type,
+          quantity_change, notes, created_by
+        )
+        SELECT ?, ?, ?, ?, 'initial', ?, 'Initial variant stock', ?
+        WHERE EXISTS (
+          SELECT 1 FROM product_variants
+          WHERE id = ? AND product_id = ? AND store_id = ? AND stock_quantity = ?
+        )
+      `).bind(crypto.randomUUID(), storeId, productId, id, stock, userId, id, productId, storeId, stock));
+    }
+    try {
+      const results = await env.DB.batch(statements);
+      if (!results[0]?.meta?.changes || (stock > 0 && !results[1]?.meta?.changes)) {
+        return json({ error: "Unable to create product variant and its initial stock record" }, 409);
+      }
+      return json({ status: "ok", variant: { id, product_id: productId, name, sku: sku || null, price, stock_quantity: stock, attributes } }, 201);
+    } catch {
+      return json({ error: "Unable to create variant; check whether the SKU is already used in this store" }, 409);
+    }
+  }
+
+  if (!["PUT", "DELETE"].includes(request.method)) return json({ error: "Method not allowed" }, 405);
+  if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
+  const variant = await env.DB.prepare(
+    "SELECT id, stock_quantity, status FROM product_variants WHERE id = ? AND product_id = ? AND store_id = ? LIMIT 1"
+  ).bind(variantId, productId, storeId).first();
+  if (!variant) return json({ error: "Product variant not found" }, 404);
+
+  if (request.method === "DELETE") {
+    if (variant.stock_quantity > 0) {
+      return json({ error: "A variant with remaining stock cannot be deactivated" }, 409);
+    }
+    await env.DB.prepare(
+      "UPDATE product_variants SET status = 'inactive' WHERE id = ? AND product_id = ? AND store_id = ?"
+    ).bind(variantId, productId, storeId).run();
+    return json({ status: "ok" });
+  }
+
+  const parsed = await readBody(request);
+  if (parsed.error) return json({ error: parsed.error }, parsed.status);
+  const body = parsed.body;
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const sku = typeof body.sku === "string" ? body.sku.trim() : "";
+  const price = body.price;
+  const attributes = body.attributes == null ? {} : body.attributes;
+  const status = body.status || "active";
+  if (!validName(name) || name.length > 100 || (sku && sku.length > 100) ||
+      typeof price !== "number" || !Number.isFinite(price) || price < 0 ||
+      !["active", "inactive"].includes(status) ||
+      !attributes || typeof attributes !== "object" || Array.isArray(attributes) ||
+      JSON.stringify(attributes).length > 4000) {
+    return json({ error: "Invalid product variant data" }, 400);
+  }
+  if (status === "inactive" && variant.stock_quantity > 0) {
+    return json({ error: "A variant with remaining stock cannot be deactivated" }, 409);
+  }
+  try {
+    await env.DB.prepare(`
+      UPDATE product_variants
+      SET name = ?, sku = ?, price = ?, attributes_json = ?, status = ?
+      WHERE id = ? AND product_id = ? AND store_id = ?
+    `).bind(name, sku || null, price, JSON.stringify(attributes), status, variantId, productId, storeId).run();
+    return json({ status: "ok" });
+  } catch {
+    return json({ error: "Unable to update variant; check whether the SKU is already used in this store" }, 409);
+  }
+}
+
 async function handleInventory(request, env, storeId, userId, access) {
   if (request.method === "GET") {
     const result = await env.DB.prepare(`
@@ -408,8 +516,9 @@ async function handleInventory(request, env, storeId, userId, access) {
 
 export async function handleCatalog(request, env) {
   const url = new URL(request.url);
+  const variantMatch = url.pathname.match(/^\/api\/stores\/([^/]+)\/products\/([^/]+)\/variants(?:\/([^/]+))?$/);
   const match = url.pathname.match(/^\/api\/stores\/([^/]+)\/(categories|products|inventory)(?:\/([^/]+))?$/);
-  if (!match) return null;
+  if (!match && !variantMatch) return null;
 
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
   const session = await getAuthenticatedSession(request, env.DB);
@@ -417,9 +526,17 @@ export async function handleCatalog(request, env) {
 
   let storeId;
   let resourceId = null;
+  let productId = null;
+  let variantId = null;
   try {
-    storeId = decodeURIComponent(match[1]);
-    resourceId = match[3] ? decodeURIComponent(match[3]) : null;
+    if (variantMatch) {
+      storeId = decodeURIComponent(variantMatch[1]);
+      productId = decodeURIComponent(variantMatch[2]);
+      variantId = variantMatch[3] ? decodeURIComponent(variantMatch[3]) : null;
+    } else {
+      storeId = decodeURIComponent(match[1]);
+      resourceId = match[3] ? decodeURIComponent(match[3]) : null;
+    }
   } catch {
     return json({ error: "Invalid store or resource ID" }, 400);
   }
@@ -429,6 +546,9 @@ export async function handleCatalog(request, env) {
   if (access.store_status !== "active") return json({ error: "Store is not active" }, 409);
 
   try {
+    if (variantMatch) {
+      return await handleVariants(request, env, storeId, session.user_id, access, productId, variantId);
+    }
     if (match[2] === "categories") {
       return await handleCategories(request, env, storeId, session.user_id, access, resourceId);
     }
