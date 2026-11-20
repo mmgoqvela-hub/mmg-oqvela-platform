@@ -102,7 +102,6 @@ async function listTeam(db,storeId) {
       WHERE sm.store_id=?
       GROUP BY sm.id
       ORDER BY sm.created_at DESC
-      LIMIT 500
     `).bind(storeId).all()
   ]);
   return {
