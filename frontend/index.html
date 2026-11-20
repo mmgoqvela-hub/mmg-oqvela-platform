@@ -2520,6 +2520,26 @@ footer{
         line.className = "muted";
         line.textContent = "الباقة: " + sub.plan_name + " — الاشتراك: " + localizeCode(sub.subscription_status) + " — الدفع: " + (sub.payment_status ? localizeCode(sub.payment_status) : "—");
         panel.append(line);
+
+        if (sub.is_trial && sub.expires_at) {
+          const expiryTime = Date.parse(sub.expires_at.replace(" ", "T") + (sub.expires_at.endsWith("Z") ? "" : "Z"));
+          if (Number.isFinite(expiryTime)) {
+            const remainingDays = Math.ceil((expiryTime - Date.now()) / 86400000);
+            if (remainingDays <= 0 || sub.subscription_status === "expired") {
+              const notice = document.createElement("p");
+              notice.className = "message error";
+              notice.setAttribute("role", "alert");
+              notice.textContent = "انتهت الفترة التجريبية. أصبح المتجر مخفياً للزوار؛ اختر باقة مدفوعة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة.";
+              panel.append(notice);
+            } else if (remainingDays <= 3) {
+              const notice = document.createElement("p");
+              notice.className = "message";
+              notice.setAttribute("role", "status");
+              notice.textContent = "تنبيه: بقي " + formatNumber(remainingDays) + " يوم على انتهاء الفترة التجريبية. اختر باقة مدفوعة لتجنب توقف ظهور متجرك.";
+              panel.append(notice);
+            }
+          }
+        }
       }
       if (subscriptions.some(x => ["pending","active","suspended"].includes(x.subscription_status))) {
         status.textContent = "يوجد اشتراك قيد المراجعة أو نشط أو معلّق؛ لا يمكن إنشاء طلب جديد.";
