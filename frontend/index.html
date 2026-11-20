@@ -347,6 +347,7 @@ footer{
       </div>
     </form>
     <hr><h3>طلبات الاشتراك المدفوعة</h3><div id="adminSubscriptionRequests" class="account-grid"></div>
+    <hr><h3>الباقات الحالية</h3><div id="adminSubscriptionPlans" class="account-grid"></div>
     <hr><h3>إنشاء باقة اشتراك</h3>
     <form id="subscriptionPlanForm" class="admin-form">
       <div class="field"><label for="planName">اسم الباقة</label><input id="planName" required minlength="2" maxlength="80"></div>
@@ -747,6 +748,55 @@ footer{
     }
   }
 
+
+  async function loadAdminSubscriptionPlans() {
+    const container = $("adminSubscriptionPlans");
+    if (!container) return;
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/subscription-plans");
+      const plans = data.plans || [];
+      if (!plans.length) { container.textContent = "لم تُنشأ باقات مدفوعة بعد."; return; }
+      for (const plan of plans) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = plan.name;
+        const details = document.createElement("p");
+        details.className = "muted";
+        details.textContent = plan.price + " " + plan.currency + " — " + plan.duration_days + " يوم — " + (plan.is_active ? "مفعّلة" : "متوقفة") + " — عدد الاشتراكات: " + plan.subscriptions_count;
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "secondary";
+        toggle.textContent = plan.is_active ? "إيقاف الباقة" : "تفعيل الباقة";
+        toggle.addEventListener("click", async () => {
+          toggle.disabled = true;
+          try {
+            await api("/api/admin/subscription-plans/" + encodeURIComponent(plan.id), {
+              method:"PUT",
+              body:JSON.stringify({
+                name:plan.name,
+                description:plan.description || "",
+                price:Number(plan.price),
+                currency:plan.currency,
+                duration_days:Number(plan.duration_days),
+                is_active:!Boolean(plan.is_active)
+              })
+            });
+            await loadAdminSubscriptionPlans();
+          } catch (error) {
+            details.textContent = error.message;
+            toggle.disabled = false;
+          }
+        });
+        card.append(title, details, toggle);
+        container.append(card);
+      }
+    } catch (error) {
+      container.textContent = "تعذر تحميل الباقات: " + error.message;
+    }
+  }
+
   async function loadAdminSubscriptionRequests() {
     const container = $("adminSubscriptionRequests");
     if (!container) return;
@@ -775,6 +825,7 @@ footer{
               const result = await api("/api/admin/subscriptions/" + encodeURIComponent(request.payment_id) + "/approve", {method:"POST",body:"{}"});
               details.textContent = result.message || "تمت الموافقة.";
               await loadAdminSubscriptionRequests();
+      await loadAdminSubscriptionPlans();
             } catch (error) { details.textContent = error.message; approve.disabled = false; }
           });
           const reject = document.createElement("button");
