@@ -36,6 +36,7 @@ This document is the working source of truth for preserving previously agreed re
 - There is an unresolved ownership workflow in the historical decisions: central administration was described as creating stores, while the current code allows account owners to create additional stores. Preserve current behavior until this workflow is reconciled against the user's original approval; do not silently change production behavior.
 
 ### 2.3 Roles and permissions
+- Team managers who are ordinary store members may manage staff and custom roles only within their own permission ceiling: they cannot create/grant/assign permissions they do not themselves hold. Owners and account admins retain full store-role administration. Automated regression coverage protects against privilege escalation through role creation.
 - Account-level roles include owner, admin and member.
 - Store-level staff/roles and permission assignments are part of the foundation.
 - Permissions must be enforced server-side, not merely hidden in the UI.
