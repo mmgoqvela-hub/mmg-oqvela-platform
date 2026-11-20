@@ -46,7 +46,7 @@ export async function handlePublicStorefront(request, env) {
 
     if (!store) return json({error:"Store is unavailable"},404);
 
-    const [categoriesResult, productsResult] = await Promise.all([
+    const [categoriesResult, productsResult, platformSettings] = await Promise.all([
       env.DB.prepare(`
         SELECT id, parent_id, name, slug, description, sort_order
         FROM categories
@@ -75,7 +75,8 @@ export async function handlePublicStorefront(request, env) {
           )
         ORDER BY p.is_featured DESC, p.created_at DESC
         LIMIT 200
-      `).bind(store.id).all()
+      `).bind(store.id).all(),
+      env.DB.prepare("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN ('platform_footer_ar','platform_footer_en')").all()
     ]);
 
     const products = productsResult.results || [];
@@ -118,6 +119,7 @@ export async function handlePublicStorefront(request, env) {
       status:"ok",
       store,
       order_settings:orderSettings,
+      platform_footer: Object.fromEntries((platformSettings.results || []).map(item => [item.setting_key, item.setting_value])),
       categories:categoriesResult.results || [],
       products:products.map(product => ({
         ...product,
