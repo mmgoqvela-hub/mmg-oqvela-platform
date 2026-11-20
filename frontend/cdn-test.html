@@ -11,7 +11,7 @@
 <body><main>
 <h1>اختبار Cloudflare CDN</h1>
 <p class="muted">هذه صفحة اختبار مستقلة لملف صورة ثابت داخل المنصة. اضغط الزر لطلب الملف نفسه عدة مرات ومقارنة ترويسات الاستجابة. لا ترفع أي بيانات خاصة هنا.</p>
-<img class="asset" src="/cdn-test.svg" alt="صورة اختبار CDN">
+<img class="asset" src="/cdn-test-14ee5d51.svg" alt="صورة اختبار CDN">
 <p><button id="run">ابدأ الاختبار</button></p>
 <p class="muted">النتيجة الأهم: <b>CF-Cache-Status: HIT</b> في طلب لاحق. قد تختلف النتيجة حسب نطاق النشر وموقع نقطة Cloudflare وحالة الكاش.</p>
 <pre id="out">لم يبدأ الاختبار بعد.</pre>
@@ -19,7 +19,7 @@
 <script>
 const out=document.getElementById('out');
 document.getElementById('run').addEventListener('click',async()=>{
- const url='/cdn-test.svg'; const lines=[];
+ const url='/cdn-test-14ee5d51.svg'; const lines=[];
  for(let i=1;i<=3;i++){
   const start=performance.now();
   try{
