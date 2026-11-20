@@ -439,6 +439,7 @@ async function currentUser(request, env) {
           s.name,
           s.slug,
           s.business_type,
+          s.template_key,
           s.status
         FROM stores s
         JOIN account_users au
