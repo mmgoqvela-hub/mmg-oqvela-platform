@@ -86,3 +86,18 @@ test("Notification messages are safely rendered and localized for Arabic", async
   assert.match(html, /Your payment request for/);
   assert.match(html, /انتهت الفترة التجريبية لمتجر/);
 });
+
+
+test("Every notification read mutation is scoped to the authenticated user", () => {
+  assert.match(route, /UPDATE user_notifications[\s\S]*?WHERE user_id = \? AND read_at IS NULL/);
+  assert.match(route, /UPDATE user_notifications[\s\S]*?WHERE id = \? AND user_id = \? AND read_at IS NULL/);
+  assert.match(route, /SELECT id FROM user_notifications WHERE id = \? AND user_id = \?/);
+  assert.match(route, /getAuthenticatedSession\(request, env\.DB\)/);
+  assert.match(route, /if \(!validOrigin\(request\)\)/);
+});
+
+test("Notification inbox bounds user-controlled page size and disables caching", () => {
+  assert.match(route, /Math\.max\(1, Math\.min\(requestedLimit, 50\)\)/);
+  assert.match(route, /Cache-Control": "no-store"/);
+  assert.match(route, /WHERE user_id = \?\s+ORDER BY created_at DESC/);
+});
