@@ -65,6 +65,14 @@ CREATE TABLE store_order_items (
 CREATE INDEX idx_store_orders_store_created ON store_orders(store_id, created_at DESC);
 CREATE INDEX idx_store_orders_store_status ON store_orders(store_id, order_status, payment_status);
 CREATE INDEX idx_store_order_items_order ON store_order_items(store_id, order_id);
+CREATE UNIQUE INDEX idx_store_orders_unique_shamcash_reference
+    ON store_orders(store_id, transaction_reference)
+    WHERE transaction_reference IS NOT NULL;
+
+INSERT OR IGNORE INTO permissions (id,code,description)
+VALUES
+  (lower(hex(randomblob(16))),'orders.read','Read customer orders and checkout records'),
+  (lower(hex(randomblob(16))),'orders.manage','Update customer order and payment statuses');
 
 -- Enforce product/variant ownership and reserve tracked stock in the same transaction
 -- that creates the order. Any insufficient stock aborts the complete D1 batch.
