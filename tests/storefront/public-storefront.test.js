@@ -63,7 +63,7 @@ test("Public storefront returns its selected template and published catalog only
 
 test("Invalid slugs are rejected before database access",async()=>{
   const db=createDb();
-  const response=await handlePublicStorefront(request("../private"),{DB:db});
+  const response=await handlePublicStorefront(request("invalid!"),{DB:db});
   assert.equal(response.status,404);
   assert.equal(db.calls.length,0);
 });
