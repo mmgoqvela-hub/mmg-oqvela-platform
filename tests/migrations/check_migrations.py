@@ -94,6 +94,12 @@ def main():
     if "preferred_language" not in user_language_columns:
         raise SystemExit("User language preference column is missing")
 
+    store_columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(stores)")
+    }
+    if "template_key" not in store_columns:
+        raise SystemExit("Store template selection column is missing")
+
     seed_identity(connection)
     default_language = connection.execute(
         "SELECT preferred_language FROM users WHERE id = 'user-1'"
@@ -117,6 +123,30 @@ def main():
         pass
     else:
         raise SystemExit("Unsupported language preference was accepted")
+
+    connection.execute(
+        "INSERT INTO stores (id, account_id, name, slug) VALUES ('template-default-store', 'account-1', 'Default Template', 'template-default')"
+    )
+    template_default = connection.execute(
+        "SELECT template_key FROM stores WHERE id='template-default-store'"
+    ).fetchone()
+    if template_default != ("modern",):
+        raise SystemExit(f"New stores must use the modern template by default: {template_default}")
+    connection.execute(
+        "UPDATE stores SET template_key='boutique' WHERE id='template-default-store'"
+    )
+    if connection.execute(
+        "SELECT template_key FROM stores WHERE id='template-default-store'"
+    ).fetchone() != ("boutique",):
+        raise SystemExit("Store template selection was not persisted")
+    try:
+        connection.execute(
+            "UPDATE stores SET template_key='unknown' WHERE id='template-default-store'"
+        )
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise SystemExit("Unsupported storefront template was accepted")
 
     # Verify database-level tenant boundaries for catalog, inventory and staff roles.
     connection.executemany(
