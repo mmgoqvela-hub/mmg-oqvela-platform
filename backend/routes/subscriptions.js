@@ -108,6 +108,9 @@ async function getStoreSubscription(db, storeId, userId) {
 
   if (!store) return null;
 
+  // Payment references and billing history are restricted to store owners/admins.
+  if (!["owner", "admin"].includes(store.account_role)) return null;
+
   const result = await db.prepare(`
     SELECT
       ss.id AS subscription_id,
