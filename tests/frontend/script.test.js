@@ -95,6 +95,14 @@ test("Store subscription panel warns before and after paid subscription expiry",
 });
 
 
+test("Storefront safely renders central WhatsApp support contact",async()=>{
+ const html=await readFile(new URL("../../frontend/storefront.html",import.meta.url),"utf8");
+ assert.match(html,/id="platformSupportContact"/);
+ assert.match(html,/platform_support_whatsapp/);
+ assert.match(html,/https:\/\/wa\.me\/" \+ supportPhone/);
+ assert.match(html,/platformSupport:"Contact platform support"/);
+});
+
 test("Public storefront supports persistent cart, variant selection, stock limits and safe rendering", async () => {
   const html = await readFile(new URL("../../frontend/storefront.html", import.meta.url), "utf8");
   const start = html.indexOf("<script>");
