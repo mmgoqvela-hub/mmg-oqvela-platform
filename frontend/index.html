@@ -562,6 +562,8 @@ footer{
     "إعادة المحاولة":"Try again",
     "اشتراك المتجر":"Store subscription",
     "انتهت الفترة التجريبية. أصبح المتجر مخفياً للزوار؛ اختر باقة مدفوعة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة.":"The free trial has ended. Your storefront is hidden from visitors; choose a paid plan and submit payment for reactivation after admin approval.",
+    "انتهى الاشتراك المدفوع. أصبح المتجر مخفياً للزوار؛ اختر باقة جديدة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة.":"Your paid subscription has expired. Your storefront is hidden; choose a new plan and submit payment to reactivate it after admin approval.",
+    " يوم على انتهاء الاشتراك المدفوع. جدّد اشتراكك لتجنب توقف ظهور متجرك.":" day(s) remain on your paid subscription. Renew it to avoid your storefront being hidden.",
     "تنبيه: بقي ":"Notice: ",
     " يوم على انتهاء الفترة التجريبية. اختر باقة مدفوعة لتجنب توقف ظهور متجرك.":" day(s) remain in your free trial. Choose a paid plan to avoid your storefront being hidden.",
     "جارٍ تحميل بيانات الاشتراك...":"Loading subscription details...",
@@ -2527,7 +2529,7 @@ footer{
         line.textContent = "الباقة: " + sub.plan_name + " — الاشتراك: " + localizeCode(sub.subscription_status) + " — الدفع: " + (sub.payment_status ? localizeCode(sub.payment_status) : "—");
         panel.append(line);
 
-        if (sub.is_trial && sub.expires_at) {
+        if (sub.expires_at && ["active", "expired"].includes(sub.subscription_status)) {
           const expiryTime = Date.parse(sub.expires_at.replace(" ", "T") + (sub.expires_at.endsWith("Z") ? "" : "Z"));
           if (Number.isFinite(expiryTime)) {
             const remainingDays = Math.ceil((expiryTime - Date.now()) / 86400000);
@@ -2535,13 +2537,17 @@ footer{
               const notice = document.createElement("p");
               notice.className = "message error";
               notice.setAttribute("role", "alert");
-              notice.textContent = "انتهت الفترة التجريبية. أصبح المتجر مخفياً للزوار؛ اختر باقة مدفوعة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة.";
+              notice.textContent = sub.is_trial
+                ? "انتهت الفترة التجريبية. أصبح المتجر مخفياً للزوار؛ اختر باقة مدفوعة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة."
+                : "انتهى الاشتراك المدفوع. أصبح المتجر مخفياً للزوار؛ اختر باقة جديدة وأرسل طلب الدفع لإعادة تفعيله بعد موافقة الإدارة.";
               panel.append(notice);
             } else if (remainingDays <= 3) {
               const notice = document.createElement("p");
               notice.className = "message";
               notice.setAttribute("role", "status");
-              notice.textContent = "تنبيه: بقي " + formatNumber(remainingDays) + " يوم على انتهاء الفترة التجريبية. اختر باقة مدفوعة لتجنب توقف ظهور متجرك.";
+              notice.textContent = sub.is_trial
+                ? "تنبيه: بقي " + formatNumber(remainingDays) + " يوم على انتهاء الفترة التجريبية. اختر باقة مدفوعة لتجنب توقف ظهور متجرك."
+                : "تنبيه: بقي " + formatNumber(remainingDays) + " يوم على انتهاء الاشتراك المدفوع. جدّد اشتراكك لتجنب توقف ظهور متجرك.";
               panel.append(notice);
             }
           }
