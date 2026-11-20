@@ -324,6 +324,8 @@ test("Product creation records initial stock in the same database batch", async 
   assert.equal(db.calls.length,2);
   assert.ok(db.calls[0].sql.includes("INSERT INTO products"));
   assert.ok(db.calls[1].sql.includes("INSERT INTO inventory_movements"));
+  assert.ok(db.calls[1].values.includes("SUPPLIER-INV-204"));
+  assert.ok(db.calls[1].values.includes("Restock"));
 });
 
 test("Product listing is scoped to the selected store", async () => {
@@ -358,7 +360,7 @@ test("Valid inventory movements update stock and create a movement record atomic
   const db = createDb({product:{id:"product-1",track_inventory:1,stock_quantity:5}});
   const response = await handleCatalog(makeRequest("inventory","POST",{
     product_id:"product-1",movement_type:"purchase",quantity_change:4,
-    notes:"Restock"
+    reference_id:"SUPPLIER-INV-204",notes:"Restock"
   }),{DB:db});
   const result = await response.json();
   assert.equal(response.status,200);
