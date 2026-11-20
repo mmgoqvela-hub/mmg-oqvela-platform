@@ -3198,6 +3198,7 @@ footer{
       if (previewLogo.style.display === "block") previewLogo.src = logoUrl.value;
       else previewLogo.removeAttribute("src");
       previewProductsTitle.textContent = productsTitleText.value || "المنتجات";
+      previewButton.textContent = addToCartText.value || "أضف إلى السلة";
       previewProducts.style.display = sectionOptions.products?.checked === false ? "none" : "grid";
       previewCategories.style.display = sectionOptions.categories?.checked === false ? "none" : "inline";
       previewCart.style.display = sectionOptions.cart?.checked === false ? "none" : "inline-block";
