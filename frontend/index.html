@@ -1141,7 +1141,25 @@ footer{
   }
 
   function notificationText(value) {
-    return translateText(String(value || ""));
+    const raw = String(value || "");
+    if (currentLanguage !== "ar") return raw;
+    const patterns = [
+      [/^Your subscription request for (.+) has been submitted and is awaiting review\.$/, name => "تم إرسال طلب الاشتراك لمتجر " + name + "، وهو بانتظار مراجعة الإدارة."],
+      [/^Your payment for (.+) was approved\. The subscription is now active\.$/, name => "تمت الموافقة على دفعتك لمتجر " + name + "، وأصبح الاشتراك فعالاً الآن."],
+      [/^Your payment request for (.+) was rejected\. Reason: (.+)$/, (name, reason) => "تم رفض طلب الدفع لمتجر " + name + ". السبب: " + reason],
+      [/^Your free trial for (.+) has started\. You can manage your store during the trial period\.$/, name => "بدأت الفترة التجريبية المجانية لمتجر " + name + "، ويمكنك إدارة متجرك خلالها."],
+      [/^Your free trial for (.+) expires in 3 days\. Choose a paid plan and submit your Sham Cash payment to avoid interruption\.$/, name => "تنتهي الفترة التجريبية لمتجر " + name + " بعد 3 أيام. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش."],
+      [/^Your subscription for (.+) expires in 3 days\. Submit a renewal request to avoid interruption\.$/, name => "ينتهي اشتراك متجر " + name + " بعد 3 أيام. أرسل طلب تجديد لتجنب توقف المتجر."],
+      [/^Your free trial for (.+) expires tomorrow\. Choose a paid plan and submit your Sham Cash payment\.$/, name => "تنتهي الفترة التجريبية لمتجر " + name + " غداً. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش."],
+      [/^Your subscription for (.+) expires tomorrow\. Submit a renewal request\.$/, name => "ينتهي اشتراك متجر " + name + " غداً. أرسل طلب تجديد."],
+      [/^Your free trial for (.+) has expired\. Your public store is hidden\. Choose a paid plan and submit your Sham Cash payment; it will return after approval\.$/, name => "انتهت الفترة التجريبية لمتجر " + name + ". أصبح متجرك مخفياً للزوار. اختر باقة مدفوعة وأرسل دفعتك عبر شام كاش ليعود بعد الموافقة."],
+      [/^Your subscription for (.+) has expired\. Your public store is hidden\. Submit a Sham Cash renewal request; it will return after approval\.$/, name => "انتهى اشتراك متجر " + name + ". أصبح متجرك مخفياً للزوار. أرسل طلب تجديد عبر شام كاش ليعود بعد الموافقة."]
+    ];
+    for (const [pattern, format] of patterns) {
+      const match = raw.match(pattern);
+      if (match) return format(...match.slice(1));
+    }
+    return translateText(raw);
   }
 
   function renderNotifications(data) {
