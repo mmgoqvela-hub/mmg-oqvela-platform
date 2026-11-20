@@ -141,9 +141,9 @@ async function adminOverview(db) {
     db.prepare("SELECT COUNT(*) AS total FROM stores").first(),
     db.prepare("SELECT COUNT(*) AS total FROM store_subscriptions WHERE status='active' AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)").first(),
     db.prepare("SELECT COUNT(*) AS total FROM payments WHERE status='pending'").first(),
-    db.prepare("SELECT COALESCE(SUM(amount),0) AS total FROM payments WHERE status='approved'").first()
+    db.prepare("SELECT currency,COALESCE(SUM(amount),0) AS total FROM payments WHERE status='approved' GROUP BY currency ORDER BY currency").all()
   ]);
-  return {users:users?.total||0,accounts:accounts?.total||0,stores:stores?.total||0,active_subscriptions:activeSubscriptions?.total||0,pending_payments:pendingPayments?.total||0,approved_payment_total:revenue?.total||0};
+  return {users:users?.total||0,accounts:accounts?.total||0,stores:stores?.total||0,active_subscriptions:activeSubscriptions?.total||0,pending_payments:pendingPayments?.total||0,approved_payment_totals:revenue?.results||[]};
 }
 
 async function listAdminResource(db,resource,url) {
@@ -246,6 +246,8 @@ async function createPlatformAdmin(request,env,admin) {
   }
   const user=await env.DB.prepare("SELECT id,status FROM users WHERE email=? LIMIT 1").bind(email).first();
   if(!user||user.status!=="active") return json({error:"An active platform user with this email is required"},404);
+  const existing=await env.DB.prepare("SELECT admin_level FROM platform_admins WHERE user_id=? LIMIT 1").bind(user.id).first();
+  if(existing?.admin_level==="super_admin") return json({error:"The super administrator cannot be changed through this form"},409);
   const result=await env.DB.batch([
     env.DB.prepare("INSERT INTO platform_admins (user_id,admin_level,status) VALUES (?,?, 'active') ON CONFLICT(user_id) DO UPDATE SET admin_level=excluded.admin_level,status='active'").bind(user.id,level),
     logAdminChange(env.DB,admin,"create","platform_admin",user.id,{admin_level:level})
@@ -261,10 +263,10 @@ async function updatePlatformAdmin(request,env,admin,userId) {
   const status=parsed.body.status;
   if(level!==undefined && !["admin","support"].includes(level)) return json({error:"Invalid platform administrator level"},400);
   if(status!==undefined && !["active","suspended"].includes(status)) return json({error:"Invalid platform administrator status"},400);
-  if(userId===admin.user_id && (status==="suspended" || level==="support")) return json({error:"You cannot remove your own active super administrator access"},409);
+  if(userId===admin.user_id && (status!==undefined || level!==undefined)) return json({error:"Use the dedicated super administrator transfer action to change your access"},409);
   const current=await env.DB.prepare("SELECT admin_level,status FROM platform_admins WHERE user_id=? LIMIT 1").bind(userId).first();
   if(!current) return json({error:"Platform administrator not found"},404);
-  if(current.admin_level==="super_admin" && (status==="suspended" || level==="support")) {
+  if(current.admin_level==="super_admin" && (status==="suspended" || (level!==undefined && level!=="super_admin"))) {
     const count=await env.DB.prepare("SELECT COUNT(*) AS total FROM platform_admins WHERE admin_level='super_admin' AND status='active'").first();
     if((count?.total||0)<=1) return json({error:"The last active super administrator cannot be removed"},409);
   }
@@ -284,6 +286,8 @@ async function transferSuperAdmin(request,env,admin) {
   const targetId=typeof parsed.body.user_id==="string"?parsed.body.user_id:"";
   if(!targetId || targetId===admin.user_id) return json({error:"Choose another active user for administrator transfer"},400);
   const target=await env.DB.prepare("SELECT id,status FROM users WHERE id=? LIMIT 1").bind(targetId).first();
+  const activeAdmins=await env.DB.prepare("SELECT COUNT(*) AS total FROM platform_admins WHERE admin_level='super_admin' AND status='active'").first();
+  if((activeAdmins?.total||0)!==1) return json({error:"Resolve existing super administrator assignments before transferring ownership"},409);
   if(!target||target.status!=="active") return json({error:"The new administrator must be an active platform user"},404);
   const result=await env.DB.batch([
     env.DB.prepare("UPDATE platform_admins SET admin_level='admin' WHERE user_id=? AND admin_level='super_admin' AND status='active'").bind(admin.user_id),
