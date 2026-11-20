@@ -5,8 +5,9 @@ The store designer uploads logos and hero images to the Worker's R2 binding name
 ## One-time Cloudflare setup
 
 1. Open the Cloudflare dashboard and select the account that owns the `mmg-oqvela-platform` Worker.
-2. Open **R2 Object Storage** and create a bucket named exactly `mmg-oqvela-store-media`.
-3. The repository's `wrangler.toml` already declares the binding:
+2. Ensure the GitHub Actions `CLOUDFLARE_API_TOKEN` has permission to list and create R2 buckets, in addition to the existing Worker and D1 deployment permissions.
+3. The deployment workflow now checks for the bucket and creates it automatically when missing. You only need to create it manually if the token lacks R2 permissions.
+4. The repository's `wrangler.toml` already declares the binding:
 
    ```toml
    [[r2_buckets]]
@@ -18,7 +19,7 @@ The store designer uploads logos and hero images to the Worker's R2 binding name
 
 ## CLI alternative
 
-From the repository root, after authenticating Wrangler with the correct Cloudflare account:
+If you prefer to create the bucket manually, from the repository root after authenticating Wrangler with the correct Cloudflare account:
 
 ```sh
 npx wrangler r2 bucket create mmg-oqvela-store-media
