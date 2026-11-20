@@ -97,8 +97,8 @@ def main():
     store_columns = {
         row[1] for row in connection.execute("PRAGMA table_info(stores)")
     }
-    if "template_key" not in store_columns:
-        raise SystemExit("Store template selection column is missing")
+    if not {"template_key", "whatsapp_phone"}.issubset(store_columns):
+        raise SystemExit("Store template or WhatsApp contact column is missing")
 
     seed_identity(connection)
     default_language = connection.execute(
@@ -159,6 +159,14 @@ def main():
     }
     if seeded_permissions != required_permissions:
         raise SystemExit(f"Store team permission catalogue is incomplete: {seeded_permissions}")
+
+    connection.execute(
+        "UPDATE stores SET whatsapp_phone='963944123456' WHERE id='template-default-store'"
+    )
+    if connection.execute(
+        "SELECT whatsapp_phone FROM stores WHERE id='template-default-store'"
+    ).fetchone() != ("963944123456",):
+        raise SystemExit("Store WhatsApp contact was not persisted")
 
     # Verify database-level tenant boundaries for catalog, inventory and staff roles.
     connection.executemany(
