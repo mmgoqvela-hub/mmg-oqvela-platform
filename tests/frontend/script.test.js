@@ -95,6 +95,17 @@ test("Store subscription panel warns before and after paid subscription expiry",
 });
 
 
+test("Store dashboard loads period-based reports and renders report values as text",async()=>{
+ const html=await readFile(new URL("../../frontend/index.html",import.meta.url),"utf8");
+ assert.match(html,/\/reports\?period=/);
+ assert.match(html,/function loadReport\(\)/);
+ assert.match(html,/metric\("الإيرادات المؤكدة حسب العملة"/);
+ assert.match(html,/line\.textContent=product\.product_name/);
+ assert.match(html,/reportPeriod = "30d"/);
+ const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
+ for(const match of scripts) assert.doesNotThrow(()=>new vm.Script(match[1]));
+});
+
 test("Storefront safely renders central WhatsApp support contact",async()=>{
  const html=await readFile(new URL("../../frontend/storefront.html",import.meta.url),"utf8");
  assert.match(html,/id="platformSupportContact"/);
