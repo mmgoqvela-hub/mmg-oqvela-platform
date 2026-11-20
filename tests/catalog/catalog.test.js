@@ -173,3 +173,45 @@ test("Valid inventory movements update stock and create a movement record atomic
   assert.ok(db.calls[1].sql.includes("INSERT INTO inventory_movements"));
 });
 
+
+test("Account members cannot create product variants", async () => {
+  const db = createDb({access:MEMBER,product:{id:"product-1",track_inventory:1}});
+  const response = await handleCatalog(makeRequest("products/product-1/variants","POST",{
+    name:"Large",price:15
+  }),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.length,0);
+});
+
+test("Product variant creation records initial variant stock", async () => {
+  const db = createDb({product:{id:"product-1",track_inventory:1}});
+  const response = await handleCatalog(makeRequest("products/product-1/variants","POST",{
+    name:"Large",sku:"LARGE-1",price:15,stock_quantity:3,
+    attributes:{size:"L",color:"Blue"}
+  }),{DB:db});
+  const result = await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.variant.stock_quantity,3);
+  assert.equal(db.calls.length,2);
+  assert.ok(db.calls[0].sql.includes("INSERT INTO product_variants"));
+  assert.ok(db.calls[1].sql.includes("INSERT INTO inventory_movements"));
+});
+
+test("A product variant with remaining stock cannot be deactivated", async () => {
+  const db = createDb({
+    product:{id:"product-1",track_inventory:1},
+    variant:{id:"variant-1",stock_quantity:4,status:"active"}
+  });
+  const response = await handleCatalog(makeRequest("products/product-1/variants/variant-1","DELETE"),{DB:db});
+  assert.equal(response.status,409);
+  assert.equal(db.calls.some(call => call.sql.includes("UPDATE product_variants")),false);
+});
+
+test("Variant routes cannot cross product or store boundaries", async () => {
+  const db = createDb({access:null});
+  const response = await handleCatalog(makeRequest("products/foreign-product/variants","POST",{
+    name:"Variant",price:1
+  }),{DB:db});
+  assert.equal(response.status,404);
+});
+
