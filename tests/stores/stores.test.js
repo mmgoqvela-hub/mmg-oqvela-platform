@@ -410,7 +410,7 @@ test("Store owner can save persistent visual customization", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(result.store.customization, customization);
   const update = db.calls.find(item => item.sql.includes("UPDATE stores"));
-  assert.equal(update.values[5], JSON.stringify(customization));
+  assert.deepEqual(JSON.parse(update.values[5]), customization);
 });
 
 test("Invalid customization values are rejected", async () => {
