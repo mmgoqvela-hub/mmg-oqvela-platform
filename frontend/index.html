@@ -825,7 +825,6 @@ footer{
               const result = await api("/api/admin/subscriptions/" + encodeURIComponent(request.payment_id) + "/approve", {method:"POST",body:"{}"});
               details.textContent = result.message || "تمت الموافقة.";
               await loadAdminSubscriptionRequests();
-      await loadAdminSubscriptionPlans();
             } catch (error) { details.textContent = error.message; approve.disabled = false; }
           });
           const reject = document.createElement("button");
@@ -949,6 +948,7 @@ footer{
       $("trialEnabled").checked = Boolean(trial.settings?.enabled);
       $("trialDuration").value = trial.settings?.duration_days || 14;
       await loadAdminSubscriptionRequests();
+      await loadAdminSubscriptionPlans();
 
       panel.classList.remove("hidden");
     } catch (error) {
