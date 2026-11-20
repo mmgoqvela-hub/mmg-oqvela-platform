@@ -1,14 +1,50 @@
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/health") {
-      return Response.json({
-        status: "ok",
-        platform: "MMG OQVELA",
-        service: "Multi-Store SaaS Platform",
-        version: "1.0.0"
-      });
+      if (request.method !== "GET") {
+        return Response.json(
+          { error: "Method not allowed" },
+          { status: 405 }
+        );
+      }
+
+      try {
+        const migrations = await env.DB
+          .prepare("SELECT COUNT(*) AS total FROM d1_migrations")
+          .first();
+
+        const tables = await env.DB
+          .prepare(`
+            SELECT COUNT(*) AS total
+            FROM sqlite_master
+            WHERE type = 'table'
+            AND name NOT LIKE 'sqlite_%'
+          `)
+          .first();
+
+        return Response.json({
+          status: "ok",
+          platform: "MMG OQVELA",
+          service: "Multi-Store SaaS Platform",
+          version: "1.0.0",
+          database: {
+            status: "connected",
+            migrations: migrations.total,
+            tables: tables.total
+          }
+        }, {
+          headers: { "Cache-Control": "no-store" }
+        });
+
+      } catch {
+        return Response.json({
+          status: "degraded",
+          platform: "MMG OQVELA",
+          database: { status: "error" }
+        }, { status: 503 });
+      }
     }
 
     return env.ASSETS.fetch(request);
