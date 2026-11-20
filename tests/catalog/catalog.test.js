@@ -33,6 +33,8 @@ function createDb(options = {}) {
           return {
             sql, values,
             async first() {
+              if (sql.includes("COUNT(*) AS total FROM products")) return {total:options.productCount ?? 0};
+              if (sql.includes("COUNT(*) AS total FROM categories")) return {total:options.childCategoryCount ?? 0};
               if (sql.includes("FROM auth_sessions")) return options.session === undefined ? SESSION : options.session;
               if (sql.includes("FROM stores s")) return options.access === undefined ? OWNER : options.access;
               if (sql.includes("FROM categories")) return options.category || null;
@@ -122,6 +124,46 @@ test("Archiving a product preserves its database record and stock history", asyn
   assert.match(archive.sql,/SET status = 'archived'/);
   assert.match(archive.sql,/WHERE id = \? AND store_id = \?/);
   assert.equal(db.calls.some(call => call.sql.includes("DELETE FROM products")),false);
+});
+
+test("Categories with linked products cannot be deleted", async () => {
+  const db = createDb({category:{id:"cat-1"},productCount:2});
+  const response = await handleCatalog(makeRequest("categories/cat-1","DELETE"),{DB:db});
+  const result = await response.json();
+  assert.equal(response.status,409);
+  assert.equal(result.linked_products,2);
+  assert.equal(db.calls.some(call=>call.sql.includes("DELETE FROM categories")),false);
+});
+
+test("Categories with child categories cannot be deleted", async () => {
+  const db = createDb({category:{id:"cat-1"},childCategoryCount:1});
+  const response = await handleCatalog(makeRequest("categories/cat-1","DELETE"),{DB:db});
+  const result = await response.json();
+  assert.equal(response.status,409);
+  assert.equal(result.child_categories,1);
+  assert.equal(db.calls.some(call=>call.sql.includes("DELETE FROM categories")),false);
+});
+
+test("Unused categories can be deleted without touching products", async () => {
+  const db = createDb({category:{id:"cat-1"}});
+  const response = await handleCatalog(makeRequest("categories/cat-1","DELETE"),{DB:db});
+  assert.equal(response.status,200);
+  assert.ok(db.calls.some(call=>call.sql.includes("DELETE FROM categories") && call.values.includes("store-001")));
+  assert.equal(db.calls.some(call=>call.sql.includes("DELETE FROM products")),false);
+});
+
+test("Category deletion is blocked for members without catalog.manage", async () => {
+  const db = createDb({access:MEMBER,category:{id:"cat-1"}});
+  const response = await handleCatalog(makeRequest("categories/cat-1","DELETE"),{DB:db});
+  assert.equal(response.status,403);
+  assert.equal(db.calls.some(call=>call.sql.includes("DELETE FROM categories")),false);
+});
+
+test("A category from another store cannot be deleted", async () => {
+  const db = createDb({category:null});
+  const response = await handleCatalog(makeRequest("categories/foreign-category","DELETE"),{DB:db});
+  assert.equal(response.status,404);
+  assert.equal(db.calls.some(call=>call.sql.includes("DELETE FROM categories")),false);
 });
 
 test("Catalog endpoints require an authenticated account member", async () => {
