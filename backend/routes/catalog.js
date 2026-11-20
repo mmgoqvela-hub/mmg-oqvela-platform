@@ -301,10 +301,15 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   if (!product) return json({ error: "Product not found" }, 404);
   if (method === "GET") {
     if (!canRead(access, "catalog.read")) return json({ error: "Store read permission required" }, 403);
-    const variants = await env.DB.prepare(
-      "SELECT id, name, sku, price, stock_quantity, attributes_json, status FROM product_variants WHERE product_id = ? AND store_id = ? ORDER BY created_at ASC"
-    ).bind(productId, storeId).all();
-    return json({ status: "ok", product, variants: variants.results || [] });
+    const [variants, images] = await Promise.all([
+      env.DB.prepare(
+        "SELECT id, name, sku, price, stock_quantity, attributes_json, status FROM product_variants WHERE product_id = ? AND store_id = ? ORDER BY created_at ASC"
+      ).bind(productId, storeId).all(),
+      env.DB.prepare(
+        "SELECT id, file_key AS url, alt_text, sort_order FROM product_images WHERE product_id = ? AND store_id = ? ORDER BY sort_order ASC, created_at ASC"
+      ).bind(productId, storeId).all()
+    ]);
+    return json({ status: "ok", product, variants: variants.results || [], images: images.results || [] });
   }
   if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
   if (method === "DELETE") {
