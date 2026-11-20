@@ -6,3 +6,12 @@
 
 /cdn-test-photo.webp
   Cache-Control: public, max-age=31536000, immutable
+
+/cdn-size-100kb.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/cdn-size-500kb.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/cdn-size-1mb.jpg
+  Cache-Control: public, max-age=31536000, immutable
