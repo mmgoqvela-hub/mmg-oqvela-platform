@@ -88,7 +88,7 @@ test("Public storefront exposes the centrally configured support WhatsApp number
  assert.equal(response.status,200);
  assert.equal(result.platform_support_whatsapp,"963944123456");
  const query=db.calls.find(call=>call.sql.includes("FROM platform_settings"));
- assert.ok(query.sql.includes("platform_support_whatsapp"));
+ assert.ok(query.values.includes("platform_support_whatsapp"));
 });
 
 test("Public storefront exposes only currently active platform announcements",async()=>{
