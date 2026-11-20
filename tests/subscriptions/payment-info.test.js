@@ -28,6 +28,7 @@ function createDb(session = SESSION) {
     prepare(sql) {
       return {
         sql,
+        async all() { return {results:SETTINGS}; },
         bind() {
           return {
             async first() {
