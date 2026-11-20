@@ -470,6 +470,7 @@ footer{
       count.textContent = "عدد المتاجر: " + stores.length;
 
       card.append(title, role, count);
+      if (["owner", "admin"].includes(account.role)) renderStoreCreator(account, card);
 
       for (const store of stores) {
         const line = document.createElement("p");
@@ -493,6 +494,47 @@ footer{
         grid.append(card);
       }
     }
+  }
+
+
+  function renderStoreCreator(account, card) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary";
+    toggle.textContent = "إنشاء متجر إضافي";
+    const form = document.createElement("form");
+    form.className = "admin-form";
+    form.hidden = true;
+    const name = document.createElement("input");
+    name.required = true;
+    name.minLength = 2;
+    name.maxLength = 100;
+    const label = document.createElement("label");
+    label.textContent = "اسم المتجر الجديد";
+    const field = document.createElement("div");
+    field.className = "field wide";
+    field.append(label, name);
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "primary";
+    submit.textContent = "إنشاء المتجر";
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = "المتجر الإضافي لا يحصل على فترة تجريبية جديدة؛ يلزم اختيار باقة مدفوعة.";
+    form.append(field, note, submit);
+    toggle.addEventListener("click", () => { form.hidden = !form.hidden; });
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      submit.disabled = true;
+      try {
+        await api("/api/stores", {method:"POST",body:JSON.stringify({account_id:account.id,name:name.value.trim()})});
+        await checkSession();
+      } catch (error) {
+        note.textContent = error.message;
+        submit.disabled = false;
+      }
+    });
+    card.append(toggle, form);
   }
 
   function renderStoreEditor(store, card) {
