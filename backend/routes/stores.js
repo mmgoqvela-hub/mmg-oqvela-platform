@@ -182,7 +182,7 @@ export async function handleStores(request, env) {
     if (Object.prototype.hasOwnProperty.call(body || {}, "customization")) {
       const value = body.customization;
       if (!value || typeof value !== "object" || Array.isArray(value)) return json({ error: "Invalid store customization" }, 400);
-      const allowedKeys = ["colors", "texts", "fonts", "sections", "logo", "heroImage", "announcement"];
+      const allowedKeys = ["colors", "texts", "fonts", "sections", "logo", "heroImage", "announcement", "layout"];
       const customization = {};
       for (const key of allowedKeys) if (Object.prototype.hasOwnProperty.call(value, key)) customization[key] = value[key];
       customizationJson = JSON.stringify(customization);
