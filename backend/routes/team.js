@@ -32,16 +32,28 @@ async function getContext(request,env,storeId) {
   const session=await getAuthenticatedSession(request,env.DB);
   if(!session) return {response:json({error:"Authentication required"},401)};
   const store=await env.DB.prepare(`
-    SELECT s.id,s.account_id,s.status AS store_status,a.status AS account_status,au.role AS account_role
+    SELECT s.id,s.account_id,s.status AS store_status,a.status AS account_status,
+           au.role AS account_role,sm.id AS store_member_id,
+           COALESCE(GROUP_CONCAT(DISTINCT p.code),'') AS permissions
     FROM stores s
     JOIN accounts a ON a.id=s.account_id
     JOIN account_users au ON au.account_id=s.account_id
+    LEFT JOIN store_members sm ON sm.store_id=s.id AND sm.user_id=au.user_id AND sm.status='active'
+    LEFT JOIN member_roles mr ON mr.store_member_id=sm.id
+    LEFT JOIN roles r ON r.id=mr.role_id AND r.store_id=s.id
+    LEFT JOIN role_permissions rp ON rp.role_id=r.id
+    LEFT JOIN permissions p ON p.id=rp.permission_id
     WHERE s.id=? AND au.user_id=? AND au.status='active' AND a.status='active'
+      AND (au.role IN ('owner','admin') OR sm.id IS NOT NULL)
+    GROUP BY s.id,a.status,au.role,sm.id
     LIMIT 1
   `).bind(storeId,session.user_id).first();
   if(!store) return {response:json({error:"Store not found"},404)};
   if(store.store_status!=="active") return {response:json({error:"Store is not active"},409)};
-  if(!["owner","admin"].includes(store.account_role)) return {response:json({error:"Store owner or administrator access required"},403)};
+  const permissions=String(store.permissions||"").split(",");
+  if(!["owner","admin"].includes(store.account_role) && !permissions.includes("team.manage")) {
+    return {response:json({error:"Store team management permission required"},403)};
+  }
   return {session,store};
 }
 
