@@ -444,6 +444,9 @@ footer{
     "طلب جديد في متجرك":"New order in your store",
     "تم استلام طلب جديد عبر شام كاش ويحتاج إلى مراجعة رقم العملية.":"A new Sham Cash order was received and its transaction reference needs review.",
     "تم استلام طلب جديد بالدفع عند الاستلام.":"A new cash-on-delivery order was received.",
+    "إنشاء الطلب":"Order created",
+    "تغيير حالة الدفع":"Payment status changed",
+    "تغيير حالة الطلب":"Order status changed",
     "إدارة الطلبات وطرق الدفع":"Orders and payment settings",
     "طلبات المتجر":"Store orders",
     "طرق الدفع المتاحة للزبائن":"Customer payment methods",
@@ -2557,6 +2560,12 @@ footer{
             const line=document.createElement("p"); line.className="muted";
             line.textContent=item.product_name+(item.variant_name?" / "+item.variant_name:"")+" × "+item.quantity+" — "+formatNumber(item.line_total)+" "+item.currency;
             box.append(line);
+          }
+          for(const event of order.events||[]){
+            const history=document.createElement("p");history.className="muted";
+            const eventLabel=event.event_type==="created"?"إنشاء الطلب":event.event_type==="payment_status"?"تغيير حالة الدفع":"تغيير حالة الطلب";
+            history.textContent=eventLabel+(event.from_value?" — "+event.from_value+" ← ":" — ")+event.to_value+" — "+formatDateTime(event.created_at);
+            box.append(history);
           }
           if(order.shipping_address){const address=document.createElement("p");address.className="muted";address.textContent="العنوان: "+order.shipping_address;box.append(address);}
           if(order.customer_notes){const note=document.createElement("p");note.className="muted";note.textContent="ملاحظات: "+order.customer_notes;box.append(note);}
