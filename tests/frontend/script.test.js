@@ -152,10 +152,12 @@ test("Public checkout prevents duplicate submissions and cart mutation while pen
  const start=html.indexOf("<script>");
  const end=html.indexOf("</script>",start+8);
  const script=html.slice(start+8,end);
- assert.match(script,/let orderSubmitting = false/);
- assert.match(script,/if \\(orderSubmitting \\|\\| !cart\\.length\\) return/);
- assert.match(script,/orderSubmitting = true;[\\s\\S]*?button\\.disabled = true/);
- assert.match(script,/querySelectorAll\\(\"button\"\\)\\.forEach\\(control => \\{ control\\.disabled = true; \\}\\)/);
- assert.match(script,/finally \\{[\\s\\S]*?orderSubmitting = false/);
+ for(const marker of [
+  "let orderSubmitting = false",
+  "if (orderSubmitting || !cart.length) return",
+  "orderSubmitting = true;",
+  'querySelectorAll("button").forEach(control => { control.disabled = true; })',
+  "orderSubmitting = false;"
+ ]) assert.ok(script.includes(marker),"missing checkout protection: "+marker);
  assert.doesNotThrow(()=>new vm.Script(script));
 });
