@@ -154,6 +154,7 @@
       <div class="status" id="status" role="status" hidden></div>
     </section>
   </main>
+  <section id="platformAnnouncements" class="announcement-stack" aria-live="polite"></section>
   <footer id="platformFooter">© 2026 MMG OQVELA — جميع الحقوق محفوظة</footer>
   <script>
     (() => {
@@ -174,6 +175,20 @@
       const t = key => messages[language][key] || key;
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
 
+      function renderAnnouncements() {
+        const container=$("platformAnnouncements");
+        container.replaceChildren();
+        for(const announcement of storeData?.announcements || []) {
+          const card=document.createElement("article");
+          card.className="platform-announcement announcement-"+announcement.announcement_type;
+          const title=document.createElement("h3");
+          title.textContent=language==="en"?announcement.title_en:announcement.title_ar;
+          const message=document.createElement("p");
+          message.textContent=language==="en"?announcement.message_en:announcement.message_ar;
+          card.append(title,message);container.append(card);
+        }
+      }
+
       function setLanguage(next) {
         language = next;
         localStorage.setItem("mmg_language",language);
@@ -184,6 +199,7 @@
         $("search").placeholder = t("search");
         $("search").setAttribute("aria-label",t("search"));
         $("platformFooter").textContent = (language === "en" ? storeData?.platform_footer?.platform_footer_en : storeData?.platform_footer?.platform_footer_ar) || t("footer");
+        renderAnnouncements();
         $("whatsappContact").textContent = t("contact");
         $("cartHeading").textContent = t("cart");
         $("cartTotalLabel").textContent = t("total");
@@ -529,6 +545,7 @@
             return;
           }
           storeData = data;
+          renderAnnouncements();
           renderCheckoutMethods();
           document.title = data.store.name + " | MMG OQVELA";
           document.body.dataset.template = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(data.store.template_key) ? data.store.template_key : "modern";
