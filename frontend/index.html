@@ -3074,6 +3074,7 @@ footer{
       previewHeading.textContent = headingText.value || store.name || "اسم متجرك";
       previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
       previewButton.style.background = primaryColor.value;
+      livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
     };
     [primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
     updatePreview();
@@ -3095,16 +3096,9 @@ footer{
       line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
     }
     designField.append(sectionsWrap);
-    const updatePreview = () => {
-      livePreview.style.background = backgroundColor.value;
-      previewHeading.textContent = headingText.value || store.name || "اسم متجرك";
-      previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
-      previewButton.style.background = primaryColor.value;
-      livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
-    };
-    [fontSelect,primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
-    updatePreview();
-    designField.append(designTitle,designHint,designGrid,livePreview);
+    fontSelect.addEventListener("change",updatePreview);
+    livePreview.append(document.createTextNode(""));
+    designField.append(designTitle,designHint,designGrid,sectionsWrap,livePreview);
     let loadedCustomization = {};
     const loadCustomization = async () => {
       try {
