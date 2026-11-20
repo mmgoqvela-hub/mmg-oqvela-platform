@@ -2800,6 +2800,9 @@ footer{
           quantity.required = true;
           const notes = document.createElement("input");
           notes.maxLength = 1000;
+          const referenceId = document.createElement("input");
+          referenceId.maxLength = 120;
+          referenceId.placeholder = "مثال: فاتورة المورد أو رقم الإيصال";
           const productField = document.createElement("div");
           productField.className = "field";
           const productLabel = document.createElement("label");
@@ -2820,13 +2823,18 @@ footer{
           const notesLabel = document.createElement("label");
           notesLabel.textContent = "ملاحظات";
           notesField.append(notesLabel,notes);
+          const referenceField = document.createElement("div");
+          referenceField.className = "field";
+          const referenceLabel = document.createElement("label");
+          referenceLabel.textContent = "رقم المرجع";
+          referenceField.append(referenceLabel,referenceId);
           const movementSubmit = document.createElement("button");
           movementSubmit.type = "submit";
           movementSubmit.className = "primary";
           movementSubmit.textContent = "تسجيل حركة المخزون";
           const movementMessage = document.createElement("p");
           movementMessage.className = "muted";
-          movementForm.append(productField,variantField,typeField,quantityField,notesField,movementSubmit,movementMessage);
+          movementForm.append(productField,variantField,typeField,quantityField,referenceField,notesField,movementSubmit,movementMessage);
           movementForm.addEventListener("submit", async event => {
             event.preventDefault();
             const entered = Number(quantity.value);
@@ -2846,6 +2854,7 @@ footer{
                   variant_id:variantSelect.value || null,
                   movement_type:typeValue,
                   quantity_change:signedQuantity,
+                  reference_id:referenceId.value.trim(),
                   notes:notes.value.trim()
                 })
               });
@@ -2870,7 +2879,10 @@ footer{
             line.textContent = movement.product_name + (movement.variant_name ? " / " + movement.variant_name : "") + " — " +
               localizeCode(movement.movement_type) + " — " +
               formatNumber(movement.quantity_change) + " — " +
-              formatDateTime(movement.created_at);
+              formatDateTime(movement.created_at) +
+              (movement.reference_id ? " — المرجع: " + movement.reference_id : "") +
+              (movement.created_by_name ? " — بواسطة: " + movement.created_by_name : "") +
+              (movement.notes ? " — " + movement.notes : "");
             panel.append(line);
           }
         }
