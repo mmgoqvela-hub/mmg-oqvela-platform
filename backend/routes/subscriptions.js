@@ -40,6 +40,15 @@ function validTransactionReference(value) {
   );
 }
 
+function validSenderName(value) {
+  return (
+    typeof value === "string" &&
+    value.trim().length >= 2 &&
+    value.trim().length <= 120 &&
+    /^[\p{L}\p{M} .'-]+$/u.test(value.trim())
+  );
+}
+
 function validPlanData(body) {
   return (
     typeof body?.name === "string" &&
@@ -136,6 +145,7 @@ async function getStoreSubscription(db, storeId, userId) {
       p.currency AS payment_currency,
       p.payment_method,
       p.transaction_reference,
+      p.sender_name,
       p.status AS payment_status,
       p.rejection_reason,
       p.created_at AS payment_created_at,
@@ -167,16 +177,20 @@ async function createSubscriptionRequest(request, env, session) {
   const reference = typeof body.transaction_reference === "string"
     ? body.transaction_reference.trim()
     : "";
+  const senderName = typeof body.sender_name === "string"
+    ? body.sender_name.trim()
+    : "";
 
   if (
     typeof storeId !== "string" ||
     !storeId ||
     typeof planId !== "string" ||
     !planId ||
-    !validTransactionReference(reference)
+    !validTransactionReference(reference) ||
+    !validSenderName(senderName)
   ) {
     return json({
-      error: "تحقق من المتجر والباقة ورقم عملية التحويل."
+      error: "تحقق من المتجر والباقة ورقم العملية واسم المرسل."
     }, 400);
   }
 
@@ -313,11 +327,11 @@ async function createSubscriptionRequest(request, env, session) {
       env.DB.prepare(`
         INSERT INTO payments (
           id, subscription_id, amount, currency,
-          payment_method, transaction_reference,
+          payment_method, transaction_reference, sender_name,
           status, payment_details_snapshot, created_at
         )
         SELECT
-          ?, ss.id, ?, ?, 'shamcash', ?, 'pending', ?,
+          ?, ss.id, ?, ?, 'shamcash', ?, ?, 'pending', ?,
           CURRENT_TIMESTAMP
         FROM store_subscriptions ss
         WHERE ss.id = ?
@@ -327,6 +341,7 @@ async function createSubscriptionRequest(request, env, session) {
         plan.price,
         plan.currency,
         reference,
+        senderName,
         snapshot,
         subscriptionId
       ),
@@ -373,6 +388,7 @@ async function createSubscriptionRequest(request, env, session) {
         link: settings.shamcash_link || "",
         instructions: settings.shamcash_instructions || "",
         transaction_reference: reference,
+        sender_name: senderName,
         status: "pending"
       }
     }, 201);
