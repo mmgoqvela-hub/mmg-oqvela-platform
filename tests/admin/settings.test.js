@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS = [
   { setting_key: "shamcash_instructions", setting_value: "" },
   { setting_key: "shamcash_enabled", setting_value: "0" },
   { setting_key: "platform_footer_ar", setting_value: "© 2026 MMG OQVELA — جميع الحقوق محفوظة" },
-  { setting_key: "platform_footer_en", setting_value: "© 2026 MMG OQVELA — All rights reserved" }
+  { setting_key: "platform_footer_en", setting_value: "© 2026 MMG OQVELA — All rights reserved" },
+  { setting_key: "platform_support_whatsapp", setting_value: "" }
 ];
 
 function createDb(options = {}) {
@@ -157,7 +158,8 @@ const VALID_SETTINGS = {
   shamcash_instructions: "Payment instructions",
   shamcash_enabled: true,
   platform_footer_ar: "© MMG OQVELA — الحقوق محفوظة",
-  platform_footer_en: "© MMG OQVELA — All rights reserved"
+  platform_footer_en: "© MMG OQVELA — All rights reserved",
+  platform_support_whatsapp: "+963 944 123 456"
 };
 
 test("Unauthenticated users cannot access admin settings", async () => {
@@ -236,7 +238,8 @@ test("Super admin can update settings and create audit log", async () => {
   assert.equal(result.status, "ok");
   assert.equal(result.settings.shamcash_enabled, "1");
   assert.equal(result.settings.platform_footer_ar, VALID_SETTINGS.platform_footer_ar);
-  assert.equal(db.calls.length, 8);
+  assert.equal(result.settings.platform_support_whatsapp, "963944123456");
+  assert.equal(db.calls.length, 9);
 
   const auditLog = db.calls.find(item =>
     item.sql.includes("INSERT INTO admin_activity_logs")
@@ -439,4 +442,17 @@ test("Platform announcements reject invalid schedules and unsupported types",asy
  }),{DB:db});
  assert.equal(response.status,400);
  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO platform_announcements")||call.sql.includes("INSERT INTO admin_activity_logs")),false);
+});
+
+
+test("Central support WhatsApp accepts optional international numbers and rejects invalid values",async()=>{
+ const validDb=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const valid=await handleAdmin(makeRequest("PUT",{...VALID_SETTINGS,platform_support_whatsapp:"+48 600 123 456"}),{DB:validDb});
+ const validBody=await valid.json();
+ assert.equal(valid.status,200);
+ assert.equal(validBody.settings.platform_support_whatsapp,"48600123456");
+ const invalidDb=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const invalid=await handleAdmin(makeRequest("PUT",{...VALID_SETTINGS,platform_support_whatsapp:"javascript:alert(1)"}),{DB:invalidDb});
+ assert.equal(invalid.status,400);
+ assert.equal(invalidDb.calls.some(call=>call.sql.includes("INSERT INTO platform_settings")),false);
 });
