@@ -17,7 +17,8 @@ const trialRoute = await readFile(
 const trialMigration = await readFile(
   new URL("../../database/migrations/0010_account_trial_period.sql", import.meta.url),
   "utf8"
-);\nconst senderMigration = await readFile(
+);
+const senderMigration = await readFile(
   new URL("../../database/migrations/0017_shamcash_sender_name.sql", import.meta.url),
   "utf8"
 );
