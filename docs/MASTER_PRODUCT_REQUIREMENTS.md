@@ -155,7 +155,7 @@ Other detailed business modules (such as order processing, customer management, 
 - R2 file storage, file access policies and quotas.
 - Terms, privacy and risk/security management screens.
 - Full business audit logs beyond platform-admin settings.
-- Tenant-isolation regression tests now cover cross-store category parents, product categories, variants, images and staff-role assignment at database level, plus cross-account store-creation rejection. Broader API coverage for every future module remains required.
+- Order security regression tests now verify foreign-store order IDs cannot be mutated and order item/event histories are fetched only under the requested store ID. - Tenant-isolation regression tests now cover cross-store category parents, product categories, variants, images and staff-role assignment at database level, plus cross-account store-creation rejection. Broader API coverage for every future module remains required.
 
 ### Not evidenced as implemented
 - Customer accounts and private customer order-history/status tracking are not implemented; do not expose order details publicly without a secure verification and rate-limiting design.
