@@ -15,11 +15,16 @@ function json(data, status = 200) {
 
 export async function handleStores(request, env) {
   const url = new URL(request.url);
+  const collectionPath = url.pathname === "/api/stores";
   const match = url.pathname.match(/^\/api\/stores\/([^/]+)$/);
 
-  if (!match) return null;
+  if (!collectionPath && !match) return null;
 
-  if (!["GET", "PUT"].includes(request.method)) {
+  if (collectionPath && request.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  if (!collectionPath && !["GET", "PUT"].includes(request.method)) {
     return json({ error: "Method not allowed" }, 405);
   }
 
@@ -33,6 +38,30 @@ export async function handleStores(request, env) {
     return json({ error: "Authentication required" }, 401);
   }
 
+  if (collectionPath) {
+    try {
+      const raw = await request.text();
+      if (raw.length > 5000) return json({ error: "Request too large" }, 413);
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: "Invalid JSON" }, 400); }
+      const accountId = typeof body?.account_id === "string" ? body.account_id.trim() : "";
+      const name = typeof body?.name === "string" ? body.name.trim() : "";
+      const businessType = typeof body?.business_type === "string" ? body.business_type.trim() : "";
+      const description = typeof body?.description === "string" ? body.description.trim() : "";
+      if (!accountId || name.length < 2 || name.length > 100 || businessType.length > 80 || description.length > 1000) {
+        return json({ error: "تحقق من بيانات المتجر." }, 400);
+      }
+      const account = await env.DB.prepare("SELECT a.id, au.role FROM accounts a JOIN account_users au ON au.account_id = a.id WHERE a.id = ? AND a.status = 'active' AND au.user_id = ? AND au.status = 'active' LIMIT 1").bind(accountId, session.user_id).first();
+      if (!account) return json({ error: "الحساب غير موجود أو لا تملك صلاحية الوصول إليه." }, 404);
+      if (!["owner", "admin"].includes(account.role)) return json({ error: "يجب أن تكون مالك الحساب أو مديره لإنشاء متجر." }, 403);
+      const storeId = crypto.randomUUID();
+      const slug = "store-" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+      await env.DB.prepare("INSERT INTO stores (id, account_id, name, slug, business_type, description, status) VALUES (?, ?, ?, ?, ?, ?, 'active')").bind(storeId, accountId, name, slug, businessType || null, description || null).run();
+      return json({ status: "ok", message: "تم إنشاء المتجر. اختر له باقة مدفوعة لتفعيل خدماته.", store: { id: storeId, account_id: accountId, name, slug, status: "active" } }, 201);
+    } catch {
+      return json({ error: "تعذر إنشاء المتجر." }, 500);
+    }
+  }
   let storeId;
 
   try {
