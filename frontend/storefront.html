@@ -571,7 +571,7 @@
           $("storeName").textContent = customization.texts?.heroTitle || data.store.name;
           $("storeDescription").textContent = customization.texts?.heroSubtitle || data.store.description || "";
           const logo = $("storeLogo");
-          if (typeof customization.logo === "string" && /^https?:\\/\\//i.test(customization.logo)) {
+          if (typeof customization.logo === "string" && /^https?:/i.test(customization.logo)) {
             logo.src = customization.logo; logo.hidden = false;
             logo.addEventListener("error",() => { logo.hidden = true; },{once:true});
           }
