@@ -209,6 +209,32 @@ textarea{
 }
 .account-card h3{margin-top:0}
 .muted{color:var(--muted);font-size:13px}
+.template-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:12px 0 20px}
+.template-option{border:1px solid var(--border);border-radius:12px;background:#0c1728;color:white;padding:10px;text-align:start;cursor:pointer;min-width:0}
+.template-option[aria-pressed="true"]{border-color:#60a5fa;box-shadow:0 0 0 2px #3b82f655}
+.template-option strong,.template-option small{display:block}
+.template-option small{color:var(--muted);font-size:11px;line-height:1.6;margin-top:4px}
+.template-preview{height:82px;border-radius:8px;margin-bottom:9px;padding:8px;display:flex;gap:5px;overflow:hidden}
+.template-preview span{display:block;border-radius:4px}
+.template-preview .preview-main{flex:1}
+.template-preview .preview-side{width:28%}
+.template-preview .preview-line{height:7px;margin-bottom:6px}
+.template-preview[data-template="modern"]{background:#eaf1ff}
+.template-preview[data-template="modern"] .preview-main{background:linear-gradient(145deg,#2457a6,#68a7ff)}
+.template-preview[data-template="modern"] .preview-side{background:#fff}
+.template-preview[data-template="classic"]{background:#f2e8d8}
+.template-preview[data-template="classic"] .preview-main{background:#7b4b2a}
+.template-preview[data-template="classic"] .preview-side{background:#fff9ef}
+.template-preview[data-template="minimal"]{background:#fff}
+.template-preview[data-template="minimal"] .preview-main{background:#242424}
+.template-preview[data-template="minimal"] .preview-side{background:#e8e8e8}
+.template-preview[data-template="boutique"]{background:#f8eee8}
+.template-preview[data-template="boutique"] .preview-main{background:#9b625c}
+.template-preview[data-template="boutique"] .preview-side{background:#fff}
+.template-preview[data-template="tech"]{background:#101a2b}
+.template-preview[data-template="tech"] .preview-main{background:linear-gradient(145deg,#05a6a6,#2447a5)}
+.template-preview[data-template="tech"] .preview-side{background:#263b59}
+.storefront-link{display:inline-flex;margin:12px 0;color:#93c5fd;text-decoration:underline}
 footer{
   text-align:center;
   color:#667891;
@@ -598,7 +624,27 @@ footer{
     "تم تحديث حالة المنتج.":"Product status updated.",
     "تم تسجيل حركة المخزون.":"Inventory movement recorded.",
     "الكمية":"Quantity",
-    "أدخل كمية صحيحة لا تساوي صفراً.":"Enter a valid non-zero quantity."
+    "أدخل كمية صحيحة لا تساوي صفراً.":"Enter a valid non-zero quantity.",
+    "قالب المتجر":"Storefront template",
+    "اختر التصميم الذي يناسب نشاط متجرك.":"Choose the design that best fits your business.",
+    "عصري":"Modern",
+    "تصميم عصري مرن يناسب أغلب الأنشطة.":"A flexible modern design for most businesses.",
+    "كلاسيكي":"Classic",
+    "مظهر تقليدي أنيق مع إبراز واضح للمحتوى.":"An elegant traditional look with clear content hierarchy.",
+    "بسيط":"Minimal",
+    "تصميم هادئ ونظيف يركز على المنتجات.":"A clean, quiet design focused on products.",
+    "متجر أنيق":"Boutique",
+    "مظهر دافئ وفاخر للمنتجات والعلامات المميزة.":"A warm, premium look for distinctive products and brands.",
+    "تقني":"Tech",
+    "واجهة داكنة حديثة للمنتجات والخدمات التقنية.":"A modern dark interface for technology products and services.",
+    "معاينة المتجر":"View storefront",
+    "تم حفظ القالب بنجاح.":"Store template saved successfully.",
+    "القالب":"Template",
+    "هذا المتجر غير متاح حالياً.":"This store is currently unavailable.",
+    "لم يتم نشر منتجات بعد.":"No products have been published yet.",
+    "عرض المنتجات":"Browse products",
+    "منتجات مميزة":"Featured products",
+    "العودة إلى الصفحة الرئيسية":"Back to home"
   };
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
   let authenticated = false;
@@ -1396,6 +1442,62 @@ footer{
     descriptionInput.value = store.description || "";
     descriptionField.append(descriptionLabel, descriptionInput);
 
+    const templateField = document.createElement("div");
+    templateField.className = "field wide";
+    const templateLabel = document.createElement("label");
+    templateLabel.textContent = "قالب المتجر";
+    const templateHint = document.createElement("p");
+    templateHint.className = "muted";
+    templateHint.textContent = "اختر التصميم الذي يناسب نشاط متجرك.";
+    const templatePicker = document.createElement("div");
+    templatePicker.className = "template-picker";
+    let selectedTemplate = ["modern","classic","minimal","boutique","tech"].includes(store.template_key)
+      ? store.template_key : "modern";
+    const templates = [
+      ["modern","عصري","تصميم عصري مرن يناسب أغلب الأنشطة."],
+      ["classic","كلاسيكي","مظهر تقليدي أنيق مع إبراز واضح للمحتوى."],
+      ["minimal","بسيط","تصميم هادئ ونظيف يركز على المنتجات."],
+      ["boutique","متجر أنيق","مظهر دافئ وفاخر للمنتجات والعلامات المميزة."],
+      ["tech","تقني","واجهة داكنة حديثة للمنتجات والخدمات التقنية."]
+    ];
+    const templateButtons = [];
+    for (const [key,labelText,descriptionText] of templates) {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "template-option";
+      option.dataset.template = key;
+      option.setAttribute("aria-pressed",String(key === selectedTemplate));
+      const preview = document.createElement("div");
+      preview.className = "template-preview";
+      preview.dataset.template = key;
+      const mainPreview = document.createElement("span");
+      mainPreview.className = "preview-main";
+      const sidePreview = document.createElement("span");
+      sidePreview.className = "preview-side";
+      preview.append(mainPreview,sidePreview);
+      const label = document.createElement("strong");
+      label.textContent = labelText;
+      const descriptionTextNode = document.createElement("small");
+      descriptionTextNode.textContent = descriptionText;
+      option.append(preview,label,descriptionTextNode);
+      option.addEventListener("click",() => {
+        selectedTemplate = key;
+        for (const button of templateButtons) button.setAttribute("aria-pressed",String(button.dataset.template === key));
+      });
+      templateButtons.push(option);
+      templatePicker.append(option);
+    }
+    templateField.append(templateLabel,templateHint,templatePicker);
+    const storefrontLink = document.createElement("a");
+    storefrontLink.className = "storefront-link";
+    storefrontLink.href = "/s/" + encodeURIComponent(store.slug);
+    storefrontLink.target = "_blank";
+    storefrontLink.rel = "noopener noreferrer";
+    storefrontLink.textContent = "معاينة المتجر";
+    const templateLinkField = document.createElement("div");
+    templateLinkField.className = "field wide";
+    templateLinkField.append(storefrontLink);
+
     const save = document.createElement("button");
     save.type = "submit";
     save.className = "primary";
@@ -1409,6 +1511,8 @@ footer{
       nameField,
       typeField,
       descriptionField,
+      templateField,
+      templateLinkField,
       save,
       message
     );
@@ -1433,12 +1537,16 @@ footer{
             body: JSON.stringify({
               name: nameInput.value,
               business_type: typeInput.value,
-              description: descriptionInput.value
+              description: descriptionInput.value,
+              template_key: selectedTemplate
             })
           }
         );
 
-        message.textContent = result.message || "تم الحفظ بنجاح";
+        message.textContent = selectedTemplate !== store.template_key
+          ? "تم حفظ القالب بنجاح."
+          : (result.message || "تم الحفظ بنجاح");
+        store.template_key = selectedTemplate;
         await checkSession();
       } catch (error) {
         message.textContent = error.message;
