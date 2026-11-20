@@ -67,8 +67,9 @@ async function createPublicOrder(request,env,slug){
   const notes=b.customer_notes==null||b.customer_notes===""?null:typeof b.customer_notes==="string"?b.customer_notes.trim():undefined;
   const method=b.payment_method;
   if(!validText(name,2,120)||!validText(phone,6,30)||
-    (email!==null&&(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))||
-    (address!==null&&address.length>1000)||(notes!==null&&notes.length>1000)||
+    (email!==null&&(!validText(email,5,254)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))||
+    (address!==null&&(typeof address!=="string"||address.length>1000))||
+    (notes!==null&&(typeof notes!=="string"||notes.length>1000))||
     !["cash_on_delivery","shamcash"].includes(method)||
     !Array.isArray(b.items)||b.items.length<1||b.items.length>30){
     return json({error:"Invalid order details"},400);
