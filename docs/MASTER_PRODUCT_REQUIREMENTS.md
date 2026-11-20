@@ -161,7 +161,7 @@ Other detailed business modules (such as order processing, customer management, 
 - End-to-end customer shopping/order workflows.
 - Store-side business reports/analytics.
 - A complete staff invitation/onboarding workflow.
-- Persistent notification inbox storage, authenticated read/unread API and bilingual dashboard UI are implemented; lifecycle event generation, scheduled expiry reminders, external delivery integrations and notification preferences remain incomplete.
+- Persistent notification inbox storage, authenticated read/unread API and bilingual dashboard UI are implemented; transactional lifecycle notifications for trial start and Sham Cash payment submission/approval/rejection, plus a daily UTC scheduled job for three-day, one-day and expired subscription reminders, are implemented in code. External email/push/WhatsApp delivery integrations and notification preferences remain incomplete. The scheduled job will only execute after a deployment that includes the cron trigger; no production deployment or migration has been performed.
 Do not represent these as finished until implemented and tested.
 
 ## 6. Delivery order (preserve dependencies)
