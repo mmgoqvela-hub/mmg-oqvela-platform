@@ -491,24 +491,30 @@ async function handleProductImages(request, env, storeId, access, productId, ima
     const parsed = await readBody(request, 3000);
     if (parsed.error) return json({ error: parsed.error }, parsed.status);
     const body = parsed.body;
-    const fileKey = typeof body.url === "string" ? body.url : "";
+    const fileKey = typeof body.url === "string" ? body.url.trim() : "";
     const altText = typeof body.alt_text === "string" ? body.alt_text.trim() : "";
     const sortOrder = body.sort_order === undefined ? 0 : body.sort_order;
-    const prefix = "/media/" + storeId + "/";
-    const validPath = /^[a-zA-Z0-9_-]{3,80}$/.test(storeId) &&
+    let externalUrl = false;
+    try {
+      const parsedUrl = new URL(fileKey);
+      externalUrl = parsedUrl.protocol === "https:" && !parsedUrl.username && !parsedUrl.password && fileKey.length <= 2000;
+    } catch {}
+    const validMediaPath = /^[a-zA-Z0-9_-]{3,80}$/.test(storeId) &&
       new RegExp("^/media/" + storeId + "/[a-f0-9-]+\\.(?:jpg|png|webp|gif)$","i").test(fileKey);
-    if (!fileKey.startsWith(prefix) || !validPath ||
+    if ((!externalUrl && !validMediaPath) ||
         altText.length > 250 || !Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 100000) {
-      return json({ error: "Invalid product image data" }, 400);
+      return json({ error: "Image URL must be a valid HTTPS link or an uploaded image belonging to this store" }, 400);
     }
     const imageCount = await env.DB.prepare(
       "SELECT COUNT(*) AS total FROM product_images WHERE product_id = ? AND store_id = ?"
     ).bind(productId, storeId).first();
     if ((imageCount?.total || 0) >= 5) return json({ error: "A product can have at most five images" }, 409);
-    if (!env.STORE_MEDIA) return json({ error: "Image storage is not configured" }, 503);
-    const object = await env.STORE_MEDIA.head(fileKey.slice("/media/".length));
-    if (!object || object.customMetadata?.storeId !== storeId) {
-      return json({ error: "Uploaded image not found in this store" }, 404);
+    if (!externalUrl) {
+      if (!env.STORE_MEDIA) return json({ error: "Direct HTTPS image URLs are available while file uploads are disabled." }, 503);
+      const object = await env.STORE_MEDIA.head(fileKey.slice("/media/".length));
+      if (!object || object.customMetadata?.storeId !== storeId) {
+        return json({ error: "Uploaded image not found in this store" }, 404);
+      }
     }
     const id = crypto.randomUUID();
     await env.DB.prepare(`
