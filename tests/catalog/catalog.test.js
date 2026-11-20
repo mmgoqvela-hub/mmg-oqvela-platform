@@ -40,6 +40,8 @@ function createDb(options = {}) {
               if (sql.includes("FROM categories")) return options.category || null;
               if (sql.includes("FROM products")) return options.product || null;
               if (sql.includes("FROM product_variants")) return options.variant || null;
+              if (sql.includes("SELECT id, file_key FROM product_images")) return options.image || null;
+              if (sql.includes("COUNT(*) AS total FROM product_images")) return {total:options.imageCount || 0};
               return null;
             },
             async all() {
@@ -93,6 +95,30 @@ test("Product image registration verifies the R2 object and scopes the record to
   assert.ok(insert);
   assert.ok(insert.values.includes("store-001"));
   assert.ok(insert.values.includes("product-1"));
+});
+
+test("Product gallery rejects a sixth image even when the client bypasses the UI", async () => {
+  const db=createDb({product:{id:"product-1",store_id:"store-001"},imageCount:5});
+  const response=await handleCatalog(makeRequest("products/product-1/images","POST",{
+    url:"/media/store-001/123e4567-e89b-12d3-a456-426614174000.webp",
+    alt_text:"Extra image"
+  }),{DB:db,STORE_MEDIA:{head:async()=>({customMetadata:{storeId:"store-001"}})}});
+  assert.equal(response.status,409);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO product_images")),false);
+});
+
+test("Deleting a product image removes its unreferenced R2 object", async () => {
+  const db=createDb({
+    product:{id:"product-1",store_id:"store-001"},
+    image:{id:"image-1",file_key:"/media/store-001/123e4567-e89b-12d3-a456-426614174000.webp"},
+    imageCount:0
+  });
+  const deleted=[];
+  const response=await handleCatalog(makeRequest("products/product-1/images/image-1","DELETE"),{
+    DB:db,STORE_MEDIA:{delete:async key=>deleted.push(key)}
+  });
+  assert.equal(response.status,200);
+  assert.deepEqual(deleted,["store-001/123e4567-e89b-12d3-a456-426614174000.webp"]);
 });
 
 test("Owners can update product details within their own store", async () => {
