@@ -55,6 +55,34 @@
     body[data-template=tech] .topbar{background:var(--surface)}
     body[data-template=tech] .search{color:var(--ink)}
     body[data-template=tech] .empty{background:var(--surface)}
+    body[data-template=market]{--bg:#eff8ef;--surface:#fff;--ink:#173b27;--muted:#66806d;--accent:#27834b;--line:#d7ead9}
+    body[data-template=market] .hero{background:linear-gradient(120deg,#e0f3df,#f7fff4);padding:62px 30px 44px;border-radius:0 0 28px 28px}
+    body[data-template=market] .product{border-radius:20px;box-shadow:0 8px 24px #245c1710}
+    body[data-template=market] .product-art{background:linear-gradient(135deg,#d9f0d8,#f5fff0);color:#27834b}
+    body[data-template=restaurant]{--bg:#211b19;--surface:#302522;--ink:#fff4e8;--muted:#c5aa97;--accent:#e18b54;--line:#514039;color-scheme:dark}
+    body[data-template=restaurant] .hero{text-align:center;padding:78px 24px 58px;background:radial-gradient(ellipse at center,#523328,#211b19 70%)}
+    body[data-template=restaurant] .description{margin:auto}
+    body[data-template=restaurant] .product{border-radius:8px}
+    body[data-template=restaurant] .product-art{background:linear-gradient(135deg,#523328,#74452e);color:#ffd4a6}
+    body[data-template=fashion]{--bg:#f7f5f1;--surface:#fff;--ink:#24211f;--muted:#77716b;--accent:#24211f;--line:#e5e0d9;font-family:Georgia,"Times New Roman",serif}
+    body[data-template=fashion] .hero{padding:82px 0 60px;border-bottom:1px solid var(--line)}
+    body[data-template=fashion] h1{font-size:clamp(40px,7vw,76px);letter-spacing:-.04em}
+    body[data-template=fashion] .product{border:0;border-radius:0;background:transparent}
+    body[data-template=fashion] .product-art{height:230px;background:#e9e5df;color:#62564b}
+    body[data-template=electronics]{color-scheme:dark;--bg:#0b1220;--surface:#121f33;--ink:#edf5ff;--muted:#9aacc3;--accent:#54d5e8;--line:#263c58}
+    body[data-template=electronics] .hero{background:linear-gradient(115deg,#102f4b,#111d31);padding:62px 28px 44px;border:1px solid #254a68;border-radius:16px;margin-top:24px}
+    body[data-template=electronics] .product{border-radius:10px;box-shadow:0 12px 28px #0003}
+    body[data-template=electronics] .product-art{background:linear-gradient(135deg,#183d5c,#164c55);color:#8ceef0}
+    body[data-template=beauty]{--bg:#fff4f5;--surface:#fff;--ink:#4c3039;--muted:#947681;--accent:#c46d8b;--line:#f0dce3}
+    body[data-template=beauty] .hero{background:linear-gradient(135deg,#f9e3e9,#fff8f8);padding:68px 28px 48px;border-radius:24px}
+    body[data-template=beauty] .product{border-radius:22px}
+    body[data-template=beauty] .product-art{height:190px;background:linear-gradient(145deg,#f4d9e1,#fff0f3);color:#b45d7d}
+    body[data-template=luxury]{color-scheme:dark;--bg:#11100f;--surface:#1d1a17;--ink:#f6edda;--muted:#b6a98d;--accent:#c9a45c;--line:#4b3d27;font-family:Georgia,"Times New Roman",serif}
+    body[data-template=luxury] .topbar{background:#171411;border-bottom-color:#5b492d}
+    body[data-template=luxury] .hero{padding:90px 0 65px;text-align:center}
+    body[data-template=luxury] .description{margin:auto}
+    body[data-template=luxury] .product{border-radius:2px;border-color:#5b492d}
+    body[data-template=luxury] .product-art{height:205px;background:linear-gradient(145deg,#29231a,#51412a);color:#e3c47e}
     @media(max-width:620px){.hero{padding:38px 0 25px}.container{padding:0 16px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product-art{height:115px}.product-body{padding:12px}.product h3{font-size:15px}.toolbar{align-items:stretch}.search{min-width:100%}}
   </style>
 </head>
@@ -212,7 +240,7 @@
           }
           storeData = data;
           document.title = data.store.name + " | MMG OQVELA";
-          document.body.dataset.template = ["modern","classic","minimal","boutique","tech"].includes(data.store.template_key) ? data.store.template_key : "modern";
+          document.body.dataset.template = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(data.store.template_key) ? data.store.template_key : "modern";
           $("businessType").textContent = data.store.business_type || "";
           $("storeName").textContent = data.store.name;
           $("storeDescription").textContent = data.store.description || "";
