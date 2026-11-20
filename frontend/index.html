@@ -506,6 +506,9 @@ footer{
     "اسم المتجر":"Store name",
     "نوع النشاط":"Business type",
     "وصف المتجر":"Store description",
+    "رقم واتساب المتجر":"Store WhatsApp number",
+    "اكتب الرقم مع رمز الدولة، مثال: +963...":"Enter the number with country code, e.g. +963...",
+    "اتصل بنا عبر واتساب":"Contact us on WhatsApp",
     "حفظ بيانات المتجر":"Save store details",
     "إغلاق التعديل":"Close editor",
     "جارٍ الحفظ...":"Saving...",
@@ -1800,6 +1803,19 @@ footer{
     descriptionInput.value = store.description || "";
     descriptionField.append(descriptionLabel, descriptionInput);
 
+    const whatsappField = document.createElement("div");
+    whatsappField.className = "field wide";
+    const whatsappLabel = document.createElement("label");
+    whatsappLabel.textContent = "رقم واتساب المتجر";
+    const whatsappInput = document.createElement("input");
+    whatsappInput.type = "tel";
+    whatsappInput.inputMode = "tel";
+    whatsappInput.maxLength = 24;
+    whatsappInput.dir = "ltr";
+    whatsappInput.placeholder = "اكتب الرقم مع رمز الدولة، مثال: +963...";
+    whatsappInput.value = store.whatsapp_phone || "";
+    whatsappField.append(whatsappLabel,whatsappInput);
+
     const templateField = document.createElement("div");
     templateField.className = "field wide";
     const templateLabel = document.createElement("label");
@@ -1869,6 +1885,7 @@ footer{
       nameField,
       typeField,
       descriptionField,
+      whatsappField,
       templateField,
       templateLinkField,
       save,
@@ -1896,7 +1913,8 @@ footer{
               name: nameInput.value,
               business_type: typeInput.value,
               description: descriptionInput.value,
-              template_key: selectedTemplate
+              template_key: selectedTemplate,
+              whatsapp_phone: whatsappInput.value.trim()
             })
           }
         );
@@ -1905,6 +1923,7 @@ footer{
           ? "تم حفظ القالب بنجاح."
           : (result.message || "تم الحفظ بنجاح");
         store.template_key = selectedTemplate;
+        store.whatsapp_phone = whatsappInput.value.trim().replace(/[\\s()+.-]/g, "") || null;
         await checkSession();
       } catch (error) {
         message.textContent = error.message;
