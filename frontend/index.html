@@ -248,12 +248,22 @@ footer{
   font-size:12px;
 }
 @media(max-width:800px){
-  main{margin:38px auto}
+  main{margin:24px auto;width:calc(100% - 24px);max-width:none}
   .hero{grid-template-columns:1fr;gap:35px}
   .hero-copy{text-align:center}
   .description{margin:auto}
   .features{justify-content:center}
   .auth-card{width:100%;max-width:480px;margin:auto}
+  .dashboard{width:100%;min-width:0}
+  .admin-panel{width:100%;max-width:100%;min-width:0;padding:16px;margin-top:18px;overflow:hidden}
+  .account-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+  .account-card{min-width:0;padding:16px;overflow-wrap:anywhere}
+  .admin-form{grid-template-columns:minmax(0,1fr);gap:12px}
+  .admin-form .wide{grid-column:1}
+  .dashboard-top{align-items:stretch}
+  .dashboard-top>button{width:100%}
+  .admin-panel input,.admin-panel select,.admin-panel textarea{max-width:100%;min-width:0}
+  .admin-panel pre{white-space:pre-wrap;overflow-wrap:anywhere}
 }
 </style>
 </head>
@@ -1082,10 +1092,13 @@ footer{
     const normalized = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
     const date = new Date(normalized);
     if (Number.isNaN(date.getTime())) return raw;
-    return new Intl.DateTimeFormat(currentLanguage === "ar" ? "ar" : "en", {
+    const formatted = new Intl.DateTimeFormat(currentLanguage === "ar" ? "ar-EG-u-nu-latn" : "en-GB", {
       dateStyle: "medium",
-      timeStyle: "short"
+      timeStyle: "short",
+      hour12: false
     }).format(date);
+    // Isolate the date from surrounding RTL labels to prevent digit reordering.
+    return "\\u2068" + formatted + "\\u2069";
   }
   function localizeCode(value) {
     const labels = {
@@ -3222,9 +3235,35 @@ footer{
         const time = document.createElement("p");
         time.className = "muted";
         time.textContent = "التاريخ: " + formatDateTime(log.created_at);
-        const details = document.createElement("p");
-        details.className = "muted";
-        details.textContent = "التفاصيل: " + (log.details || "—");
+        const details = document.createElement("div");
+        details.className = "muted activity-details";
+        const detailsLabel = document.createElement("strong");
+        detailsLabel.textContent = currentLanguage === "ar" ? "التفاصيل" : "Details";
+        details.append(detailsLabel);
+        let parsedDetails = log.details;
+        if (typeof parsedDetails === "string") {
+          try { parsedDetails = JSON.parse(parsedDetails); } catch { /* keep plain text */ }
+        }
+        if (parsedDetails && typeof parsedDetails === "object" && !Array.isArray(parsedDetails)) {
+          const list = document.createElement("dl");
+          list.style.cssText = "display:grid;grid-template-columns:minmax(90px,auto) 1fr;gap:7px 12px;margin:8px 0 0";
+          const detailLabels = currentLanguage === "ar"
+            ? {changed:"الحقول المعدّلة",shamcash_link:"رابط شام كاش",shamcash_recipient:"مستفيد شام كاش",shamcash_instructions:"تعليمات الدفع",shamcash_enabled:"تفعيل شام كاش",enabled:"مفعّل",duration_days:"مدة التجربة بالأيام"}
+            : {changed:"Changed fields",shamcash_link:"Sham Cash link",shamcash_recipient:"Sham Cash recipient",shamcash_instructions:"Payment instructions",shamcash_enabled:"Sham Cash enabled",enabled:"Enabled",duration_days:"Trial duration (days)"};
+          for (const [key,value] of Object.entries(parsedDetails)) {
+            const term = document.createElement("dt");
+            term.textContent = detailLabels[key] || localizeCode(key);
+            const description = document.createElement("dd");
+            description.style.cssText = "margin:0;overflow-wrap:anywhere";
+            description.textContent = Array.isArray(value) ? value.map(v => detailLabels[v] || localizeCode(v)).join("، ") : typeof value === "boolean" ? (value ? (currentLanguage === "ar" ? "نعم" : "Yes") : (currentLanguage === "ar" ? "لا" : "No")) : String(value ?? "—");
+            list.append(term,description);
+          }
+          details.append(list);
+        } else {
+          const value = document.createElement("p");
+          value.textContent = String(parsedDetails || "—");
+          details.append(value);
+        }
         item.append(title, actor, time, details);
         container.append(item);
       }
