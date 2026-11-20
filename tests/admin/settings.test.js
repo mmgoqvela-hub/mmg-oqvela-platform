@@ -50,6 +50,7 @@ function createDb(options = {}) {
         async all() {
           calls.push({sql,values:[]});
           if (sql.includes("FROM platform_announcements")) return {results:options.announcements ?? []};
+          if (sql.includes("FROM platform_service_requests")) return {results:options.serviceRequests ?? []};
           if (sql.includes("GROUP BY currency")) return {results:options.revenue ?? []};
           return {results:[]};
         },
@@ -81,7 +82,7 @@ function createDb(options = {}) {
             async all() {
               calls.push({ sql, values });
               return {
-                results: sql.includes("FROM platform_announcements") ? (options.announcements ?? []) : sql.includes("FROM admin_activity_logs")
+                results: sql.includes("FROM platform_announcements") ? (options.announcements ?? []) : sql.includes("FROM platform_service_requests") ? (options.serviceRequests ?? []) : sql.includes("FROM admin_activity_logs")
                   ? (options.activityLogs ?? [])
                   : sql.includes("GROUP BY currency")
                     ? (options.revenue ?? [])
