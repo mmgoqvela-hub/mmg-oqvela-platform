@@ -13,6 +13,16 @@ test("Frontend inline JavaScript parses without syntax errors", async () => {
 });
 
 
+test("Storefront renders centrally managed announcements safely and in both languages",async()=>{
+ const html=await readFile(new URL("../../frontend/storefront.html",import.meta.url),"utf8");
+ assert.match(html,/platformAnnouncements/);
+ assert.match(html,/textContent=language==="en"\?announcement\.title_en:announcement\.title_ar/);
+ assert.match(html,/message\.textContent=language==="en"\?announcement\.message_en:announcement\.message_ar/);
+ assert.match(html,/announcement_type/);
+ const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
+ for(const match of scripts) assert.doesNotThrow(()=>new vm.Script(match[1]));
+});
+
 test("Arabic visible interface text has English translations", async () => {
   const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
   const dictionary = html.match(/const translations = \{([\s\S]*?)\n  \};/);
