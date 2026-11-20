@@ -395,7 +395,7 @@ test("Store owner can save persistent visual customization", async () => {
     store: { ...STORE, account_role: "owner", customization_json: "{}" }
   });
   const customization = {
-    colors: { primary: "#123456", background: "#ffffff" },
+    colors: { primary: "#123456", background: "#ffffff", text: "#172033", surface: "#fefefe", muted: "#68758a", border: "#e1e7f0" },
     texts: { heroTitle: "Welcome to our store" },
     fonts: { heading: "Cairo" },
     sections: { featured: true, testimonials: false },
@@ -411,6 +411,22 @@ test("Store owner can save persistent visual customization", async () => {
   assert.deepEqual(result.store.customization, customization);
   const update = db.calls.find(item => item.sql.includes("UPDATE stores"));
   assert.deepEqual(JSON.parse(update.values[5]), customization);
+});
+
+test("Store color customization accepts the complete six-color palette", async () => {
+  const db = createDb({ session: SESSION, store: { ...STORE, account_role: "owner", customization_json: "{}" } });
+  const colors = { primary: "#123456", background: "#ffffff", text: "#172033", surface: "#fefefe", muted: "#68758a", border: "#e1e7f0" };
+  const response = await handleStores(makeRequest("PUT", { ...VALID_DATA, customization: { colors } }), { DB: db });
+  const result = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(result.store.customization.colors, colors);
+});
+
+test("Malformed short hex colors are rejected", async () => {
+  const db = createDb({ session: SESSION, store: { ...STORE, account_role: "owner", customization_json: "{}" } });
+  const response = await handleStores(makeRequest("PUT", { ...VALID_DATA, customization: { colors: { primary: "#fff" } } }), { DB: db });
+  assert.equal(response.status, 400);
+  assert.equal(db.calls.some(item => item.sql.includes("UPDATE stores")), false);
 });
 
 test("Invalid customization values are rejected", async () => {
