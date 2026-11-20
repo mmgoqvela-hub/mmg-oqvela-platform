@@ -2309,7 +2309,7 @@ footer{
                   emptyGallery.textContent = "لا توجد صور مضافة لهذا المنتج.";
                   galleryList.append(emptyGallery);
                 }
-                for (const image of galleryImages) {
+                for (const [imageIndex,image] of galleryImages.entries()) {
                   const imageCard = document.createElement("div");
                   imageCard.className = "account-card";
                   const preview = document.createElement("img");
@@ -2320,6 +2320,43 @@ footer{
                   preview.style.maxHeight = "130px";
                   preview.style.objectFit = "cover";
                   preview.style.borderRadius = "10px";
+                  const orderControls = document.createElement("div");
+                  orderControls.className = "button-row";
+                  const moveImage = async direction => {
+                    const nextIndex = imageIndex + direction;
+                    if (nextIndex < 0 || nextIndex >= galleryImages.length) return;
+                    const reordered = [...galleryImages];
+                    [reordered[imageIndex],reordered[nextIndex]] = [reordered[nextIndex],reordered[imageIndex]];
+                    try {
+                      await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/images/order",{
+                        method:"PUT",
+                        body:JSON.stringify({image_ids:reordered.map(entry => entry.id)})
+                      });
+                      galleryImages = reordered.map((entry,index) => ({...entry,sort_order:index}));
+                      renderGallery();
+                      galleryMessage.textContent = "تم تحديث ترتيب الصور.";
+                    } catch(error) {
+                      galleryMessage.textContent = error.message;
+                    }
+                  };
+                  const moveLeft = document.createElement("button");
+                  moveLeft.type = "button";
+                  moveLeft.className = "secondary";
+                  moveLeft.textContent = "←";
+                  moveLeft.disabled = imageIndex === 0;
+                  moveLeft.setAttribute("aria-label","تحريك الصورة للأمام");
+                  moveLeft.addEventListener("click",() => moveImage(-1));
+                  const moveRight = document.createElement("button");
+                  moveRight.type = "button";
+                  moveRight.className = "secondary";
+                  moveRight.textContent = "→";
+                  moveRight.disabled = imageIndex === galleryImages.length - 1;
+                  moveRight.setAttribute("aria-label","تحريك الصورة للخلف");
+                  moveRight.addEventListener("click",() => moveImage(1));
+                  orderControls.append(moveLeft,moveRight);
+                  const mainLabel = document.createElement("p");
+                  mainLabel.className = "muted";
+                  mainLabel.textContent = imageIndex === 0 ? "الصورة الرئيسية" : "صورة إضافية";
                   const removeImage = document.createElement("button");
                   removeImage.type = "button";
                   removeImage.className = "secondary";
@@ -2336,7 +2373,7 @@ footer{
                       removeImage.disabled = false;
                     }
                   });
-                  imageCard.append(preview,removeImage);
+                  imageCard.append(preview,mainLabel,orderControls,removeImage);
                   galleryList.append(imageCard);
                 }
               };
