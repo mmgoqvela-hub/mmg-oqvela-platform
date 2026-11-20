@@ -78,6 +78,19 @@ test("Public storefront receives the centrally managed bilingual footer",async()
  assert.equal(result.platform_footer.platform_footer_en,"MMG rights reserved");
 });
 
+test("Public storefront exposes the centrally configured support WhatsApp number",async()=>{
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store"},
+  platformSettings:[{setting_key:"platform_support_whatsapp",setting_value:"963944123456"}]
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.platform_support_whatsapp,"963944123456");
+ const query=db.calls.find(call=>call.sql.includes("FROM platform_settings"));
+ assert.ok(query.sql.includes("platform_support_whatsapp"));
+});
+
 test("Public storefront exposes only currently active platform announcements",async()=>{
  const db=createDb({
   store:{id:"store-1",name:"Test Store",slug:"test-store"},
