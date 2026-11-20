@@ -46,9 +46,8 @@ export async function handleStoreMedia(request, env) {
   const uploadPath = url.pathname === "/api/store-media";
   if (!mediaMatch && !uploadPath) return null;
 
-  if (!env.STORE_MEDIA) return json({ error: "تخزين الصور غير مهيأ بعد. يلزم ربط مساحة R2 باسم STORE_MEDIA." }, 503);
-
   if (mediaMatch) {
+    if (!env.STORE_MEDIA) return json({ error: "الصورة المخزنة غير متاحة حالياً. استخدم رابط HTTPS مباشراً للصورة." }, 404);
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "Method not allowed" }, 405);
     const key = mediaMatch[1] + "/" + mediaMatch[2] + "." + mediaMatch[3].toLowerCase();
     const object = await env.STORE_MEDIA.get(key);
@@ -63,6 +62,7 @@ export async function handleStoreMedia(request, env) {
     return new Response(object.body, { headers });
   }
 
+  if (!env.STORE_MEDIA) return json({ error: "رفع الملفات غير متاح في الخطة المجانية الحالية. أضف رابط HTTPS مباشراً للصورة بدلاً من ذلك." }, 503);
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
   const session = await getAuthenticatedSession(request, env.DB);
