@@ -930,6 +930,7 @@ export async function handleSubscriptions(request, env) {
   const path = url.pathname;
 
   const customerPath =
+    path === "/api/subscriptions/payment-info" ||
     path === "/api/subscriptions/plans" ||
     path === "/api/subscriptions/request" ||
     /^\/api\/subscriptions\/store\/[^/]+$/.test(path);
@@ -954,6 +955,38 @@ export async function handleSubscriptions(request, env) {
         return json({ error: "Authentication required" }, 401);
       }
 
+      if (path === "/api/subscriptions/payment-info") {
+        if (request.method !== "GET") {
+          return json({ error: "Method not allowed" }, 405);
+        }
+
+        const settings = await env.DB.prepare("
+          SELECT setting_key, setting_value
+          FROM platform_settings
+          WHERE setting_key IN (
+            'shamcash_enabled',
+            'shamcash_link',
+            'shamcash_recipient',
+            'shamcash_instructions'
+          )
+        ").all();
+
+        const values = Object.fromEntries(
+          (settings.results || []).map(item => [
+            item.setting_key,
+            item.setting_value
+          ])
+        );
+
+        return json({
+          status: "ok",
+          enabled: values.shamcash_enabled === "1",
+          method: "شام كاش",
+          recipient: values.shamcash_recipient || "",
+          link: values.shamcash_link || "",
+          instructions: values.shamcash_instructions || ""
+        });
+      }
       if (path === "/api/subscriptions/plans") {
         if (request.method !== "GET") {
           return json({ error: "Method not allowed" }, 405);
