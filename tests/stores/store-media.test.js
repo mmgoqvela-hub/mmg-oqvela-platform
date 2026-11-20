@@ -67,3 +67,12 @@ test("Public media route serves only an existing namespaced object with safe hea
   assert.equal(response.headers.get("X-Content-Type-Options"),"nosniff");
   assert.equal(response.headers.get("Content-Type"),"image/png");
 });
+
+test("File uploads return a clear free-tier response when R2 is not bound",async()=>{
+  const runtime=env();
+  delete runtime.STORE_MEDIA;
+  const response=await handleStoreMedia(uploadRequest(new Blob([png],{type:"image/png"})),runtime);
+  const result=await response.json();
+  assert.equal(response.status,503);
+  assert.match(result.error,/رابط HTTPS/);
+});
