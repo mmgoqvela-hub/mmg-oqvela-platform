@@ -113,7 +113,12 @@ function makeRequest(method = "GET", body = undefined, options = {}) {
   });
 }
 
-function makeAdminPathRequest(path,method="GET",body=undefined) {\n  const headers={Origin:"https://example.com",Cookie:"mmg_session="+TOKEN};\n  if(body!==undefined) headers["Content-Type"]="application/json";\n  return new Request("https://example.com"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});\n}\n\nconst SUPER_ADMIN = {
+function makeAdminPathRequest(path,method="GET",body=undefined) {
+  const headers={Origin:"https://example.com",Cookie:"mmg_session="+TOKEN};
+  if(body!==undefined) headers["Content-Type"]="application/json";
+  return new Request("https://example.com"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
+}
+
   user_id: USER_ID,
   admin_level: "super_admin",
   status: "active"
