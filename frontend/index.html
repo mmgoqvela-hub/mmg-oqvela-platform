@@ -1286,7 +1286,13 @@ footer{
   }
 
   function renderCatalogPanel(store, card, accountRole) {
-    const canManage = ["owner", "admin"].includes(accountRole);
+    const storePermissions = Array.isArray(store.permissions) ? store.permissions : String(store.permissions || "").split(",").filter(Boolean);
+    const isStoreAdmin = ["owner", "admin"].includes(accountRole);
+    const canReadCatalog = isStoreAdmin || storePermissions.includes("catalog.read");
+    const canManage = isStoreAdmin || storePermissions.includes("catalog.manage");
+    const canReadInventory = isStoreAdmin || storePermissions.includes("inventory.read");
+    const canInventoryManage = isStoreAdmin || storePermissions.includes("inventory.manage");
+    if (!canReadCatalog) return;
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "secondary";
@@ -1308,7 +1314,7 @@ footer{
         const [categoryData, productData, inventoryData] = await Promise.all([
           api("/api/stores/" + encodeURIComponent(store.id) + "/categories"),
           api("/api/stores/" + encodeURIComponent(store.id) + "/products?limit=100"),
-          api("/api/stores/" + encodeURIComponent(store.id) + "/inventory")
+          canReadInventory ? api("/api/stores/" + encodeURIComponent(store.id) + "/inventory") : Promise.resolve({movements:[]})
         ]);
         const categories = categoryData.categories || [];
         const products = productData.products || [];
@@ -1534,8 +1540,8 @@ footer{
 
         const inventoryHeading = document.createElement("h4");
         inventoryHeading.textContent = "سجل حركة المخزون";
-        panel.append(inventoryHeading);
-        if (canManage && products.some(product => product.track_inventory && product.status !== "archived")) {
+        if (canReadInventory) panel.append(inventoryHeading);
+        if (canInventoryManage && products.some(product => product.track_inventory && product.status !== "archived")) {
           const movementForm = document.createElement("form");
           movementForm.className = "admin-form";
           const productSelect = document.createElement("select");
@@ -1615,12 +1621,12 @@ footer{
           });
           panel.append(movementForm);
         }
-        if (!movements.length) {
+        if (canReadInventory && !movements.length) {
           const empty = document.createElement("p");
           empty.className = "muted";
           empty.textContent = "لا توجد حركات مخزون مسجلة.";
           panel.append(empty);
-        } else {
+        } else if (canReadInventory) {
           for (const movement of movements.slice(0,20)) {
             const line = document.createElement("p");
             line.className = "muted";
