@@ -1,0 +1,56 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const route = await readFile(
+  new URL("../../backend/routes/subscriptions.js", import.meta.url),
+  "utf8"
+);
+const migration = await readFile(
+  new URL("../../database/migrations/0012_paid_approval_atomicity.sql", import.meta.url),
+  "utf8"
+);
+
+function functionSource(name, nextName) {
+  const start = route.indexOf(`async function ${name}(`);
+  const end = route.indexOf(`\nasync function ${nextName}(`, start);
+  assert.notEqual(start, -1, `${name} must exist`);
+  assert.notEqual(end, -1, `${nextName} must exist after ${name}`);
+  return route.slice(start, end);
+}
+
+test("Rejection records history and audit before changing payment status", () => {
+  const source = functionSource("rejectPayment", "adminPlans");
+  const history = source.indexOf("INSERT INTO subscription_history");
+  const audit = source.indexOf("INSERT INTO admin_activity_logs");
+  const paymentUpdate = source.indexOf("UPDATE payments");
+
+  assert.ok(history >= 0, "rejection history insert must exist");
+  assert.ok(audit > history, "audit insert must follow history insert");
+  assert.ok(paymentUpdate > audit, "payment status update must be last");
+  assert.match(source, /status = 'rejected'/);
+  assert.match(source, /rejection_reason = \?/);
+});
+
+test("Database rejection guard requires audit/history and cancels subscription", () => {
+  assert.match(migration, /CREATE TRIGGER trg_paid_rejection_guard/);
+  assert.match(migration, /action = 'cancelled'/);
+  assert.match(migration, /action = 'reject'/);
+  assert.match(migration, /CREATE TRIGGER trg_paid_rejection_complete/);
+  assert.match(migration, /SET status = 'cancelled'/);
+});
+
+test("Approval prepares invoice, history and audit before payment approval", () => {
+  const source = functionSource("approvePayment", "rejectPayment");
+  const invoice = source.indexOf("INSERT INTO invoices");
+  const history = source.indexOf("INSERT INTO subscription_history");
+  const audit = source.indexOf("INSERT INTO admin_activity_logs");
+  const paymentUpdate = source.indexOf("UPDATE payments");
+
+  assert.ok(invoice >= 0, "invoice insert must exist");
+  assert.ok(history > invoice, "history must follow invoice");
+  assert.ok(audit > history, "audit must follow history");
+  assert.ok(paymentUpdate > audit, "payment approval must be last");
+  assert.match(migration, /CREATE TRIGGER trg_paid_approval_guard/);
+  assert.match(migration, /CREATE TRIGGER trg_paid_approval_complete/);
+});
