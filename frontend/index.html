@@ -3077,6 +3077,33 @@ footer{
     };
     [primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
     updatePreview();
+    const fontSelect = document.createElement("select");
+    for (const [value,label] of [["system","النظام الافتراضي"],["cairo","Cairo"],["tajawal","Tajawal"],["serif","خط كلاسيكي"]]) {
+      const option = document.createElement("option"); option.value = value; option.textContent = label; fontSelect.append(option);
+    }
+    const logoUrl = document.createElement("input"); logoUrl.type = "url"; logoUrl.maxLength = 500; logoUrl.placeholder = "https://example.com/logo.png";
+    const announcementText = document.createElement("input"); announcementText.type = "text"; announcementText.maxLength = 180; announcementText.placeholder = "رسالة ترحيبية أعلى المتجر";
+    makeDesignField("الخط",fontSelect);
+    makeDesignField("رابط شعار المتجر",logoUrl);
+    makeDesignField("شريط إعلان قصير",announcementText);
+    const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
+    const sectionsLabel = document.createElement("label"); sectionsLabel.textContent = "الأقسام الظاهرة";
+    const sectionOptions = {};
+    for (const [key,label] of [["products","عرض المنتجات"],["cart","عرض سلة المشتريات"],["categories","عرض تصنيفات المنتجات"]]) {
+      const line = document.createElement("label"); line.className = "toggle-row";
+      const check = document.createElement("input"); check.type = "checkbox"; check.checked = true;
+      line.append(check,document.createTextNode(label)); sectionsWrap.append(line); sectionOptions[key] = check;
+    }
+    designField.append(sectionsWrap);
+    const updatePreview = () => {
+      livePreview.style.background = backgroundColor.value;
+      previewHeading.textContent = headingText.value || store.name || "اسم متجرك";
+      previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
+      previewButton.style.background = primaryColor.value;
+      livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
+    };
+    [fontSelect,primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
+    updatePreview();
     designField.append(designTitle,designHint,designGrid,livePreview);
     let loadedCustomization = {};
     const loadCustomization = async () => {
@@ -3089,6 +3116,10 @@ footer{
         backgroundColor.value = loadedCustomization.colors?.background || "#101a2c";
         headingText.value = loadedCustomization.texts?.heroTitle || store.name || "";
         subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
+        fontSelect.value = ["system","cairo","tajawal","serif"].includes(loadedCustomization.fonts?.family) ? loadedCustomization.fonts.family : "system";
+        logoUrl.value = loadedCustomization.logo || "";
+        announcementText.value = loadedCustomization.announcement || "";
+        for (const key of Object.keys(sectionOptions)) sectionOptions[key].checked = loadedCustomization.sections?.[key] !== false;
         updatePreview();
       } catch (error) {
         message.textContent = "تعذر تحميل إعدادات التصميم: " + error.message;
@@ -3152,7 +3183,11 @@ footer{
               customization: {
                 ...loadedCustomization,
                 colors: { ...(loadedCustomization.colors || {}), primary: primaryColor.value, background: backgroundColor.value },
-                texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim() }
+                texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim() },
+                fonts: { ...(loadedCustomization.fonts || {}), family: fontSelect.value },
+                logo: logoUrl.value.trim(),
+                announcement: announcementText.value.trim(),
+                sections: { ...(loadedCustomization.sections || {}), products: sectionOptions.products.checked, cart: sectionOptions.cart.checked, categories: sectionOptions.categories.checked }
               }
             })
           }
