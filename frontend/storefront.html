@@ -128,7 +128,7 @@
     <section>
       <div class="toolbar">
         <input class="search" id="search" type="search" placeholder="ابحث في المنتجات..." aria-label="ابحث في المنتجات">
-        <div class="filters" id="storeCategoriesToolbar"><div id="filters"></div></div>
+        <div id="storeCategoriesToolbar"><div class="filters" id="filters"></div></div>
       </div>
       <section class="cart-panel" id="storeCartSection" aria-labelledby="cartHeading">
         <div class="cart-head"><h2 class="section-title" id="cartHeading">سلة المشتريات</h2><span class="cart-count" id="cartCount">0</span></div>
@@ -582,7 +582,7 @@
             $("storeAnnouncement").hidden = false;
           }
           const sections = customization.sections || {};
-          $("storeProductsSection").hidden = sections.products === false;
+          $("storeProductsGridSection").hidden = sections.products === false;
           $("storeCartSection").hidden = sections.cart === false;
           $("storeCategoriesToolbar").hidden = sections.categories === false;
           const supportPhone = String(data.platform_support_whatsapp || "").replace(/\D/g,"");
