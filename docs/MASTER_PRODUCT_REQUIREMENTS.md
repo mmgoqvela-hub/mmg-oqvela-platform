@@ -158,7 +158,7 @@ Other detailed business modules (such as order processing, customer management, 
 
 ### Not evidenced as implemented
 - Complete customer checkout, order persistence, order processing and store-side order management at `/s/{slug}` after payment and delivery rules are approved.
-- End-to-end customer shopping/order workflows.
+- End-to-end customer shopping/order workflows: cart, checkout, order creation, tenant-scoped store order list, manual payment review and order status transitions are implemented; customer accounts/order history and external messaging remain incomplete.
 - Store-side business reports/analytics.
 - A complete staff invitation/onboarding workflow.
 - Persistent notification inbox storage, authenticated read/unread API and bilingual dashboard UI are implemented; transactional lifecycle notifications for trial start and Sham Cash payment submission/approval/rejection, plus a daily UTC scheduled job for three-day, one-day and expired subscription reminders, are implemented in code. External email/push/WhatsApp delivery integrations and notification preferences remain incomplete. The scheduled job will only execute after a deployment that includes the cron trigger; no production deployment or migration has been performed.
