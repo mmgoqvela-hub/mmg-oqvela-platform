@@ -12,6 +12,26 @@ function json(data, status = 200) {
 
 const TYPES = new Set(["support", "advertising", "store_setup", "website_design", "contact"]);
 
+async function enforcePublicRequestLimit(db, request) {
+  const address = request.headers.get("CF-Connecting-IP") || "unknown";
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(address));
+  const ipHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  const result = await db.prepare(`
+    INSERT INTO public_service_request_rate_limits(ip_hash, window_started_at, request_count)
+    VALUES(?, CURRENT_TIMESTAMP, 1)
+    ON CONFLICT(ip_hash) DO UPDATE SET
+      window_started_at = CASE
+        WHEN window_started_at <= datetime('now','-10 minutes') THEN CURRENT_TIMESTAMP
+        ELSE window_started_at END,
+      request_count = CASE
+        WHEN window_started_at <= datetime('now','-10 minutes') THEN 1
+        ELSE request_count + 1 END
+    WHERE window_started_at <= datetime('now','-10 minutes') OR request_count < 5
+    RETURNING request_count
+  `).bind(ipHash).first();
+  return Boolean(result);
+}
+
 export async function handlePublicServiceRequests(request, env) {
   const url = new URL(request.url);
   if (url.pathname !== "/api/service-requests") return null;
@@ -19,6 +39,9 @@ export async function handlePublicServiceRequests(request, env) {
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
 
   try {
+    if (!await enforcePublicRequestLimit(env.DB, request)) {
+      return json({ error: "Too many requests. Please try again in 10 minutes." }, 429);
+    }
     const raw = await request.text();
     if (raw.length > 10000) return json({ error: "Request too large" }, 413);
     let body;
