@@ -94,6 +94,7 @@
 
       function setLanguage(next) {
         language = next;
+        localStorage.setItem("mmg_language",language);
         document.documentElement.lang = language;
         document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
         $("languageToggle").textContent = language === "ar" ? "English" : "العربية";
