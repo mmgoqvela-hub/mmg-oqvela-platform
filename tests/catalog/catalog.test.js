@@ -388,3 +388,38 @@ test("Inventory history includes variant names without crossing tenant boundarie
   assert.ok(db.calls.some(call=>call.sql.includes("LEFT JOIN product_variants") && call.sql.includes("v.store_id = im.store_id")));
 });
 
+test("Inventory movement types enforce their quantity direction",async()=>{
+  for (const [movement_type,quantity_change] of [
+    ["purchase",-2],["return",-1],["sale",2],["damage",1]
+  ]) {
+    const db=createDb({product:{id:"product-1",track_inventory:1,stock_quantity:8}});
+    const response=await handleCatalog(makeRequest("inventory","POST",{
+      product_id:"product-1",movement_type,quantity_change
+    }),{DB:db});
+    assert.equal(response.status,400, movement_type+" must reject an invalid quantity direction");
+    assert.equal(db.calls.length,0);
+  }
+});
+
+test("Inventory adjustments accept either signed direction and preserve nonnegative stock",async()=>{
+  const db=createDb({product:{id:"product-1",track_inventory:1,stock_quantity:8}});
+  const response=await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"adjustment",quantity_change:-3,
+    notes:"Physical count correction"
+  }),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.stock_quantity,5);
+  assert.ok(db.calls.some(call=>call.sql.includes("UPDATE products")));
+  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO inventory_movements")));
+});
+
+test("Inventory movements are rejected when tracking is disabled",async()=>{
+  const db=createDb({product:{id:"product-1",track_inventory:0,stock_quantity:0}});
+  const response=await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"purchase",quantity_change:2
+  }),{DB:db});
+  assert.equal(response.status,409);
+  assert.equal(db.calls.length,0);
+});
+
