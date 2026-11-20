@@ -98,7 +98,8 @@ export async function getSession(db, token) {
       s.expires_at,
       u.full_name,
       u.email,
-      u.status AS user_status
+      u.status AS user_status,
+      u.preferred_language
     FROM auth_sessions s
     JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ?
