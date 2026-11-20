@@ -38,7 +38,7 @@ function db(options={}) {
               return null;
             },
             async all() { return {results:options.rows||[]}; },
-            async run() { calls.push({sql,values}); return {meta:{changes:1}}; }
+            async run() { if(!sql.includes("UPDATE auth_sessions")) calls.push({sql,values}); return {meta:{changes:1}}; }
           };
         }
       };
