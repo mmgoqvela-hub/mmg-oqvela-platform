@@ -536,6 +536,14 @@ footer{
     "خط كلاسيكي":"Classic serif",
     "رابط شعار المتجر":"Store logo URL",
     "رابط صورة الواجهة":"Hero image URL",
+    "ملف شعار المتجر":"Store logo file",
+    "ملف صورة الواجهة":"Hero image file",
+    "رفع الشعار من الجهاز":"Upload logo from device",
+    "رفع صورة الواجهة من الجهاز":"Upload hero image from device",
+    "اختر صورة أولاً.":"Choose an image first.",
+    "حجم الصورة الأقصى 5 ميغابايت.":"Maximum image size is 5 MB.",
+    "جارٍ رفع الصورة...":"Uploading image...",
+    "تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.":"Image uploaded. Save store details to apply it.",
     "محاذاة الواجهة":"Hero alignment",
     "محاذاة لليمين":"Align right",
     "توسيط":"Center",
@@ -2505,7 +2513,7 @@ footer{
                     }
                     for (const [labelText,control] of [["اسم الخيار",editName],["رمز SKU",editSku],["السعر",editPrice],["الخصائص بصيغة JSON",editAttributes],["الحالة",editStatus]]) {
                       const field = document.createElement("div"); field.className = "field";
-                      const label = document.createElement("label"); label.textContent = labelText;
+                      const label = document.createElement("label"); label.textContent = translateText(labelText);
                       field.append(label,control); editForm.append(field);
                     }
                     const saveVariant = document.createElement("button");
@@ -3125,17 +3133,17 @@ footer{
     const uploadStatus = document.createElement("p"); uploadStatus.className = "muted"; uploadStatus.setAttribute("role","status");
     async function uploadStoreImage(fileInput, targetInput) {
       const file = fileInput.files?.[0];
-      if (!file) { uploadStatus.textContent = "اختر صورة أولاً."; return; }
-      if (file.size > 5 * 1024 * 1024) { uploadStatus.textContent = "حجم الصورة الأقصى 5 ميغابايت."; return; }
+      if (!file) { uploadStatus.textContent = translateText("اختر صورة أولاً."); return; }
+      if (file.size > 5 * 1024 * 1024) { uploadStatus.textContent = translateText("حجم الصورة الأقصى 5 ميغابايت."); return; }
       const data = new FormData(); data.append("store_id",store.id); data.append("file",file);
-      uploadStatus.textContent = "جارٍ رفع الصورة...";
+      uploadStatus.textContent = translateText("جارٍ رفع الصورة...");
       try {
         const response = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:data});
         const result = await response.json().catch(()=>({}));
         if (!response.ok) throw new Error(result.error || "تعذر رفع الصورة.");
         targetInput.value = new URL(result.url,location.origin).href;
         targetInput.dispatchEvent(new Event("input",{bubbles:true}));
-        uploadStatus.textContent = "تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.";
+        uploadStatus.textContent = translateText("تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.");
         fileInput.value = "";
       } catch(error) { uploadStatus.textContent = error.message; }
     }
