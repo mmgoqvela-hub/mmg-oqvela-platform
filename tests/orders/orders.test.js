@@ -37,7 +37,7 @@ function db(options={}) {
               if(sql.includes("FROM products WHERE id")) return options.product===undefined?PRODUCT:options.product;
               return null;
             },
-            async all() { return {results:options.rows||[]}; },
+            async all() { calls.push({sql,values}); return {results:options.rows||[]}; },
             async run() { if(!sql.includes("UPDATE auth_sessions")) calls.push({sql,values}); return {meta:{changes:1}}; }
           };
         }
