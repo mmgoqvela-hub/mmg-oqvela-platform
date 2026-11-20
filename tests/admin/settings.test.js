@@ -23,7 +23,9 @@ const DEFAULT_SETTINGS = [
   { setting_key: "shamcash_link", setting_value: "" },
   { setting_key: "shamcash_recipient", setting_value: "" },
   { setting_key: "shamcash_instructions", setting_value: "" },
-  { setting_key: "shamcash_enabled", setting_value: "0" }
+  { setting_key: "shamcash_enabled", setting_value: "0" },
+  { setting_key: "platform_footer_ar", setting_value: "© 2026 MMG OQVELA — جميع الحقوق محفوظة" },
+  { setting_key: "platform_footer_en", setting_value: "© 2026 MMG OQVELA — All rights reserved" }
 ];
 
 function createDb(options = {}) {
@@ -151,7 +153,9 @@ const VALID_SETTINGS = {
   shamcash_link: "https://example.com/pay",
   shamcash_recipient: "Test Recipient",
   shamcash_instructions: "Payment instructions",
-  shamcash_enabled: true
+  shamcash_enabled: true,
+  platform_footer_ar: "© MMG OQVELA — الحقوق محفوظة",
+  platform_footer_en: "© MMG OQVELA — All rights reserved"
 };
 
 test("Unauthenticated users cannot access admin settings", async () => {
@@ -229,7 +233,8 @@ test("Super admin can update settings and create audit log", async () => {
   assert.equal(response.status, 200);
   assert.equal(result.status, "ok");
   assert.equal(result.settings.shamcash_enabled, "1");
-  assert.equal(db.calls.length, 6);
+  assert.equal(result.settings.platform_footer_ar, VALID_SETTINGS.platform_footer_ar);
+  assert.equal(db.calls.length, 7);
 
   const auditLog = db.calls.find(item =>
     item.sql.includes("INSERT INTO admin_activity_logs")
@@ -237,6 +242,15 @@ test("Super admin can update settings and create audit log", async () => {
 
   assert.ok(auditLog);
   assert.equal(auditLog.values[1], USER_ID);
+});
+
+test("Footer settings reject empty or oversized text", async () => {
+  const db = createDb({session:SESSION,admin:SUPER_ADMIN});
+  const response = await handleAdmin(makeRequest("PUT",{
+    ...VALID_SETTINGS,platform_footer_ar:"  "
+  }),{DB:db});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.length,0);
 });
 
 test("Invalid payment link is rejected", async () => {
