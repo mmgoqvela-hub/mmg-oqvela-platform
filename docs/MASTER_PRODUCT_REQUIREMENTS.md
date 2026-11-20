@@ -201,3 +201,10 @@ A feature is complete only when:
 - External notification channels (email/push/WhatsApp), consent, templates and scheduling.
 - Storage quotas and any paid overage policy.
 - Which future modules belong in the first public release versus later phases.
+
+### Account, subscription and notification authorization audit (2026-11-20)
+- Trial activation is restricted server-side to an active account owner, requires the centrally enabled trial policy and the active zero-price trial plan, and atomically claims the account's one-time trial. A unique partial index on `store_subscriptions.trial_account_id` prevents a second trial for the same account.
+- Trial status lookup requires active membership in the requested account; cross-account requests return not found.
+- Subscription billing history is restricted to store owners/admins. Subscription payment review and plan administration require an active platform `super_admin`; cross-origin requests are rejected.
+- Notification inbox, unread count, mark-one-read and mark-all-read queries are scoped to the authenticated user's ID. Inbox responses are non-cacheable and page size is capped.
+- Added regression assertions in `tests/subscriptions/integrity.test.js` and `tests/notifications/inbox.test.js` for these authorization boundaries. These tests verify route/query guards and migration constraints; they complement, but do not replace, live browser and deployed-environment verification.
