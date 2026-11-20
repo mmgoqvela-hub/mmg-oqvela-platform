@@ -320,16 +320,65 @@ async function handleAdminManagement(request,env,admin,path,url) {
   return json({error:"Method not allowed"},405);
 }
 
+async function handleAnnouncements(request, db, admin, url) {
+  const match = url.pathname.match(/^\/api\/admin\/announcements(?:\/([0-9a-f-]{36}))?$/i);
+  const id = match?.[1] || null;
+  if (request.method === "GET" && !id) {
+    const result = await db.prepare(`
+      SELECT id,title_ar,title_en,message_ar,message_en,announcement_type,is_active,starts_at,ends_at,created_at,updated_at
+      FROM platform_announcements ORDER BY created_at DESC LIMIT 100
+    `).all();
+    return json({status:"ok",announcements:result.results || []});
+  }
+  if (!["POST","PATCH"].includes(request.method)) return json({error:"Method not allowed"},405);
+  if ((request.method === "POST" && id) || (request.method === "PATCH" && !id)) return json({error:"Invalid announcement route"},400);
+  const parsed = await readAdminBody(request);
+  if (parsed.error) return json({error:parsed.error},parsed.status);
+  const body = parsed.body;
+  if (request.method === "PATCH" && Object.keys(body).length === 1 && typeof body.is_active === "boolean") {
+    const result = await db.prepare(`
+      UPDATE platform_announcements SET is_active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?
+    `).bind(body.is_active ? 1 : 0,id).run();
+    if (!result.meta?.changes) return json({error:"Announcement not found"},404);
+    await db.prepare(`INSERT INTO admin_activity_logs (id,admin_user_id,action,target_type,target_id,details) VALUES (?,?,'update','platform_announcement',?,?)`)
+      .bind(crypto.randomUUID(),admin.user_id,id,JSON.stringify({is_active:body.is_active})).run();
+    return json({status:"ok",message:"Announcement status updated"});
+  }
+  const fields=["title_ar","title_en","message_ar","message_en"];
+  if (fields.some(key=>typeof body[key]!=="string" || body[key].trim().length < 2 || body[key].length > (key.startsWith("title")?160:1000))) return json({error:"Invalid announcement text"},400);
+  const type=body.announcement_type || "info";
+  if (!["info","success","warning","urgent"].includes(type)) return json({error:"Invalid announcement type"},400);
+  const starts=body.starts_at || null, ends=body.ends_at || null;
+  if ((starts!==null && (typeof starts!=="string" || !Number.isFinite(Date.parse(starts)))) || (ends!==null && (typeof ends!=="string" || !Number.isFinite(Date.parse(ends)))) || (starts && ends && Date.parse(ends)<=Date.parse(starts))) return json({error:"Invalid announcement schedule"},400);
+  if (request.method === "POST") {
+    const newId=crypto.randomUUID();
+    await db.batch([
+      db.prepare(`INSERT INTO platform_announcements (id,title_ar,title_en,message_ar,message_en,announcement_type,is_active,starts_at,ends_at,created_by) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .bind(newId,...fields.map(key=>body[key].trim()),type,body.is_active===false?0:1,starts,ends,admin.user_id),
+      db.prepare(`INSERT INTO admin_activity_logs (id,admin_user_id,action,target_type,target_id,details) VALUES (?,?,'create','platform_announcement',?,?)`)
+        .bind(crypto.randomUUID(),admin.user_id,newId,JSON.stringify({announcement_type:type}))
+    ]);
+    return json({status:"ok",id:newId,message:"Announcement created"},201);
+  }
+  const result=await db.prepare(`UPDATE platform_announcements SET title_ar=?,title_en=?,message_ar=?,message_en=?,announcement_type=?,starts_at=?,ends_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(...fields.map(key=>body[key].trim()),type,starts,ends,id).run();
+  if (!result.meta?.changes) return json({error:"Announcement not found"},404);
+  await db.prepare(`INSERT INTO admin_activity_logs (id,admin_user_id,action,target_type,target_id,details) VALUES (?,?,'update','platform_announcement',?,?)`)
+    .bind(crypto.randomUUID(),admin.user_id,id,JSON.stringify({announcement_type:type})).run();
+  return json({status:"ok",message:"Announcement updated"});
+}
+
 export async function handleAdmin(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
 
+  const isAnnouncements = /^\/api\/admin\/announcements(?:\/[^/]+)?$/.test(path);
   const isActivityLogs = path === "/api/admin/activity-logs";
   const isOverview = path === "/api/admin/overview";
   const isTransfer = path === "/api/admin/transfer-super-admin";
   const isManagement = /^\/api\/admin\/(users|accounts|stores|platform-admins)(?:\/[^/]+)?$/.test(path);
   const isSettings = ["/api/admin/settings", "/api/admin/trial-settings"].includes(path);
-  if (!isSettings && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
+  if (!isSettings && !isAnnouncements && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
 
   if (isActivityLogs && request.method !== "GET") return json({ error: "Method not allowed" }, 405);
   if (isSettings && !["GET", "PUT"].includes(request.method)) return json({ error: "Method not allowed" }, 405);
@@ -352,6 +401,7 @@ export async function handleAdmin(request, env) {
       if (managed) return managed;
     }
     if (isTransfer) return await transferSuperAdmin(request,env,admin);
+    if (isAnnouncements) return await handleAnnouncements(request,env.DB,admin,url);
 
     if (isActivityLogs) {
       const requestedLimit = Number(new URL(request.url).searchParams.get("limit") || 50);
