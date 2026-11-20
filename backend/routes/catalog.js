@@ -452,6 +452,52 @@ async function handleVariants(request, env, storeId, userId, access, productId, 
   }
 }
 
+async function handleProductImages(request, env, storeId, access, productId, imageId) {
+  const product = await env.DB.prepare(
+    "SELECT id FROM products WHERE id = ? AND store_id = ? LIMIT 1"
+  ).bind(productId, storeId).first();
+  if (!product) return json({ error: "Product not found" }, 404);
+  if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
+
+  if (request.method === "POST" && !imageId) {
+    const parsed = await readBody(request, 3000);
+    if (parsed.error) return json({ error: parsed.error }, parsed.status);
+    const body = parsed.body;
+    const fileKey = typeof body.url === "string" ? body.url : "";
+    const altText = typeof body.alt_text === "string" ? body.alt_text.trim() : "";
+    const sortOrder = body.sort_order === undefined ? 0 : body.sort_order;
+    const prefix = "/media/" + storeId + "/";
+    const validPath = new RegExp("^/media/" + storeId.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\async function handleInventory(request, env, storeId, userId, access) {") + "/[a-f0-9-]+\\.(?:jpg|png|webp|gif)$","i");
+    if (!fileKey.startsWith(prefix) || !validPath.test(fileKey) ||
+        altText.length > 250 || !Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 100000) {
+      return json({ error: "Invalid product image data" }, 400);
+    }
+    if (!env.STORE_MEDIA) return json({ error: "Image storage is not configured" }, 503);
+    const object = await env.STORE_MEDIA.head(fileKey.slice("/media/".length));
+    if (!object || object.customMetadata?.storeId !== storeId) {
+      return json({ error: "Uploaded image not found in this store" }, 404);
+    }
+    const id = crypto.randomUUID();
+    await env.DB.prepare(`
+      INSERT INTO product_images (id, product_id, store_id, file_key, alt_text, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(id, productId, storeId, fileKey, altText || null, sortOrder).run();
+    return json({ status: "ok", image: { id, product_id: productId, url: fileKey, alt_text: altText, sort_order: sortOrder } }, 201);
+  }
+
+  if (request.method === "DELETE" && imageId) {
+    const image = await env.DB.prepare(
+      "SELECT id FROM product_images WHERE id = ? AND product_id = ? AND store_id = ? LIMIT 1"
+    ).bind(imageId, productId, storeId).first();
+    if (!image) return json({ error: "Product image not found" }, 404);
+    await env.DB.prepare(
+      "DELETE FROM product_images WHERE id = ? AND product_id = ? AND store_id = ?"
+    ).bind(imageId, productId, storeId).run();
+    return json({ status: "ok" });
+  }
+  return json({ error: "Method not allowed" }, 405);
+}
+
 async function handleInventory(request, env, storeId, userId, access) {
   if (request.method === "GET") {
     if (!canRead(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
@@ -557,8 +603,9 @@ async function handleInventory(request, env, storeId, userId, access) {
 export async function handleCatalog(request, env) {
   const url = new URL(request.url);
   const variantMatch = url.pathname.match(/^\/api\/stores\/([^/]+)\/products\/([^/]+)\/variants(?:\/([^/]+))?$/);
+  const imageMatch = url.pathname.match(/^\/api\/stores\/([^/]+)\/products\/([^/]+)\/images(?:\/([^/]+))?$/);
   const match = url.pathname.match(/^\/api\/stores\/([^/]+)\/(categories|products|inventory)(?:\/([^/]+))?$/);
-  if (!match && !variantMatch) return null;
+  if (!match && !variantMatch && !imageMatch) return null;
 
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
   const session = await getAuthenticatedSession(request, env.DB);
@@ -569,10 +616,12 @@ export async function handleCatalog(request, env) {
   let productId = null;
   let variantId = null;
   try {
-    if (variantMatch) {
-      storeId = decodeURIComponent(variantMatch[1]);
-      productId = decodeURIComponent(variantMatch[2]);
-      variantId = variantMatch[3] ? decodeURIComponent(variantMatch[3]) : null;
+    if (variantMatch || imageMatch) {
+      const routeMatch = variantMatch || imageMatch;
+      storeId = decodeURIComponent(routeMatch[1]);
+      productId = decodeURIComponent(routeMatch[2]);
+      if (variantMatch) variantId = routeMatch[3] ? decodeURIComponent(routeMatch[3]) : null;
+      else resourceId = routeMatch[3] ? decodeURIComponent(routeMatch[3]) : null;
     } else {
       storeId = decodeURIComponent(match[1]);
       resourceId = match[3] ? decodeURIComponent(match[3]) : null;
@@ -588,6 +637,9 @@ export async function handleCatalog(request, env) {
   try {
     if (variantMatch) {
       return await handleVariants(request, env, storeId, session.user_id, access, productId, variantId);
+    }
+    if (imageMatch) {
+      return await handleProductImages(request, env, storeId, access, productId, resourceId);
     }
     if (match[2] === "categories") {
       return await handleCategories(request, env, storeId, session.user_id, access, resourceId);
