@@ -2174,10 +2174,9 @@ footer{
           stock.min = "0";
           stock.step = "1";
           stock.value = "0";
-          const productImageFile = document.createElement("input");
-          productImageFile.type = "file";
-          productImageFile.accept = "image/jpeg,image/png,image/webp,image/gif";
-          productImageFile.multiple = true;
+          const productImageUrls = document.createElement("textarea");
+          productImageUrls.maxLength = 10000;
+          productImageUrls.placeholder = "https://example.com/product-image.webp\nhttps://example.com/another-image.webp";
           const category = document.createElement("select");
           const none = document.createElement("option");
           none.value = "";
@@ -2200,7 +2199,7 @@ footer{
             ["السعر الأساسي",price],
             ["العملة (رمز من 3 أحرف)",currency],
             ["الكمية الافتتاحية",stock],
-            ["صور المنتج (حتى 5 صور)",productImageFile],
+            ["روابط صور المنتج (رابط في كل سطر، حتى 5 صور)",productImageUrls],
             ["التصنيف",category]
           ];
           for (const [labelText,control] of fields) {
@@ -2229,9 +2228,9 @@ footer{
             event.preventDefault();
             productSubmit.disabled = true;
             try {
-              const selectedImages = Array.from(productImageFile.files || []);
-              if (selectedImages.length > 5) throw new Error("يمكنك اختيار خمس صور كحد أقصى لكل منتج.");
-              if (selectedImages.some(file => file.size > 5 * 1024 * 1024)) throw new Error("يجب ألا يتجاوز حجم كل صورة 5 ميغابايت.");
+              const imageUrls = productImageUrls.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+              if (imageUrls.length > 5) throw new Error("يمكنك إضافة خمس صور كحد أقصى لكل منتج.");
+              if (imageUrls.some(value => { try { const url = new URL(value); return url.protocol !== "https:" || url.username || url.password; } catch { return true; } })) throw new Error("يجب إدخال روابط صور HTTPS صحيحة فقط.");
               const created = await api("/api/stores/" + encodeURIComponent(store.id) + "/products", {
                 method:"POST",
                 body:JSON.stringify({
@@ -2246,16 +2245,10 @@ footer{
                   status:"draft"
                 })
               });
-              for (let index = 0; index < selectedImages.length; index++) {
-                const upload = new FormData();
-                upload.append("store_id",store.id);
-                upload.append("file",selectedImages[index]);
-                const uploadedResponse = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:upload});
-                const uploaded = await uploadedResponse.json().catch(()=>({}));
-                if (!uploadedResponse.ok) throw new Error(uploaded.error || "تعذر رفع إحدى صور المنتج.");
+              for (let index = 0; index < imageUrls.length; index++) {
                 await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(created.product.id) + "/images", {
                   method:"POST",
-                  body:JSON.stringify({url:uploaded.url,alt_text:productName.value.trim() + (index ? " - " + (index + 1) : ""),sort_order:index})
+                  body:JSON.stringify({url:imageUrls[index],alt_text:productName.value.trim() + (index ? " - " + (index + 1) : ""),sort_order:index})
                 });
               }
               productMessage.textContent = "تمت إضافة المنتج.";
@@ -2307,17 +2300,17 @@ footer{
               galleryHeading.textContent = "صور المنتج";
               const galleryList = document.createElement("div");
               galleryList.className = "account-grid";
-              const galleryUpload = document.createElement("input");
-              galleryUpload.type = "file";
-              galleryUpload.accept = "image/jpeg,image/png,image/webp,image/gif";
-              galleryUpload.multiple = true;
-              const galleryUploadButton = document.createElement("button");
-              galleryUploadButton.type = "button";
-              galleryUploadButton.className = "secondary";
-              galleryUploadButton.textContent = "رفع صور إضافية";
+              const galleryImageUrl = document.createElement("input");
+              galleryImageUrl.type = "url";
+              galleryImageUrl.maxLength = 2000;
+              galleryImageUrl.placeholder = "https://example.com/product-image.webp";
+              const galleryAddButton = document.createElement("button");
+              galleryAddButton.type = "button";
+              galleryAddButton.className = "secondary";
+              galleryAddButton.textContent = "إضافة رابط صورة";
               const galleryMessage = document.createElement("p");
               galleryMessage.className = "muted";
-              gallerySection.append(galleryHeading,galleryList,galleryUpload,galleryUploadButton,galleryMessage);
+              gallerySection.append(galleryHeading,galleryList,galleryImageUrl,galleryAddButton,galleryMessage);
               let galleryImages = [];
               let galleryLoaded = false;
               const renderGallery = () => {
@@ -2406,33 +2399,26 @@ footer{
                   galleryMessage.textContent = error.message;
                 }
               };
-              galleryUploadButton.addEventListener("click",async () => {
-                const files = Array.from(galleryUpload.files || []);
-                if (!files.length) { galleryMessage.textContent = "اختر صورة واحدة على الأقل."; return; }
-                if (galleryImages.length + files.length > 5) { galleryMessage.textContent = "الحد الأقصى خمس صور للمنتج الواحد."; return; }
-                if (files.some(file => file.size > 5 * 1024 * 1024)) { galleryMessage.textContent = "يجب ألا يتجاوز حجم كل صورة 5 ميغابايت."; return; }
-                galleryUploadButton.disabled = true;
+              galleryAddButton.addEventListener("click",async () => {
+                const value = galleryImageUrl.value.trim();
+                if (!value) { galleryMessage.textContent = "أدخل رابط الصورة أولاً."; return; }
+                if (galleryImages.length >= 5) { galleryMessage.textContent = "الحد الأقصى خمس صور للمنتج الواحد."; return; }
+                let valid = false;
+                try { const parsed = new URL(value); valid = parsed.protocol === "https:" && !parsed.username && !parsed.password; } catch {}
+                if (!valid) { galleryMessage.textContent = "أدخل رابط HTTPS صحيحاً للصورة."; return; }
+                galleryAddButton.disabled = true;
                 try {
-                  for (let index = 0; index < files.length; index++) {
-                    const upload = new FormData();
-                    upload.append("store_id",store.id);
-                    upload.append("file",files[index]);
-                    const response = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:upload});
-                    const uploaded = await response.json().catch(()=>({}));
-                    if (!response.ok) throw new Error(uploaded.error || "تعذر رفع إحدى الصور.");
-                    await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/images",{
-                      method:"POST",
-                      body:JSON.stringify({url:uploaded.url,alt_text:product.name + (galleryImages.length + index ? " - " + (galleryImages.length + index + 1) : ""),sort_order:galleryImages.length + index})
-                    });
-                  }
-                  galleryUpload.value = "";
+                  await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/images",{
+                    method:"POST",
+                    body:JSON.stringify({url:value,alt_text:product.name + " - " + (galleryImages.length + 1),sort_order:galleryImages.length})
+                  });
+                  galleryImageUrl.value = "";
                   await loadGallery();
-                  galleryMessage.textContent = "تمت إضافة الصور.";
+                  galleryMessage.textContent = "تمت إضافة الصورة.";
                 } catch(error) {
                   galleryMessage.textContent = error.message;
-                  await loadGallery();
                 } finally {
-                  galleryUploadButton.disabled = false;
+                  galleryAddButton.disabled = false;
                 }
               });
               const editName = document.createElement("input");
@@ -3421,32 +3407,13 @@ footer{
     makeDesignField("الخط",fontSelect);
     makeDesignField("رابط شعار المتجر",logoUrl);
     makeDesignField("رابط صورة الواجهة",heroImageUrl);
-    const logoFile = document.createElement("input"); logoFile.type = "file"; logoFile.accept = "image/jpeg,image/png,image/webp,image/gif";
-    const heroFile = document.createElement("input"); heroFile.type = "file"; heroFile.accept = "image/jpeg,image/png,image/webp,image/gif";
-    const uploadStatus = document.createElement("p"); uploadStatus.className = "muted"; uploadStatus.setAttribute("role","status");
-    async function uploadStoreImage(fileInput, targetInput) {
-      const file = fileInput.files?.[0];
-      if (!file) { uploadStatus.textContent = translateText("اختر صورة أولاً."); return; }
-      if (file.size > 5 * 1024 * 1024) { uploadStatus.textContent = translateText("حجم الصورة الأقصى 5 ميغابايت."); return; }
-      const data = new FormData(); data.append("store_id",store.id); data.append("file",file);
-      uploadStatus.textContent = translateText("جارٍ رفع الصورة...");
-      try {
-        const response = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:data});
-        const result = await response.json().catch(()=>({}));
-        if (!response.ok) throw new Error(result.error || "تعذر رفع الصورة.");
-        targetInput.value = new URL(result.url,location.origin).href;
-        targetInput.dispatchEvent(new Event("input",{bubbles:true}));
-        uploadStatus.textContent = translateText("تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.");
-        fileInput.value = "";
-      } catch(error) { uploadStatus.textContent = error.message; }
-    }
-    const logoUploadButton = document.createElement("button"); logoUploadButton.type = "button"; logoUploadButton.className = "secondary"; logoUploadButton.textContent = "رفع الشعار من الجهاز";
-    const heroUploadButton = document.createElement("button"); heroUploadButton.type = "button"; heroUploadButton.className = "secondary"; heroUploadButton.textContent = "رفع صورة الواجهة من الجهاز";
-    logoUploadButton.addEventListener("click",()=>uploadStoreImage(logoFile,logoUrl));
-    heroUploadButton.addEventListener("click",()=>uploadStoreImage(heroFile,heroImageUrl));
-    makeDesignField("ملف شعار المتجر",logoFile);
-    makeDesignField("ملف صورة الواجهة",heroFile);
-    const uploadButtons = document.createElement("div"); uploadButtons.className = "field wide"; uploadButtons.append(logoUploadButton,heroUploadButton,uploadStatus);
+    const uploadStatus = document.createElement("p");
+    uploadStatus.className = "muted";
+    uploadStatus.textContent = "للبدء مجاناً، استخدم روابط HTTPS مباشرة للصور. رفع الملفات سيُتاح عند تفعيل مساحة تخزين مناسبة لاحقاً.";
+    uploadStatus.setAttribute("role","status");
+    const uploadButtons = document.createElement("div");
+    uploadButtons.className = "field wide";
+    uploadButtons.append(uploadStatus);
     makeDesignField("محاذاة الواجهة",heroAlignment);
     makeDesignField("شريط إعلان قصير",announcementText);
     const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
