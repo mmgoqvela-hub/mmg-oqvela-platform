@@ -77,6 +77,15 @@ async function getMemberStore(db, storeId, userId) {
       AND au.user_id = ?
       AND au.status = 'active'
       AND a.status = 'active'
+      AND (
+        au.role IN ('owner','admin')
+        OR EXISTS (
+          SELECT 1 FROM store_members sm
+          WHERE sm.store_id = s.id
+            AND sm.user_id = au.user_id
+            AND sm.status = 'active'
+        )
+      )
     LIMIT 1
   `).bind(storeId, userId).first();
 }
