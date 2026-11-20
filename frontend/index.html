@@ -3031,6 +3031,69 @@ footer{
       templatePicker.append(option);
     }
     templateField.append(templateLabel,templateHint,templatePicker);
+
+    const designField = document.createElement("section");
+    designField.className = "field wide";
+    designField.style.cssText = "border:1px solid var(--border);border-radius:14px;padding:16px;background:#ffffff08";
+    const designTitle = document.createElement("h3");
+    designTitle.textContent = "تخصيص مظهر المتجر";
+    const designHint = document.createElement("p");
+    designHint.className = "muted";
+    designHint.textContent = "غيّر الألوان والعنوان وشاهد المعاينة مباشرة، ثم احفظ التغييرات.";
+    const designGrid = document.createElement("div");
+    designGrid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px";
+    const makeDesignField = (labelText, input) => {
+      const wrap = document.createElement("div"); wrap.className = "field";
+      const label = document.createElement("label"); label.textContent = labelText;
+      wrap.append(label,input); designGrid.append(wrap); return input;
+    };
+    const primaryColor = document.createElement("input");
+    primaryColor.type = "color"; primaryColor.value = "#3678ed";
+    const backgroundColor = document.createElement("input");
+    backgroundColor.type = "color"; backgroundColor.value = "#101a2c";
+    const headingText = document.createElement("input");
+    headingText.type = "text"; headingText.maxLength = 120; headingText.value = store.name || "";
+    const subtitleText = document.createElement("input");
+    subtitleText.type = "text"; subtitleText.maxLength = 240; subtitleText.value = store.description || "";
+    makeDesignField("اللون الأساسي",primaryColor);
+    makeDesignField("لون الخلفية",backgroundColor);
+    makeDesignField("عنوان الواجهة",headingText);
+    makeDesignField("النص التعريفي",subtitleText);
+    const livePreview = document.createElement("div");
+    livePreview.style.cssText = "margin-top:12px;border-radius:12px;padding:20px;min-height:125px;color:white;transition:background .15s";
+    const previewHeading = document.createElement("h3");
+    previewHeading.style.cssText = "margin:0 0 8px;font-size:22px";
+    const previewSubtitle = document.createElement("p");
+    previewSubtitle.style.cssText = "margin:0 0 14px;opacity:.82;line-height:1.7";
+    const previewButton = document.createElement("span");
+    previewButton.style.cssText = "display:inline-block;border-radius:7px;padding:8px 13px;font-size:12px;font-weight:bold";
+    previewButton.textContent = "تصفح المنتجات";
+    livePreview.append(previewHeading,previewSubtitle,previewButton);
+    const updatePreview = () => {
+      livePreview.style.background = backgroundColor.value;
+      previewHeading.textContent = headingText.value || store.name || "اسم متجرك";
+      previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
+      previewButton.style.background = primaryColor.value;
+    };
+    [primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
+    updatePreview();
+    designField.append(designTitle,designHint,designGrid,livePreview);
+    let loadedCustomization = {};
+    const loadCustomization = async () => {
+      try {
+        const data = await api("/api/stores/" + encodeURIComponent(store.id));
+        let saved = data.store?.customization_json || data.store?.customization || {};
+        if (typeof saved === "string") { try { saved = JSON.parse(saved); } catch { saved = {}; } }
+        loadedCustomization = saved && typeof saved === "object" ? saved : {};
+        primaryColor.value = loadedCustomization.colors?.primary || "#3678ed";
+        backgroundColor.value = loadedCustomization.colors?.background || "#101a2c";
+        headingText.value = loadedCustomization.texts?.heroTitle || store.name || "";
+        subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
+        updatePreview();
+      } catch (error) {
+        message.textContent = "تعذر تحميل إعدادات التصميم: " + error.message;
+      }
+    };
     const storefrontLink = document.createElement("a");
     storefrontLink.className = "storefront-link";
     storefrontLink.href = "/s/" + encodeURIComponent(store.slug);
@@ -3056,6 +3119,7 @@ footer{
       descriptionField,
       whatsappField,
       templateField,
+      designField,
       templateLinkField,
       save,
       message
@@ -3066,6 +3130,7 @@ footer{
       toggle.textContent = form.hidden
         ? "إدارة بيانات المتجر"
         : "إغلاق التعديل";
+      if (!form.hidden) loadCustomization();
     });
 
     form.addEventListener("submit", async event => {
@@ -3083,7 +3148,12 @@ footer{
               business_type: typeInput.value,
               description: descriptionInput.value,
               template_key: selectedTemplate,
-              whatsapp_phone: whatsappInput.value.trim()
+              whatsapp_phone: whatsappInput.value.trim(),
+              customization: {
+                ...loadedCustomization,
+                colors: { ...(loadedCustomization.colors || {}), primary: primaryColor.value, background: backgroundColor.value },
+                texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim() }
+              }
             })
           }
         );
