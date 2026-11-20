@@ -8,27 +8,41 @@ import {handleOrders} from "../../backend/routes/orders.js";
 const TOKEN="a".repeat(43);
 const STORE={id:"store-1",name:"Test Store",slug:"test-store"};
 const PRODUCT={id:"product-1",name:"Product",sku:"SKU-1",base_price:12.5,currency:"USD",track_inventory:1,stock_quantity:8,status:"active"};
-function db(options={}){
- const calls=[];
- return {
-  calls,
-  async batch(statements){calls.push(...statements.map(s=>({sql:s.sql,values:s.values})));return statements.map(()=>({meta:{changes:1}}));},
-  prepare(sql){return {sql,bind(...values){return {
-   sql,values,
-   async first(){
-    if(sql.includes("FROM stores s"))return options.store===undefined?STORE:options.store;
-    if(sql.includes("store_order_settings"))return options.settings??null;
-    if(sql.includes("FROM products WHERE id"))return options.product===undefined?PRODUCT:options.product;
-    if(sql.includes("FROM product_variants"))return options.variant??null;
-    if(sql.includes("SELECT id FROM product_variants"))return options.hasVariants??null;
-    if(sql.includes("FROM auth_sessions"))return options.session===undefined?{session_id:"session-1",user_id:"user-1",expires_at:"2099-01-01",user_status:"active"}:options.session;
-    if(sql.includes("FROM stores s")&&sql.includes("GROUP_CONCAT"))return options.access===undefined?{id:"store-1",store_status:"active",account_status:"active",account_role:"owner",permissions:""}:options.access;
-    return null;
-   },
-   async all(){return {results:options.rows||[]};},
-   async run(){calls.push({sql,values});return {meta:{changes:1}};}
-  };}};
- };
+function db(options={}) {
+  const calls=[];
+  return {
+    calls,
+    async batch(statements) {
+      calls.push(...statements.map(statement=>({sql:statement.sql,values:statement.values})));
+      return statements.map(()=>({meta:{changes:1}}));
+    },
+    prepare(sql) {
+      return {
+        sql,
+        bind(...values) {
+          return {
+            sql,values,
+            async first() {
+              if(sql.includes("store_order_settings")) return options.settings??null;
+              if(sql.includes("GROUP_CONCAT")) return options.access===undefined
+                ? {id:"store-1",store_status:"active",account_status:"active",account_role:"owner",permissions:""}
+                : options.access;
+              if(sql.includes("FROM stores s")) return options.store===undefined?STORE:options.store;
+              if(sql.includes("FROM auth_sessions")) return options.session===undefined
+                ? {session_id:"session-1",user_id:"user-1",expires_at:"2099-01-01",user_status:"active"}
+                : options.session;
+              if(sql.includes("SELECT id FROM product_variants")) return options.hasVariants??null;
+              if(sql.includes("FROM product_variants")) return options.variant??null;
+              if(sql.includes("FROM products WHERE id")) return options.product===undefined?PRODUCT:options.product;
+              return null;
+            },
+            async all() { return {results:options.rows||[]}; },
+            async run() { calls.push({sql,values}); return {meta:{changes:1}}; }
+          };
+        }
+      };
+    }
+  };
 }
 function request(path,method="POST",body,authenticated=false){
  const headers={Origin:"https://example.com"};
@@ -53,8 +67,8 @@ test("Public checkout creates a COD order using server-side prices and atomic D1
  assert.equal(database.calls.length,2);
  assert.match(database.calls[0].sql,/INSERT INTO store_orders/);
  assert.match(database.calls[1].sql,/INSERT INTO store_order_items/);
- assert.equal(database.calls[1].values[9],2);
- assert.equal(database.calls[1].values[10],12.5);
+ assert.equal(database.calls[1].values[8],2);
+ assert.equal(database.calls[1].values[9],12.5);
 });
 
 test("Sham Cash checkout requires a configured recipient, sender and transaction reference",async()=>{
