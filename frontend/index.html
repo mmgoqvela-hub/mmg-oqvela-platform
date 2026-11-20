@@ -3075,8 +3075,12 @@ footer{
       previewSubtitle.textContent = subtitleText.value || "اكتب وصفاً جذاباً لمتجرك";
       previewButton.style.background = primaryColor.value;
       livePreview.style.fontFamily = fontSelect.value === "serif" ? "Georgia,serif" : fontSelect.value === "cairo" ? "Cairo, sans-serif" : fontSelect.value === "tajawal" ? "Tajawal, sans-serif" : "system-ui,sans-serif";
+      livePreview.style.textAlign = heroAlignment.value === "center" ? "center" : "right";
+      livePreview.style.backgroundImage = /^https?:/i.test(heroImageUrl.value) ? "linear-gradient(#0008,#0008),url(" + JSON.stringify(heroImageUrl.value) + ")" : "none";
+      livePreview.style.backgroundSize = "cover";
+      livePreview.style.backgroundPosition = "center";
     };
-    [primaryColor,backgroundColor,headingText,subtitleText].forEach(input => input.addEventListener("input",updatePreview));
+    [primaryColor,backgroundColor,headingText,subtitleText,heroImageUrl].forEach(input => input.addEventListener("input",updatePreview));
 
     const fontSelect = document.createElement("select");
     for (const [value,label] of [["system","النظام الافتراضي"],["cairo","Cairo"],["tajawal","Tajawal"],["serif","خط كلاسيكي"]]) {
@@ -3084,8 +3088,15 @@ footer{
     }
     const logoUrl = document.createElement("input"); logoUrl.type = "url"; logoUrl.maxLength = 500; logoUrl.placeholder = "https://example.com/logo.png";
     const announcementText = document.createElement("input"); announcementText.type = "text"; announcementText.maxLength = 180; announcementText.placeholder = "رسالة ترحيبية أعلى المتجر";
+    const heroImageUrl = document.createElement("input"); heroImageUrl.type = "url"; heroImageUrl.maxLength = 500; heroImageUrl.placeholder = "https://example.com/hero.jpg";
+    const heroAlignment = document.createElement("select");
+    for (const [value,label] of [["right","محاذاة لليمين"],["center","توسيط"]]) {
+      const option = document.createElement("option"); option.value = value; option.textContent = label; heroAlignment.append(option);
+    }
     makeDesignField("الخط",fontSelect);
     makeDesignField("رابط شعار المتجر",logoUrl);
+    makeDesignField("رابط صورة الواجهة",heroImageUrl);
+    makeDesignField("محاذاة الواجهة",heroAlignment);
     makeDesignField("شريط إعلان قصير",announcementText);
     const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
     const sectionsLabel = document.createElement("label"); sectionsLabel.textContent = "الأقسام الظاهرة";
@@ -3097,6 +3108,7 @@ footer{
     }
     designField.append(sectionsWrap);
     fontSelect.addEventListener("change",updatePreview);
+    heroAlignment.addEventListener("change",updatePreview);
     updatePreview();
     livePreview.append(document.createTextNode(""));
     designField.append(designTitle,designHint,designGrid,sectionsWrap,livePreview);
@@ -3113,6 +3125,8 @@ footer{
         subtitleText.value = loadedCustomization.texts?.heroSubtitle || store.description || "";
         fontSelect.value = ["system","cairo","tajawal","serif"].includes(loadedCustomization.fonts?.family) ? loadedCustomization.fonts.family : "system";
         logoUrl.value = loadedCustomization.logo || "";
+        heroImageUrl.value = loadedCustomization.heroImage || "";
+        heroAlignment.value = loadedCustomization.layout?.heroAlignment === "center" ? "center" : "right";
         announcementText.value = loadedCustomization.announcement || "";
         for (const key of Object.keys(sectionOptions)) sectionOptions[key].checked = loadedCustomization.sections?.[key] !== false;
         updatePreview();
@@ -3181,6 +3195,8 @@ footer{
                 texts: { ...(loadedCustomization.texts || {}), heroTitle: headingText.value.trim(), heroSubtitle: subtitleText.value.trim() },
                 fonts: { ...(loadedCustomization.fonts || {}), family: fontSelect.value },
                 logo: logoUrl.value.trim(),
+                heroImage: heroImageUrl.value.trim(),
+                layout: { ...(loadedCustomization.layout || {}), heroAlignment: heroAlignment.value },
                 announcement: announcementText.value.trim(),
                 sections: { ...(loadedCustomization.sections || {}), products: sectionOptions.products.checked, cart: sectionOptions.cart.checked, categories: sectionOptions.categories.checked }
               }
