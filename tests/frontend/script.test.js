@@ -193,3 +193,11 @@ test("Admin dashboard is full-width and readable on mobile", async () => {
   assert.match(html, /activity-details/);
   assert.match(html, /Changed fields/);
 });
+
+
+test("Language switching translates dynamic text in both directions", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /const translated = translateText\(sourceText\)/);
+  assert.doesNotMatch(html, /currentLanguage === "en" \? translateText\(sourceText\) : sourceText/);
+  assert.match(html, /return "\\u2068" \+ formatted \+ "\\u2069"/);
+});
