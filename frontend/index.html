@@ -1301,6 +1301,7 @@ footer{
           renderTeamPanel(store, card);
         }
         renderCatalogPanel(store, card, account.role);
+        renderOrdersPanel(store, card, account.role, storePermissions);
       }
 
       if (account.role === "owner") {
@@ -2429,6 +2430,133 @@ footer{
         loaded = true;
         await refresh();
       }
+    });
+    card.append(toggle,panel);
+  }
+
+  function renderOrdersPanel(store, card, accountRole, permissions) {
+    const isAdmin = ["owner","admin"].includes(accountRole);
+    const perms = Array.isArray(permissions) ? permissions : String(permissions || "").split(",").filter(Boolean);
+    if (!isAdmin && !perms.includes("orders.read")) return;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "secondary";
+    toggle.textContent = "إدارة الطلبات وطرق الدفع";
+    const panel = document.createElement("section");
+    panel.className = "admin-panel";
+    panel.hidden = true;
+    let loaded = false;
+
+    async function refresh() {
+      panel.replaceChildren();
+      const heading = document.createElement("h3");
+      heading.textContent = "طلبات المتجر";
+      panel.append(heading);
+      try {
+        if (isAdmin) {
+          const settings = (await api("/api/stores/" + encodeURIComponent(store.id) + "/orders/settings")).settings;
+          const settingsHeading = document.createElement("h4");
+          settingsHeading.textContent = "طرق الدفع المتاحة للزبائن";
+          const form = document.createElement("form");
+          form.className = "admin-form";
+          const cod = document.createElement("input");
+          cod.type = "checkbox"; cod.checked = Boolean(settings.cash_on_delivery_enabled);
+          const sham = document.createElement("input");
+          sham.type = "checkbox"; sham.checked = Boolean(settings.shamcash_enabled);
+          const recipient = document.createElement("input");
+          recipient.maxLength = 160; recipient.value = settings.shamcash_recipient || "";
+          recipient.placeholder = "رقم أو اسم حساب شام كاش لاستلام التحويل";
+          const instructions = document.createElement("textarea");
+          instructions.maxLength = 2000; instructions.value = settings.shamcash_instructions || "";
+          instructions.placeholder = "تعليمات التحويل للزبائن (اختياري)";
+          const codLabel = document.createElement("label"); codLabel.append(cod,document.createTextNode(" تفعيل الدفع عند الاستلام"));
+          const shamLabel = document.createElement("label"); shamLabel.append(sham,document.createTextNode(" تفعيل شام كاش"));
+          const recipientField = document.createElement("div"); recipientField.className = "field wide";
+          const recipientLabel = document.createElement("label"); recipientLabel.textContent = "مستلم التحويل في شام كاش";
+          recipientField.append(recipientLabel,recipient);
+          const instructionsField = document.createElement("div"); instructionsField.className = "field wide";
+          const instructionsLabel = document.createElement("label"); instructionsLabel.textContent = "تعليمات الدفع";
+          instructionsField.append(instructionsLabel,instructions);
+          const save = document.createElement("button"); save.type = "submit"; save.className = "primary"; save.textContent = "حفظ طرق الدفع";
+          const message = document.createElement("p"); message.className = "muted";
+          form.append(codLabel,shamLabel,recipientField,instructionsField,save,message);
+          form.addEventListener("submit",async event=>{
+            event.preventDefault(); save.disabled=true;
+            try {
+              await api("/api/stores/"+encodeURIComponent(store.id)+"/orders/settings",{
+                method:"PUT",body:JSON.stringify({
+                  cash_on_delivery_enabled:cod.checked,shamcash_enabled:sham.checked,
+                  shamcash_recipient:recipient.value.trim(),shamcash_instructions:instructions.value.trim()
+                })
+              });
+              message.textContent="تم حفظ طرق الدفع بنجاح.";
+            } catch(error) { message.textContent="تعذر حفظ الإعدادات: "+error.message; }
+            finally { save.disabled=false; }
+          });
+          panel.append(settingsHeading,form);
+        }
+
+        const ordersHeading = document.createElement("h4");
+        ordersHeading.textContent = "أحدث الطلبات";
+        panel.append(ordersHeading);
+        const data = await api("/api/stores/"+encodeURIComponent(store.id)+"/orders");
+        const orders = data.orders || [];
+        if (!orders.length) {
+          const empty = document.createElement("p"); empty.className="muted"; empty.textContent="لا توجد طلبات حتى الآن."; panel.append(empty);
+          return;
+        }
+        for (const order of orders) {
+          const box = document.createElement("article"); box.className="account-card";
+          const title = document.createElement("h4"); title.textContent=order.order_number+" — "+order.customer_name;
+          const details = document.createElement("p"); details.className="muted";
+          details.textContent="الهاتف: "+order.customer_phone+" | الإجمالي: "+formatNumber(order.total)+" "+order.currency+
+            " | الدفع: "+(order.payment_method==="shamcash"?"شام كاش":"عند الاستلام")+
+            " | حالة الدفع: "+order.payment_status+" | حالة الطلب: "+order.order_status;
+          box.append(title,details);
+          for(const item of order.items||[]){
+            const line=document.createElement("p"); line.className="muted";
+            line.textContent=item.product_name+(item.variant_name?" / "+item.variant_name:"")+" × "+item.quantity+" — "+formatNumber(item.line_total)+" "+item.currency;
+            box.append(line);
+          }
+          if(order.shipping_address){const address=document.createElement("p");address.className="muted";address.textContent="العنوان: "+order.shipping_address;box.append(address);}
+          if(order.customer_notes){const note=document.createElement("p");note.className="muted";note.textContent="ملاحظات: "+order.customer_notes;box.append(note);}
+          if(order.payment_method==="shamcash"){
+            const payment=document.createElement("p");payment.className="muted";
+            payment.textContent="اسم المرسل: "+(order.sender_name||"—")+" | رقم العملية: "+(order.transaction_reference||"—");
+            box.append(payment);
+          }
+          if(isAdmin || perms.includes("orders.manage")){
+            const controls=document.createElement("div");controls.className="admin-form";
+            const orderStatus=document.createElement("select");
+            for(const [value,label] of [["pending","قيد المراجعة"],["confirmed","تم التأكيد"],["processing","قيد التجهيز"],["shipped","تم الشحن"],["completed","مكتمل"],["cancelled","ملغي"]]){
+              const option=document.createElement("option");option.value=value;option.textContent=label;option.selected=order.order_status===value;orderStatus.append(option);
+            }
+            const paymentStatus=document.createElement("select");
+            for(const [value,label] of [["unpaid","غير مدفوع"],["pending","بانتظار التحقق"],["paid","مدفوع"],["rejected","مرفوض"],["refunded","مسترد"]]){
+              const option=document.createElement("option");option.value=value;option.textContent=label;option.selected=order.payment_status===value;paymentStatus.append(option);
+            }
+            const save=document.createElement("button");save.type="button";save.className="primary";save.textContent="حفظ حالة الطلب";
+            const message=document.createElement("p");message.className="muted";
+            save.addEventListener("click",async()=>{
+              save.disabled=true;
+              try{
+                await api("/api/stores/"+encodeURIComponent(store.id)+"/orders/"+encodeURIComponent(order.id),{
+                  method:"PATCH",body:JSON.stringify({order_status:orderStatus.value,payment_status:paymentStatus.value})
+                });
+                await refresh();
+              }catch(error){message.textContent="تعذر تحديث الطلب: "+error.message;save.disabled=false;}
+            });
+            controls.append(orderStatus,paymentStatus,save,message);box.append(controls);
+          }
+          panel.append(box);
+        }
+      } catch(error) {
+        const failure=document.createElement("p");failure.className="message error";failure.textContent="تعذر تحميل الطلبات: "+error.message;panel.append(failure);
+      }
+    }
+    toggle.addEventListener("click",async()=>{
+      panel.hidden=!panel.hidden;
+      if(!panel.hidden&&!loaded){loaded=true;await refresh();}
     });
     card.append(toggle,panel);
   }
