@@ -28,7 +28,7 @@ export async function handlePublicStorefront(request, env) {
     const store = await env.DB.prepare(`
       SELECT
         s.id, s.name, s.slug, s.business_type, s.description,
-        s.template_key
+        s.template_key, s.whatsapp_phone
       FROM stores s
       JOIN accounts a ON a.id = s.account_id
       WHERE s.slug = ?
