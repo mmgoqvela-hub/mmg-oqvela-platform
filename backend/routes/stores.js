@@ -175,7 +175,7 @@ export async function handleStores(request, env) {
       : typeof body.whatsapp_phone === "string"
         ? body.whatsapp_phone.trim()
         : null;
-    const whatsappPhone = whatsappRaw === null ? null : whatsappRaw.replace(/[\\s()+.-]/g, "");
+    const whatsappPhone = whatsappRaw === null ? null : whatsappRaw.replace(/[\s()+.-]/g, "");
 
     if (
       name.length < 2 ||
@@ -186,7 +186,7 @@ export async function handleStores(request, env) {
       description.length > 1000 ||
       !allowedTemplates.includes(templateKey) ||
       whatsappPhone === null ||
-      (whatsappPhone !== "" && !/^\\d{8,15}$/.test(whatsappPhone))
+      (whatsappPhone !== "" && !/^\d{8,15}$/.test(whatsappPhone))
     ) {
       return json({
         error: "تحقق من البيانات: الاسم 2-100 حرف، ونوع النشاط 80، والوصف 1000 حرف كحد أقصى."
