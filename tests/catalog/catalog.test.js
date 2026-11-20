@@ -68,6 +68,31 @@ function makeRequest(path, method = "GET", body, options = {}) {
   });
 }
 
+test("Product images can only reference uploaded media from the same store", async () => {
+  const db = createDb({ product:{id:"product-1",store_id:"store-001"} });
+  const response = await handleCatalog(makeRequest("products/product-1/images","POST",{
+    url:"/media/another-store/123e4567-e89b-12d3-a456-426614174000.webp",
+    alt_text:"Product cover"
+  }),{DB:db,STORE_MEDIA:{head:async()=>({customMetadata:{storeId:"store-001"}})}});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO product_images")),false);
+});
+
+test("Product image registration verifies the R2 object and scopes the record to its store", async () => {
+  const db = createDb({ product:{id:"product-1",store_id:"store-001"} });
+  const response = await handleCatalog(makeRequest("products/product-1/images","POST",{
+    url:"/media/store-001/123e4567-e89b-12d3-a456-426614174000.webp",
+    alt_text:"Blue bag"
+  }),{DB:db,STORE_MEDIA:{head:async key=>({key,customMetadata:{storeId:"store-001"}})}});
+  const result = await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.image.url,"/media/store-001/123e4567-e89b-12d3-a456-426614174000.webp");
+  const insert=db.calls.find(call=>call.sql.includes("INSERT INTO product_images"));
+  assert.ok(insert);
+  assert.ok(insert.values.includes("store-001"));
+  assert.ok(insert.values.includes("product-1"));
+});
+
 test("Owners can update product details within their own store", async () => {
   const db = createDb({
     product:{id:"product-1",store_id:"store-001",track_inventory:1,stock_quantity:0}
