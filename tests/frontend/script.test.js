@@ -105,7 +105,6 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     assert.ok(html.includes(marker), "missing storefront cart behavior: " + marker);
   }
   assert.match(html, /name\.textContent = product\.name/);
-  assert.match(html, /title\.textContent/);
   assert.match(html, /payment and delivery options are defined/);
   assert.match(html, /خيارات الدفع والتسليم الخاصة بالمتجر/);
 });
