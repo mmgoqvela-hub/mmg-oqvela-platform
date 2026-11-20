@@ -388,6 +388,10 @@ footer{
         </label>
       </div>
 
+      <hr><h3>التذييل الإلزامي لجميع المتاجر</h3>
+      <p class="muted">يُدار مركزياً ويظهر أسفل كل متجر ولا يمكن لصاحب المتجر إزالته.</p>
+      <div class="field wide"><label for="platformFooterAr">التذييل بالعربية</label><input id="platformFooterAr" maxlength="500" required></div>
+      <div class="field wide"><label for="platformFooterEn">Footer in English</label><input id="platformFooterEn" maxlength="500" required dir="ltr"></div>
       <div class="field wide">
         <button class="primary" id="saveAdminSettings" type="submit">
           حفظ الإعدادات
@@ -3489,6 +3493,8 @@ footer{
       $("shamcashRecipient").value = settings.shamcash_recipient || "";
       $("shamcashInstructions").value = settings.shamcash_instructions || "";
       $("shamcashEnabled").checked = settings.shamcash_enabled === "1";
+      $("platformFooterAr").value = settings.platform_footer_ar || "© 2026 MMG OQVELA — جميع الحقوق محفوظة";
+      $("platformFooterEn").value = settings.platform_footer_en || "© 2026 MMG OQVELA — All rights reserved";
 
       const trial = await api("/api/admin/trial-settings");
       $("trialEnabled").checked = Boolean(trial.settings?.enabled);
@@ -3521,7 +3527,9 @@ footer{
       shamcash_link: $("shamcashLink").value.trim(),
       shamcash_recipient: $("shamcashRecipient").value.trim(),
       shamcash_instructions: $("shamcashInstructions").value.trim(),
-      shamcash_enabled: $("shamcashEnabled").checked
+      shamcash_enabled: $("shamcashEnabled").checked,
+      platform_footer_ar: $("platformFooterAr").value.trim(),
+      platform_footer_en: $("platformFooterEn").value.trim()
     };
 
     try {
