@@ -12,13 +12,24 @@ function makeRequest(body, origin = "https://example.com") {
 
 function createDb() {
   const calls=[];
+  let rateCount=0;
   return {
     calls,
     prepare(sql) {
       return {
         sql,
         bind(...values) {
-          return {sql,values,async run(){calls.push({sql,values});return {meta:{changes:1}};}};
+          return {
+            sql,values,
+            async first() {
+              if (sql.includes("public_service_request_rate_limits")) {
+                rateCount += 1;
+                return rateCount <= 5 ? {request_count:rateCount} : null;
+              }
+              return null;
+            },
+            async run(){calls.push({sql,values});return {meta:{changes:1}};}
+          };
         }
       };
     }
@@ -65,4 +76,17 @@ test("Public service request rejects cross-origin submissions",async()=>{
   const response=await handlePublicServiceRequests(makeRequest(valid,"https://attacker.example"),{DB});
   assert.equal(response.status,403);
   assert.equal(DB.calls.length,0);
+});
+
+
+test("Public service request submissions are limited to five per client per window",async()=>{
+  const DB=createDb();
+  let last;
+  for(let i=0;i<5;i++) {
+    last=await handlePublicServiceRequests(makeRequest(valid),{DB});
+    assert.equal(last.status,201);
+  }
+  const blocked=await handlePublicServiceRequests(makeRequest(valid),{DB});
+  assert.equal(blocked.status,429);
+  assert.equal(DB.calls.length,5);
 });
