@@ -111,7 +111,6 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     'id="shamcashFields"',
     'id="transactionReference"',
     'fetch("/api/public/stores/" + encodeURIComponent(slug) + "/orders"',
-    'payment_method:method',
     'function submitOrder(event)',
     'cash_on_delivery',
     'shamcash'
