@@ -1,7 +1,3 @@
-function notificationId() {
-  return crypto.randomUUID();
-}
-
 export async function scheduleSubscriptionNotifications(env) {
   const statements = [
     env.DB.prepare(`
