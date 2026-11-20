@@ -1032,6 +1032,9 @@ footer{
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
           renderSubscriptionPanel(store, card);
+        }
+        const storePermissions = Array.isArray(store.permissions) ? store.permissions : String(store.permissions || "").split(",");
+        if (["owner", "admin"].includes(account.role) || storePermissions.includes("team.manage")) {
           renderTeamPanel(store, card);
         }
         renderCatalogPanel(store, card, account.role);
