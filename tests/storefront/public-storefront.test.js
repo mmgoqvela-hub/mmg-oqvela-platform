@@ -64,7 +64,7 @@ test("Public storefront returns its selected template and published catalog only
 });
 
 test("Public storefront exposes saved per-store appearance settings",async()=>{
- const customization={colors:{primary:"#123456"},texts:{heroTitle:"Welcome"},layout:{heroAlignment:"center"},heroImage:"https://example.com/hero.jpg"};
+ const customization={colors:{primary:"#123456"},texts:{heroTitle:"Welcome",productsTitle:"Featured products",addToCart:"Buy now"},layout:{heroAlignment:"center"},heroImage:"https://example.com/hero.jpg"};
  const db=createDb({
   store:{id:"store-1",name:"Test Store",slug:"test-store",template_key:"modern",customization_json:JSON.stringify(customization)}
  });
