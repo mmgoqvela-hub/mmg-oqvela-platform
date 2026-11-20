@@ -179,7 +179,11 @@
         if (Array.isArray(saved)) cart = saved.filter(item => item && typeof item.productId === "string" && Number.isInteger(item.quantity) && item.quantity > 0);
       } catch { cart = []; }
       const $ = id => document.getElementById(id);
-      const t = key => messages[language][key] || key;
+      const t = key => {
+        const customKey = key === "products" ? "productsTitle" : key === "add" ? "addToCart" : null;
+        const customText = customKey ? storeData?.store?.customization?.texts?.[customKey] : null;
+        return typeof customText === "string" && customText.trim() ? customText.trim() : (messages[language][key] || key);
+      };
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
 
       function renderAnnouncements() {
