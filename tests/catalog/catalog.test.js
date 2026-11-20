@@ -41,7 +41,7 @@ function createDb(options = {}) {
               if (sql.includes("FROM products")) return options.product || null;
               if (sql.includes("FROM product_variants")) return options.variant || null;
               if (sql.includes("SELECT id, file_key FROM product_images")) return options.image || null;
-              if (sql.includes("COUNT(*) AS total FROM product_images")) return {total:options.imageCount || 0};
+              if (sql.includes("COUNT(*) AS total FROM product_images")) return {total:options.remainingImageCount ?? options.imageCount ?? 0};
               return null;
             },
             async all() {
@@ -95,6 +95,20 @@ test("Product image registration verifies the R2 object and scopes the record to
   assert.ok(insert);
   assert.ok(insert.values.includes("store-001"));
   assert.ok(insert.values.includes("product-1"));
+});
+
+test("Deleting a shared image reference keeps the R2 object while another product still uses it", async () => {
+  const db=createDb({
+    product:{id:"product-1",store_id:"store-001"},
+    image:{id:"image-1",file_key:"/media/store-001/shared.webp"},
+    remainingImageCount:1
+  });
+  const deleted=[];
+  const response=await handleCatalog(makeRequest("products/product-1/images/image-1","DELETE"),{
+    DB:db,STORE_MEDIA:{delete:async key=>deleted.push(key)}
+  });
+  assert.equal(response.status,200);
+  assert.deepEqual(deleted,[]);
 });
 
 test("Product gallery order updates only a complete gallery belonging to the product", async () => {
