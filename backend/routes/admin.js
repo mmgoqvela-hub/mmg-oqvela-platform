@@ -5,7 +5,9 @@ const SETTINGS_KEYS = [
   "shamcash_link",
   "shamcash_recipient",
   "shamcash_instructions",
-  "shamcash_enabled"
+  "shamcash_enabled",
+  "platform_footer_ar",
+  "platform_footer_en"
 ];
 
 function json(data, status = 200) {
@@ -22,7 +24,7 @@ async function getSettings(db) {
   const result = await db.prepare(`
     SELECT setting_key, setting_value, updated_at
     FROM platform_settings
-    WHERE setting_key IN (?, ?, ?, ?)
+    WHERE setting_key IN (${SETTINGS_KEYS.map(() => "?").join(", ")})
   `).bind(...SETTINGS_KEYS).all();
 
   const settings = {};
@@ -50,7 +52,9 @@ async function updateSettings(request, db, admin) {
     shamcash_link,
     shamcash_recipient,
     shamcash_instructions,
-    shamcash_enabled
+    shamcash_enabled,
+    platform_footer_ar = "© 2026 MMG OQVELA — جميع الحقوق محفوظة",
+    platform_footer_en = "© 2026 MMG OQVELA — All rights reserved"
   } = body || {};
 
   if (
@@ -60,7 +64,9 @@ async function updateSettings(request, db, admin) {
     shamcash_recipient.length > 200 ||
     typeof shamcash_instructions !== "string" ||
     shamcash_instructions.length > 5000 ||
-    typeof shamcash_enabled !== "boolean"
+    typeof shamcash_enabled !== "boolean" ||
+    typeof platform_footer_ar !== "string" || platform_footer_ar.trim().length < 3 || platform_footer_ar.length > 500 ||
+    typeof platform_footer_en !== "string" || platform_footer_en.trim().length < 3 || platform_footer_en.length > 500
   ) {
     return json({ error: "Invalid settings data" }, 400);
   }
@@ -80,7 +86,9 @@ async function updateSettings(request, db, admin) {
     shamcash_link: shamcash_link.trim(),
     shamcash_recipient: shamcash_recipient.trim(),
     shamcash_instructions: shamcash_instructions.trim(),
-    shamcash_enabled: shamcash_enabled ? "1" : "0"
+    shamcash_enabled: shamcash_enabled ? "1" : "0",
+    platform_footer_ar: platform_footer_ar.trim(),
+    platform_footer_en: platform_footer_en.trim()
   };
 
   const statements = SETTINGS_KEYS.map(key =>
@@ -111,7 +119,7 @@ async function updateSettings(request, db, admin) {
 
   return json({
     status: "ok",
-    message: "تم تحديث إعدادات شام كاش بنجاح",
+    message: "تم تحديث إعدادات المنصة بنجاح",
     settings: values
   });
 }
