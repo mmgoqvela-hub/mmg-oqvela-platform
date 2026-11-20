@@ -99,7 +99,7 @@ test("Store dashboard loads period-based reports and renders report values as te
  const html=await readFile(new URL("../../frontend/index.html",import.meta.url),"utf8");
  assert.match(html,/\/reports\?period=/);
  assert.match(html,/function loadReport\(\)/);
- assert.match(html,/metric\("الإيرادات المؤكدة حسب العملة"/);
+ assert.match(html,/revenueTitle\.textContent="الإيرادات المؤكدة حسب العملة"/);
  assert.match(html,/line\.textContent=product\.product_name/);
  assert.match(html,/reportPeriod = "30d"/);
  const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
