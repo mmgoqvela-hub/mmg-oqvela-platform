@@ -208,3 +208,9 @@ A feature is complete only when:
 - Subscription billing history is restricted to store owners/admins. Subscription payment review and plan administration require an active platform `super_admin`; cross-origin requests are rejected.
 - Notification inbox, unread count, mark-one-read and mark-all-read queries are scoped to the authenticated user's ID. Inbox responses are non-cacheable and page size is capped.
 - Added regression assertions in `tests/subscriptions/integrity.test.js` and `tests/notifications/inbox.test.js` for these authorization boundaries. These tests verify route/query guards and migration constraints; they complement, but do not replace, live browser and deployed-environment verification.
+
+### Order and inventory lifecycle hardening (2026-11-20)
+- Added migration `0022_order_lifecycle_guards.sql` with database-level guards for allowed order-status transitions and payment-status transitions.
+- D1 now independently prevents completing unpaid orders, progressing Sham Cash orders before payment approval, rejecting non-Sham-Cash payments, refunding a payment unless the order is cancelled, and reopening terminal/cancelled states through an invalid transition.
+- Existing stock reservation and cancellation-restoration triggers remain transactional; cancellation can restore reserved stock only on the first transition into `cancelled`.
+- Added regression assertions in `tests/orders/orders.test.js` for the new lifecycle guards. Migration is in the repository only; it has not been applied to production. Full D1/browser concurrency verification remains pending.
