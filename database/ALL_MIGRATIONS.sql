@@ -1,10 +1,4 @@
 -- MMG OQVELA Platform
--- Combined database migrations: 0001-0007
-
-
--- ===== BEGIN 0001_core_identity.sql =====
-
--- MMG OQVELA Platform
 -- Migration 0001: Core Identity and Multi-Tenant Foundation
 
 CREATE TABLE users (
@@ -170,13 +164,6 @@ CREATE INDEX idx_roles_store
 
 CREATE INDEX idx_member_roles_role
     ON member_roles(role_id);
-
-
--- ===== END 0001_core_identity.sql =====
-
-
--- ===== BEGIN 0002_billing_subscriptions.sql =====
-
 -- MMG OQVELA
 -- Migration 0002: Billing and Store Subscriptions
 
@@ -302,13 +289,6 @@ CREATE INDEX idx_subscription_history
 
 CREATE INDEX idx_invoices_subscription
     ON invoices(subscription_id);
-
-
--- ===== END 0002_billing_subscriptions.sql =====
-
-
--- ===== BEGIN 0003_catalog_inventory.sql =====
-
 -- MMG OQVELA
 -- Migration 0003: Catalog and Inventory
 
@@ -458,13 +438,6 @@ CREATE INDEX idx_product_images_product
 
 CREATE INDEX idx_inventory_product
     ON inventory_movements(store_id, product_id, created_at);
-
-
--- ===== END 0003_catalog_inventory.sql =====
-
-
--- ===== BEGIN 0004_tenant_integrity.sql =====
-
 -- MMG OQVELA
 -- Migration 0004: Tenant Isolation Integrity
 
@@ -572,13 +545,6 @@ WHEN NOT EXISTS (
 BEGIN
     SELECT RAISE(ABORT, 'Cross-store role assignment is forbidden');
 END;
-
-
--- ===== END 0004_tenant_integrity.sql =====
-
-
--- ===== BEGIN 0005_auth_sessions.sql =====
-
 -- MMG OQVELA
 -- Migration 0005: Secure Authentication Sessions
 
@@ -604,13 +570,6 @@ CREATE INDEX idx_auth_sessions_expiry
 CREATE INDEX idx_auth_sessions_active
     ON auth_sessions(token_hash, expires_at)
     WHERE revoked_at IS NULL;
-
-
--- ===== END 0005_auth_sessions.sql =====
-
-
--- ===== BEGIN 0006_tenant_mutation_guards.sql =====
-
 -- MMG OQVELA Platform
 -- Migration 0006: Tenant Mutation Integrity Guards
 
@@ -680,13 +639,6 @@ BEGIN
         'Cannot move member while assigned roles belong to another store'
     );
 END;
-
-
--- ===== END 0006_tenant_mutation_guards.sql =====
-
-
--- ===== BEGIN 0007_payment_integrity.sql =====
-
 -- MMG OQVELA Platform
 -- Migration 0007: Payment Integrity and Financial Protection
 
@@ -745,6 +697,60 @@ END;
 CREATE UNIQUE INDEX idx_one_active_subscription_per_store
 ON store_subscriptions(store_id)
 WHERE status = 'active';
+-- MMG OQVELA Platform
+-- Migration 0008: Persistent Login Rate Limiting
 
+CREATE TABLE auth_login_attempts (
+    key_hash TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    window_started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    blocked_until TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
--- ===== END 0007_payment_integrity.sql =====
+CREATE INDEX idx_auth_login_attempts_updated
+ON auth_login_attempts(updated_at);
+
+-- MMG OQVELA
+-- Migration 0009: Platform Admin Settings and Audit Logs
+
+CREATE TABLE platform_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL DEFAULT '',
+    updated_by TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (updated_by)
+        REFERENCES users(id) ON DELETE SET NULL
+);
+
+INSERT OR IGNORE INTO platform_settings
+    (setting_key, setting_value)
+VALUES
+    ('shamcash_link', ''),
+    ('shamcash_recipient', ''),
+    ('shamcash_instructions', ''),
+    ('shamcash_enabled', '0');
+
+CREATE TABLE admin_activity_logs (
+    id TEXT PRIMARY KEY,
+    admin_user_id TEXT,
+    action TEXT NOT NULL,
+    target_type TEXT,
+    target_id TEXT,
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (admin_user_id)
+        REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_admin_activity_logs_created
+ON admin_activity_logs(created_at);
+
+CREATE INDEX idx_admin_activity_logs_admin
+ON admin_activity_logs(admin_user_id, created_at);
+
+-- Preserve ShamCash payment details as they were when the request was created.
+ALTER TABLE payments
+ADD COLUMN payment_details_snapshot TEXT;

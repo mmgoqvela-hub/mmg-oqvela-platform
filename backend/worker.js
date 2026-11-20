@@ -1,4 +1,5 @@
 import { handleAuth } from "./routes/auth.js";
+import { handleAdmin } from "./routes/admin.js";
 
 export default {
   async fetch(request, env) {
@@ -49,6 +50,12 @@ export default {
           database: { status: "error" }
         }, { status: 503 });
       }
+    }
+
+    const adminResponse = await handleAdmin(request, env);
+
+    if (adminResponse) {
+      return adminResponse;
     }
 
     const authResponse = await handleAuth(request, env);
