@@ -368,6 +368,38 @@ async function login(request, env) {
   }
 }
 
+async function updatePreferences(request, env) {
+  const token = getCookie(request, COOKIE_NAME);
+  if (!token) return json({ error: "Authentication required" }, 401);
+
+  const session = await getSession(env.DB, token);
+  if (!session) {
+    return json({ error: "Session expired or invalid" }, 401, {
+      "Set-Cookie": clearSessionCookie()
+    });
+  }
+
+  const parsed = await readBody(request);
+  if (parsed.error) return json({ error: parsed.error }, 400);
+
+  const language = parsed.body?.language;
+  if (!["ar", "en"].includes(language)) {
+    return json({ error: "Unsupported language preference" }, 400);
+  }
+
+  try {
+    await env.DB.prepare("UPDATE users SET preferred_language = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'active'")
+      .bind(language, session.user_id).run();
+
+    return json({
+      status: "ok",
+      preferences: { language }
+    });
+  } catch {
+    return json({ error: "Unable to update language preference" }, 500);
+  }
+}
+
 async function currentUser(request, env) {
   const token = getCookie(request, COOKIE_NAME);
 
@@ -423,7 +455,8 @@ async function currentUser(request, env) {
       user: {
         id: session.user_id,
         fullName: session.full_name,
-        email: session.email
+        email: session.email,
+        preferredLanguage: session.preferred_language === "en" ? "en" : "ar"
       },
       accounts: accountsResult.results || [],
       stores: storesResult.results || []
@@ -492,6 +525,14 @@ export async function handleAuth(request, env) {
     }
 
     return logout(request, env);
+  }
+
+  if (path === "/api/auth/preferences") {
+    if (request.method !== "PUT") {
+      return json({ error: "Method not allowed" }, 405);
+    }
+
+    return updatePreferences(request, env);
   }
 
   if (path === "/api/auth/me") {
