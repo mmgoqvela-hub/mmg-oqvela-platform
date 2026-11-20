@@ -3120,6 +3120,32 @@ footer{
     makeDesignField("الخط",fontSelect);
     makeDesignField("رابط شعار المتجر",logoUrl);
     makeDesignField("رابط صورة الواجهة",heroImageUrl);
+    const logoFile = document.createElement("input"); logoFile.type = "file"; logoFile.accept = "image/jpeg,image/png,image/webp,image/gif";
+    const heroFile = document.createElement("input"); heroFile.type = "file"; heroFile.accept = "image/jpeg,image/png,image/webp,image/gif";
+    const uploadStatus = document.createElement("p"); uploadStatus.className = "muted"; uploadStatus.setAttribute("role","status");
+    async function uploadStoreImage(fileInput, targetInput) {
+      const file = fileInput.files?.[0];
+      if (!file) { uploadStatus.textContent = "اختر صورة أولاً."; return; }
+      if (file.size > 5 * 1024 * 1024) { uploadStatus.textContent = "حجم الصورة الأقصى 5 ميغابايت."; return; }
+      const data = new FormData(); data.append("store_id",store.id); data.append("file",file);
+      uploadStatus.textContent = "جارٍ رفع الصورة...";
+      try {
+        const response = await fetch("/api/store-media",{method:"POST",credentials:"same-origin",body:data});
+        const result = await response.json().catch(()=>({}));
+        if (!response.ok) throw new Error(result.error || "تعذر رفع الصورة.");
+        targetInput.value = new URL(result.url,location.origin).href;
+        targetInput.dispatchEvent(new Event("input",{bubbles:true}));
+        uploadStatus.textContent = "تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.";
+        fileInput.value = "";
+      } catch(error) { uploadStatus.textContent = error.message; }
+    }
+    const logoUploadButton = document.createElement("button"); logoUploadButton.type = "button"; logoUploadButton.className = "secondary"; logoUploadButton.textContent = "رفع الشعار من الجهاز";
+    const heroUploadButton = document.createElement("button"); heroUploadButton.type = "button"; heroUploadButton.className = "secondary"; heroUploadButton.textContent = "رفع صورة الواجهة من الجهاز";
+    logoUploadButton.addEventListener("click",()=>uploadStoreImage(logoFile,logoUrl));
+    heroUploadButton.addEventListener("click",()=>uploadStoreImage(heroFile,heroImageUrl));
+    makeDesignField("ملف شعار المتجر",logoFile);
+    makeDesignField("ملف صورة الواجهة",heroFile);
+    const uploadButtons = document.createElement("div"); uploadButtons.className = "field wide"; uploadButtons.append(logoUploadButton,heroUploadButton,uploadStatus);
     makeDesignField("محاذاة الواجهة",heroAlignment);
     makeDesignField("شريط إعلان قصير",announcementText);
     const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
@@ -3136,7 +3162,7 @@ footer{
     heroAlignment.addEventListener("change",updatePreview);
     updatePreview();
     livePreview.append(document.createTextNode(""));
-    designField.append(designTitle,designHint,designGrid,sectionsWrap,livePreview);
+    designField.append(designTitle,designHint,designGrid,uploadButtons,sectionsWrap,livePreview);
     let loadedCustomization = {};
     const loadCustomization = async () => {
       try {
