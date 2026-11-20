@@ -51,7 +51,7 @@
     @media(max-width:620px){.cart-row{align-items:flex-start;flex-direction:column}.cart-actions{width:100%;justify-content:flex-end}}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
     .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
-    .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}
+    .product-art{height:155px;background:linear-gradient(135deg,#dce8fb,#f4f7fb);display:grid;place-items:center;color:var(--accent);font-size:40px;font-weight:800}.product-art img{width:100%;height:100%;object-fit:cover;display:block}.product-art.has-image{background:var(--surface)}
     .product-body{padding:16px}
     .product h3{margin:0 0 7px;font-size:17px}
     .product p{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -451,7 +451,24 @@
           const art = document.createElement("div");
           art.className = "product-art";
           art.setAttribute("aria-hidden","true");
-          art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
+          const productImage = Array.isArray(product.images) ? product.images[0] : null;
+          if (productImage && typeof productImage.url === "string" && productImage.url.startsWith("/media/")) {
+            const image = document.createElement("img");
+            image.src = productImage.url;
+            image.alt = productImage.alt_text || product.name;
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.addEventListener("error", () => {
+              art.classList.remove("has-image");
+              image.remove();
+              art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
+            }, { once:true });
+            art.classList.add("has-image");
+            art.removeAttribute("aria-hidden");
+            art.append(image);
+          } else {
+            art.textContent = product.product_type === "service" ? "✦" : product.product_type === "digital" ? "⌘" : "◇";
+          }
           const body = document.createElement("div");
           body.className = "product-body";
           const name = document.createElement("h3");
