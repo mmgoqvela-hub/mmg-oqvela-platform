@@ -455,6 +455,7 @@ footer{
     <div id="adminAnnouncements" class="account-grid"></div>
     <hr><h3>طلبات الاشتراك المدفوعة</h3><div id="adminSubscriptionRequests" class="account-grid"></div>
     <hr><h3>الباقات الحالية</h3><div id="adminSubscriptionPlans" class="account-grid"></div>
+    <hr><h3>طلبات التواصل والخدمات</h3><p class="muted">مراجعة طلبات الدعم والإعلانات وإنشاء المتاجر وتصميم المواقع.</p><div id="platformServiceRequests" class="account-grid"></div>
     <hr><h3>سجل عمليات الإدارة</h3>
     <p class="muted">آخر العمليات الإدارية المسجلة، للمتابعة والمراجعة.</p>
     <button class="secondary" id="refreshAdminLogs" type="button">تحديث السجل</button>
@@ -3746,6 +3747,82 @@ footer{
     } finally {button.disabled=false;}
   });
 
+  async function loadPlatformServiceRequests() {
+    const container = $("platformServiceRequests");
+    if (!container) return;
+    container.replaceChildren();
+    try {
+      const data = await api("/api/admin/service-requests?limit=100");
+      const requests = data.requests || [];
+      if (!requests.length) {
+        container.textContent = translateText("لا توجد طلبات حالياً.");
+        return;
+      }
+      const typeLabels = {
+        support: currentLanguage === "ar" ? "الدعم الفني" : "Technical support",
+        advertising: currentLanguage === "ar" ? "الإعلانات والتسويق" : "Advertising & marketing",
+        store_setup: currentLanguage === "ar" ? "إنشاء متجر إلكتروني" : "Online store setup",
+        website_design: currentLanguage === "ar" ? "تصميم أو تطوير موقع" : "Website design or development",
+        contact: currentLanguage === "ar" ? "استفسار عام" : "General inquiry"
+      };
+      const statuses = ["new","reviewing","accepted","rejected","completed"];
+      const statusLabels = currentLanguage === "ar"
+        ? {new:"جديد",reviewing:"قيد المراجعة",accepted:"مقبول",rejected:"مرفوض",completed:"مكتمل"}
+        : {new:"New",reviewing:"Under review",accepted:"Accepted",rejected:"Rejected",completed:"Completed"};
+      for (const item of requests) {
+        const card = document.createElement("article");
+        card.className = "account-card";
+        const title = document.createElement("h4");
+        title.textContent = typeLabels[item.request_type] || item.request_type;
+        const name = document.createElement("p");
+        name.className = "muted";
+        name.textContent = item.full_name + " · " + (item.email || item.phone);
+        name.dataset.noTranslate = "true";
+        const message = document.createElement("p");
+        message.textContent = item.message;
+        message.style.whiteSpace = "pre-wrap";
+        message.dataset.noTranslate = "true";
+        const created = document.createElement("p");
+        created.className = "muted";
+        created.textContent = formatDateTime(item.created_at);
+        const status = document.createElement("select");
+        for (const value of statuses) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = statusLabels[value];
+          option.selected = item.status === value;
+          status.append(option);
+        }
+        const notes = document.createElement("textarea");
+        notes.maxLength = 3000;
+        notes.placeholder = translateText("ملاحظات الإدارة");
+        notes.value = item.admin_notes || "";
+        const save = document.createElement("button");
+        save.type = "button";
+        save.className = "secondary";
+        save.textContent = translateText("تحديث الطلب");
+        const result = document.createElement("p");
+        result.className = "muted";
+        save.addEventListener("click", async () => {
+          save.disabled = true;
+          try {
+            await api("/api/admin/service-requests/" + encodeURIComponent(item.id), {
+              method:"PATCH",
+              body:JSON.stringify({status:status.value,admin_notes:notes.value})
+            });
+            result.textContent = currentLanguage === "ar" ? "تم تحديث الطلب." : "Request updated.";
+          } catch(error) {
+            result.textContent = error.message;
+          } finally { save.disabled = false; }
+        });
+        card.append(title,name,message,created,status,notes,save,result);
+        container.append(card);
+      }
+    } catch(error) {
+      container.textContent = error.message;
+    }
+  }
+
   async function loadAdminPanel() {
     const panel = $("adminPanel");
     panel.classList.add("hidden");
@@ -3774,7 +3851,8 @@ footer{
         loadAdminSubscriptionRequests(),
         loadAdminSubscriptionPlans(),
         loadAdminActivityLogs(),
-        loadAdminAnnouncements()
+        loadAdminAnnouncements(),
+        loadPlatformServiceRequests()
       ]);
 
       panel.classList.remove("hidden");
@@ -3845,6 +3923,50 @@ footer{
     } finally {
       button.disabled = false;
     }
+  });
+
+  document.querySelectorAll("[data-open-request]").forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      $("serviceRequestType").value = link.dataset.openRequest;
+      $("serviceRequestMessageStatus").textContent = "";
+      $("serviceRequestModal").classList.remove("hidden");
+      $("serviceRequestName").focus();
+    });
+  });
+  $("closeServiceRequest").addEventListener("click", () => $("serviceRequestModal").classList.add("hidden"));
+  $("serviceRequestModal").addEventListener("click", event => {
+    if (event.target === $("serviceRequestModal")) $("serviceRequestModal").classList.add("hidden");
+  });
+  $("aboutLink").addEventListener("click", event => {
+    event.preventDefault();
+    $("aboutModal").classList.remove("hidden");
+  });
+  $("closeAbout").addEventListener("click", () => $("aboutModal").classList.add("hidden"));
+  $("publicServiceRequestForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = $("submitServiceRequest");
+    const status = $("serviceRequestMessageStatus");
+    button.disabled = true;
+    status.textContent = "";
+    try {
+      const result = await api("/api/service-requests", {
+        method:"POST",
+        body:JSON.stringify({
+          request_type:$("serviceRequestType").value,
+          full_name:$("serviceRequestName").value.trim(),
+          email:$("serviceRequestEmail").value.trim(),
+          phone:$("serviceRequestPhone").value.trim(),
+          message:$("serviceRequestMessage").value.trim(),
+          website:$("serviceRequestWebsite").value,
+          language:currentLanguage
+        })
+      });
+      status.textContent = translateText(result.message || "تم استلام طلبك بنجاح، وسنراجعه قريباً.");
+      $("publicServiceRequestForm").reset();
+    } catch(error) {
+      status.textContent = error.message;
+    } finally { button.disabled = false; }
   });
 
   async function checkSession() {
