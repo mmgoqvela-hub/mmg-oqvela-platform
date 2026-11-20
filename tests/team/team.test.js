@@ -106,3 +106,12 @@ test("Custom roles cannot be granted unknown or duplicate permissions",async()=>
   assert.equal(response.status,400);
   assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO roles")),false);
 });
+
+test("A team manager cannot create a role with permissions they do not hold",async()=>{
+ const db=createDb({store:{...OWNER,account_role:"member",store_member_id:"sm-1",permissions:"team.manage"}});
+ const response=await handleTeam(makeRequest("/roles","POST",{
+  name:"Escalation role",permissions:["team.manage","catalog.manage"]
+ }),{DB:db});
+ assert.equal(response.status,403);
+ assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO roles")),false);
+});
