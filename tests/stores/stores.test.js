@@ -369,3 +369,21 @@ test("Invalid WhatsApp numbers are rejected without saving", async () => {
   assert.equal(db.calls.some(item => item.sql.includes("UPDATE stores")),false);
 });
 
+
+test("Store owner can select a business-specific storefront template",async()=>{
+  const db=createDb({session:SESSION,store:{...STORE,account_role:"owner"}});
+  const response=await handleStores(makeRequest("PUT",{...VALID_DATA,template_key:"restaurant"}),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.store.template_key,"restaurant");
+  const update=db.calls.find(item=>item.sql.includes("UPDATE stores"));
+  assert.equal(update.values[3],"restaurant");
+});
+
+test("Unknown storefront templates are rejected",async()=>{
+  const db=createDb({session:SESSION,store:{...STORE,account_role:"owner"}});
+  const response=await handleStores(makeRequest("PUT",{...VALID_DATA,template_key:"unknown-theme"}),{DB:db});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(item=>item.sql.includes("UPDATE stores")),false);
+});
+
