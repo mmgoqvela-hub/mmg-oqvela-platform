@@ -76,7 +76,7 @@ export async function handlePublicStorefront(request, env) {
         ORDER BY p.is_featured DESC, p.created_at DESC
         LIMIT 200
       `).bind(store.id).all(),
-      env.DB.prepare("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN (?,?)").bind("platform_footer_ar","platform_footer_en").all(),
+      env.DB.prepare("SELECT setting_key,setting_value FROM platform_settings WHERE setting_key IN (?,?,?)").bind("platform_footer_ar","platform_footer_en","platform_support_whatsapp").all(),
       env.DB.prepare("SELECT id,title_ar,title_en,message_ar,message_en,announcement_type FROM platform_announcements WHERE is_active=1 AND (starts_at IS NULL OR datetime(starts_at)<=CURRENT_TIMESTAMP) AND (ends_at IS NULL OR datetime(ends_at)>CURRENT_TIMESTAMP) ORDER BY created_at DESC LIMIT 10").bind().all()
     ]);
 
@@ -121,6 +121,7 @@ export async function handlePublicStorefront(request, env) {
       store,
       order_settings:orderSettings,
       platform_footer: Object.fromEntries((platformSettings.results || []).map(item => [item.setting_key, item.setting_value])),
+      platform_support_whatsapp: (platformSettings.results || []).find(item => item.setting_key === "platform_support_whatsapp")?.setting_value || "",
       announcements: announcementsResult.results || [],
       categories:categoriesResult.results || [],
       products:products.map(product => ({
