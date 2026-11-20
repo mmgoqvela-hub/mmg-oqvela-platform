@@ -1,3 +1,4 @@
+import { scheduleSubscriptionNotifications } from "./notifications/scheduler.js";
 import { handleAuth } from "./routes/auth.js";
 import { handleAdmin } from "./routes/admin.js";
 import { handleTrial } from "./routes/trial.js";
@@ -9,6 +10,10 @@ import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
 
 export default {
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(scheduleSubscriptionNotifications(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 
