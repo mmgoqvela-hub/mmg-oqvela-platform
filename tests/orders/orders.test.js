@@ -23,6 +23,7 @@ function db(options={}) {
           return {
             sql,values,
             async first() {
+              if(sql.includes("SELECT COUNT(*) AS total_orders")) return options.reportTotals??{total_orders:0,completed_orders:0,open_orders:0,cancelled_orders:0};
               if(sql.includes("store_order_settings")) return options.settings??null;
               if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
               if(sql.includes("GROUP_CONCAT")) return options.access===undefined
@@ -37,7 +38,12 @@ function db(options={}) {
               if(sql.includes("FROM products WHERE id")) return options.product===undefined?PRODUCT:options.product;
               return null;
             },
-            async all() { calls.push({sql,values}); return {results:options.rows||[]}; },
+            async all() {
+              calls.push({sql,values});
+              if(sql.includes("FROM store_order_items i")) return {results:options.reportTopProducts||[]};
+              if(sql.includes("paid_revenue")) return {results:options.reportRevenue||[]};
+              return {results:options.rows||[]};
+            },
             async run() { if(!sql.includes("UPDATE auth_sessions")) calls.push({sql,values}); return {meta:{changes:1}}; }
           };
         }
@@ -56,6 +62,36 @@ const checkout={
  payment_method:"cash_on_delivery",
  items:[{product_id:"product-1",quantity:2}]
 };
+
+test("Store reports return tenant-scoped order counts and paid revenue only",async()=>{
+ const database=db({
+  reportTotals:{total_orders:12,completed_orders:5,open_orders:4,cancelled_orders:3},
+  reportRevenue:[{currency:"USD",paid_orders:4,paid_revenue:250}],
+  reportTopProducts:[{product_id:"p1",product_name:"Product A",units_sold:8,paid_sales:160}]
+ });
+ const response=await handleOrders(request("/api/stores/store-1/reports?period=7d","GET",undefined,true),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.report.period,"7d");
+ assert.equal(result.report.totals.total_orders,12);
+ assert.equal(result.report.paid_revenue[0].paid_revenue,250);
+ assert.equal(result.report.top_products[0].units_sold,8);
+ const revenueQuery=database.calls.find(call=>call.sql.includes("paid_revenue"));
+ assert.ok(revenueQuery.sql.includes("payment_status='paid'"));
+ assert.ok(revenueQuery.sql.includes("store_id=?"));
+ assert.equal(revenueQuery.values[1],"-7 days");
+ const productQuery=database.calls.find(call=>call.sql.includes("FROM store_order_items i"));
+ assert.ok(productQuery.sql.includes("o.payment_status='paid'"));
+});
+
+test("Store reports reject unsupported periods and require order read permission",async()=>{
+ const invalid=await handleOrders(request("/api/stores/store-1/reports?period=all","GET",undefined,true),{DB:db()});
+ assert.equal(invalid.status,400);
+ const denied=await handleOrders(request("/api/stores/store-1/reports?period=30d","GET",undefined,true),{
+  DB:db({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"catalog.read"}})
+ });
+ assert.equal(denied.status,403);
+});
 
 test("Public checkout creates a COD order using server-side prices and atomic D1 batch",async()=>{
  const database=db();
