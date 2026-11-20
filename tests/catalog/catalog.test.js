@@ -262,3 +262,29 @@ test("Store members without catalog.read cannot inspect product variants",async(
   assert.equal(db.calls.some(call=>call.sql.includes("FROM product_variants")),false);
 });
 
+
+test("Inventory movements update a selected product variant stock",async()=>{
+  const db=createDb({
+    product:{id:"product-1",track_inventory:1,stock_quantity:12},
+    variant:{id:"variant-1",stock_quantity:3,status:"active"}
+  });
+  const response=await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",variant_id:"variant-1",
+    movement_type:"purchase",quantity_change:5,notes:"Variant restock"
+  }),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.stock_quantity,8);
+  assert.ok(db.calls.some(call=>call.sql.includes("UPDATE product_variants")));
+  assert.ok(db.calls.some(call=>call.sql.includes("INSERT INTO inventory_movements") && call.values.includes("variant-1")));
+});
+
+test("Inventory history includes variant names without crossing tenant boundaries",async()=>{
+  const db=createDb({access:MEMBER,rows:[{product_name:"Shirt",variant_name:"Large"}]});
+  const response=await handleCatalog(makeRequest("inventory"),{DB:db});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.movements[0].variant_name,"Large");
+  assert.ok(db.calls.some(call=>call.sql.includes("LEFT JOIN product_variants") && call.sql.includes("v.store_id = im.store_id")));
+});
+
