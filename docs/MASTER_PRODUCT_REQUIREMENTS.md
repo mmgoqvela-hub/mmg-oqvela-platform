@@ -61,7 +61,11 @@ This document is the working source of truth for preserving previously agreed re
 - The first eligible store receives the account's trial; creating another store must not grant a second trial.
 - Each store has its own subscription.
 - Paid subscriptions use **شام كاش** (display spelling with a space).
-- A customer submits the transfer transaction reference; payment is not considered approved until platform administration reviews it.
+- A store receives one free trial per account; platform administration controls whether trials are enabled and their duration. The platform must notify the account/store owner before the trial expires and when it expires. After expiry, the storefront must be suspended/hidden until a paid subscription is approved; the owner must be prompted to choose and pay for a plan.
+- When a plan is selected, show the exact amount due and the centrally configured Sham Cash recipient/payment instructions.
+- The customer may submit a transfer transaction number, an image of the transfer receipt, or both. A submitted proof is only a pending request and must never activate a paid subscription automatically.
+- Platform administration reviews each pending request and explicitly approves or rejects it. Rejection requires a reason; approval activates the subscription and issues/marks its invoice through the existing atomic approval workflow.
+- Payment proof images must be stored securely with restricted access; public storefronts must never expose payment evidence. R2 storage/bucket configuration is not yet available and must be completed before image-proof upload is represented as operational.
 - Store owner/admin can submit a subscription request; ordinary members cannot.
 - Enforce at most one pending/active/suspended subscription per store. Expired/cancelled/rejected requests may be followed by a new request.
 - Approval/rejection must be atomic and auditable; rejection requires a reason.
@@ -127,7 +131,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Store detail update and tenant membership checks.
 - One-time account trial settings and activation flow.
 - Subscription plans, store subscriptions, Sham Cash transaction references and review flow.
-- Subscription history and invoices for subscription payments.
+- Subscription history and invoices for subscription payments. Subscription payment review supports Sham Cash transaction references and admin approval/rejection; receipt-image evidence, trial lifecycle notifications and expiry messaging remain incomplete.
 - Central Sham Cash settings.
 - Central trial settings.
 - Platform-admin activity-log API and visible admin log.
@@ -144,7 +148,7 @@ Other detailed business modules (such as order processing, customer management, 
 - Store staff and custom role management are now implemented for existing active platform accounts. Email-based invitation delivery, invitation acceptance, and adding users who do not yet have platform accounts remain incomplete; no email provider has been configured.
 - Product/category/variant/image/inventory management end-to-end: category and product create/edit UI, guarded category deletion, variant creation/listing/editing/activation/deactivation and initial variant stock are exposed in the store catalog UI; server-side tenant and permission checks exist. Category deletion is blocked while products or child categories are linked. R2-backed product image upload/management remains incomplete. Variant-level stock movements are supported in the store UI and recorded with variant names in inventory history. Inventory writes require `inventory.manage`; history reads require `inventory.read`. Movement direction, disabled tracking, nonnegative stock, atomic stock/history writes and read-only member restrictions have automated API coverage. Latest product/category UI and inventory permission/movement test workflows pass CI; full browser/device verification remains pending.
 - Storefronts: eleven selectable design templates and public product browsing are implemented; customer cart, checkout, order processing and store-side order management remain incomplete and require approved workflow details.
-- Subscription lifecycle notifications and renewal rules.
+- Subscription lifecycle notifications and renewal rules. Trial-expiry reminders, expiry notices and storefront suspension are confirmed requirements; notification delivery channels/scheduling and secure receipt-image storage remain incomplete.
 - Platform-wide announcements/ads and mandatory footer.
 - Per-store WhatsApp contact configuration and public contact link are implemented. A separate centrally configured platform support contact remains to be added if required.
 - R2 file storage, file access policies and quotas.
