@@ -30,20 +30,38 @@ async function readBody(request, maxLength = 12000) {
 async function getStoreAccess(db, storeId, userId) {
   return db.prepare(`
     SELECT s.id, s.status AS store_status, a.status AS account_status,
-           au.role AS account_role
+           au.role AS account_role, sm.id AS store_member_id,
+           COALESCE(GROUP_CONCAT(DISTINCT p.code), '') AS permissions
     FROM stores s
     JOIN accounts a ON a.id = s.account_id
     JOIN account_users au ON au.account_id = s.account_id
+    LEFT JOIN store_members sm
+      ON sm.store_id = s.id AND sm.user_id = au.user_id AND sm.status = 'active'
+    LEFT JOIN member_roles mr ON mr.store_member_id = sm.id
+    LEFT JOIN roles r ON r.id = mr.role_id AND r.store_id = s.id
+    LEFT JOIN role_permissions rp ON rp.role_id = r.id
+    LEFT JOIN permissions p ON p.id = rp.permission_id
     WHERE s.id = ?
       AND au.user_id = ?
       AND au.status = 'active'
       AND a.status = 'active'
+      AND (au.role IN ('owner','admin') OR sm.id IS NOT NULL)
+    GROUP BY s.id, a.status, au.role, sm.id
     LIMIT 1
   `).bind(storeId, userId).first();
 }
 
-function canWrite(access) {
-  return ["owner", "admin"].includes(access?.account_role);
+function hasPermission(access, code) {
+  if (["owner", "admin"].includes(access?.account_role)) return true;
+  return String(access?.permissions || "").split(",").includes(code);
+}
+
+function canRead(access, code = "catalog.read") {
+  return hasPermission(access, code);
+}
+
+function canWrite(access, code = "catalog.manage") {
+  return hasPermission(access, code);
 }
 
 function validName(value, max = 100) {
@@ -67,6 +85,7 @@ async function handleCategories(request, env, storeId, userId, access, categoryI
   if (!categoryId) {
     if (!["GET", "POST"].includes(method)) return json({ error: "Method not allowed" }, 405);
     if (method === "GET") {
+      if (!canRead(access, "catalog.read")) return json({ error: "Store read permission required" }, 403);
       const result = await env.DB.prepare(`
         SELECT id, parent_id, name, slug, description, sort_order, created_at
         FROM categories
@@ -416,6 +435,7 @@ async function handleVariants(request, env, storeId, userId, access, productId, 
 
 async function handleInventory(request, env, storeId, userId, access) {
   if (request.method === "GET") {
+    if (!canRead(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
     const result = await env.DB.prepare(`
       SELECT im.id, im.product_id, p.name AS product_name, im.variant_id,
              im.movement_type, im.quantity_change, im.reference_id,
@@ -430,7 +450,7 @@ async function handleInventory(request, env, storeId, userId, access) {
     return json({ status: "ok", movements: result.results || [] });
   }
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
+  if (!canWrite(access, "inventory.manage")) return json({ error: "Store write permission required" }, 403);
   const parsed = await readBody(request);
   if (parsed.error) return json({ error: parsed.error }, parsed.status);
   const body = parsed.body;
