@@ -654,6 +654,10 @@ footer{
     "اسم الدور":"Role name",
     "وصف الدور":"Role description",
     "إنشاء دور":"Create role",
+    "حفظ الدور":"Save role",
+    "تعديل الدور":"Edit role",
+    "حذف الدور":"Delete role",
+    "لا يمكن حذف دور مستخدم من أحد الموظفين.":"A role assigned to an employee cannot be deleted.",
     "صلاحيات الدور":"Role permissions",
     "عرض المنتجات والتصنيفات":"View products and categories",
     "إدارة المنتجات والتصنيفات":"Manage products and categories",
@@ -1242,6 +1246,57 @@ footer{
           });
           label.append(checkbox,labelText);
           permissionsField.append(label);
+          permissionCheckboxes.set(code,checkbox);
+        }
+
+        let editingRoleId = null;
+        const roleList = document.createElement("div");
+        roleList.className = "account-grid";
+        for (const role of roles.filter(item => !item.is_system)) {
+          const roleCard = document.createElement("article");
+          roleCard.className = "account-card";
+          const roleTitle = document.createElement("h4");
+          roleTitle.textContent = role.name;
+          roleTitle.dataset.noTranslate = "true";
+          const roleDescriptionText = document.createElement("p");
+          roleDescriptionText.className = "muted";
+          roleDescriptionText.textContent = role.description || "";
+          roleDescriptionText.dataset.noTranslate = "true";
+          const rolePermissions = document.createElement("p");
+          rolePermissions.className = "muted";
+          rolePermissions.textContent = role.permissions.join("، ");
+          rolePermissions.dataset.noTranslate = "true";
+          const editRole = document.createElement("button");
+          editRole.type = "button";
+          editRole.className = "secondary";
+          editRole.textContent = "تعديل الدور";
+          editRole.addEventListener("click",() => {
+            editingRoleId = role.id;
+            roleName.value = role.name;
+            roleDescription.value = role.description || "";
+            selectedPermissions.splice(0,selectedPermissions.length,...role.permissions);
+            for (const [code,checkbox] of permissionCheckboxes) checkbox.checked = selectedPermissions.includes(code);
+            roleSubmit.textContent = "حفظ الدور";
+            roleMessage.textContent = "";
+            roleName.focus();
+          });
+          const deleteRole = document.createElement("button");
+          deleteRole.type = "button";
+          deleteRole.className = "secondary";
+          deleteRole.textContent = "حذف الدور";
+          deleteRole.addEventListener("click",async () => {
+            if (!window.confirm("هل تريد حذف هذا الدور؟")) return;
+            deleteRole.disabled = true;
+            try {
+              await api("/api/stores/" + encodeURIComponent(store.id) + "/team/roles/" + encodeURIComponent(role.id),{method:"DELETE"});
+              await refresh();
+            } catch(error) {
+              roleDescriptionText.textContent = error.message;
+              deleteRole.disabled = false;
+            }
+          });
+          roleCard.append(roleTitle,roleDescriptionText,rolePermissions,editRole,deleteRole);
+          roleList.append(roleCard);
         }
         const roleSubmit = document.createElement("button");
         roleSubmit.type = "submit";
@@ -1254,8 +1309,8 @@ footer{
           event.preventDefault();
           roleSubmit.disabled = true;
           try {
-            await api("/api/stores/" + encodeURIComponent(store.id) + "/team/roles",{
-              method:"POST",
+            await api("/api/stores/" + encodeURIComponent(store.id) + "/team/roles" + (editingRoleId ? "/" + encodeURIComponent(editingRoleId) : ""),{
+              method:editingRoleId ? "PUT" : "POST",
               body:JSON.stringify({
                 name:roleName.value.trim(),
                 description:roleDescription.value.trim(),
@@ -1263,13 +1318,14 @@ footer{
               })
             });
             roleMessage.textContent = "تم إنشاء الدور المخصص.";
+            editingRoleId = null;
             await refresh();
           } catch(error) {
             roleMessage.textContent = error.message;
             roleSubmit.disabled = false;
           }
         });
-        panel.append(customHeading,roleForm);
+        panel.append(customHeading,roleList,roleForm);
       } catch(error) {
         loaded = false;
         const failure = document.createElement("p");
