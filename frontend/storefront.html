@@ -451,7 +451,7 @@
           const card=document.createElement("article");card.className="customer-order";
           const title=document.createElement("strong");title.textContent=t("orderNumber")+" "+order.order_number+" — "+decisionLabel(order);
           const detail=document.createElement("small");
-          detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"));
+          detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"))+" · هاتف المحل: "+(order.store_phone_snapshot||ordersData.store?.whatsapp_phone||"غير محدد")+" · العنوان: "+(order.shipping_address||"");
           card.append(title,document.createElement("br"),detail);
           if(order.customer_decision==="rejected"&&order.rejection_reason){
             const reason=document.createElement("p");reason.textContent=t("rejectionReason")+": "+order.rejection_reason;card.append(reason);
