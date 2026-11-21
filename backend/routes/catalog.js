@@ -315,6 +315,36 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
   }
   if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
   if (method === "DELETE") {
+    const url = new URL(request.url);
+    if (url.searchParams.get("permanent") === "1") {
+      const ordered = await env.DB.prepare(
+        "SELECT id FROM store_order_items WHERE product_id = ? AND store_id = ? LIMIT 1"
+      ).bind(productId, storeId).first();
+      if (ordered) {
+        return json({
+          error: "لا يمكن حذف هذا المنتج نهائياً لأنه مرتبط بطلب سابق. يمكنك أرشفته بدلاً من ذلك للحفاظ على سجل الطلبات."
+        }, 409);
+      }
+      const images = await env.DB.prepare(
+        "SELECT file_key FROM product_images WHERE product_id = ? AND store_id = ?"
+      ).bind(productId, storeId).all();
+      try {
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM inventory_movements WHERE product_id = ? AND store_id = ?").bind(productId, storeId),
+          env.DB.prepare("DELETE FROM product_images WHERE product_id = ? AND store_id = ?").bind(productId, storeId),
+          env.DB.prepare("DELETE FROM product_variants WHERE product_id = ? AND store_id = ?").bind(productId, storeId),
+          env.DB.prepare("DELETE FROM products WHERE id = ? AND store_id = ?").bind(productId, storeId)
+        ]);
+      } catch {
+        return json({ error: "تعذر حذف المنتج. قد يكون مرتبطاً بسجلات أخرى؛ استخدم الأرشفة للحفاظ على البيانات." }, 409);
+      }
+      return json({
+        status: "ok",
+        message: "Product permanently deleted",
+        removed_image_keys: (images.results || []).map(image => image.file_key).filter(key =>
+          typeof key === "string" && key.startsWith("/media/" + storeId + "/"))
+      });
+    }
     await env.DB.prepare(
       "UPDATE products SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND store_id = ?"
     ).bind(productId, storeId).run();
