@@ -250,7 +250,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
     }
     const trackInventory = body.track_inventory !== false;
     const stock = body.stock_quantity === undefined ? 0 : body.stock_quantity;
-    if (!Number.isInteger(stock) || stock < 0 || stock > 1000000000) {
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1000000000 || ((body.sale_unit || "piece") === "kg" && stock % 50 !== 0)) {
       return json({ error: "Invalid initial stock quantity" }, 400);
     }
     if (!trackInventory && stock !== 0) {
@@ -605,6 +605,9 @@ async function handleInventory(request, env, storeId, userId, access) {
   ).bind(productId, storeId).first();
   if (!product) return json({ error: "Product not found" }, 404);
   if (!product.track_inventory) return json({ error: "Inventory tracking is disabled for this product" }, 409);
+  if (product.sale_unit === "kg" && quantityChange % 50 !== 0) {
+    return json({ error: "Weight inventory movements must use 50 gram increments" }, 400);
+  }
 
   let currentQuantity = product.stock_quantity;
   if (variantId) {
