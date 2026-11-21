@@ -167,10 +167,10 @@ WHEN OLD.status='draft' AND NEW.status='posted'
 BEGIN
   SELECT CASE WHEN ROUND(NEW.total,2) != ROUND(NEW.subtotal-NEW.discount_amount,2)
     THEN RAISE(ABORT,'POS sale total does not reconcile with subtotal and discount') END;
-  SELECT CASE WHEN COALESCE((SELECT SUM(line_total) FROM pos_sale_items
+  SELECT CASE WHEN ROUND(COALESCE((SELECT SUM(line_total) FROM pos_sale_items
       WHERE sale_id=NEW.id AND store_id=NEW.store_id),0),2) != ROUND(NEW.subtotal,2)
     THEN RAISE(ABORT,'POS sale items do not reconcile with subtotal') END;
-  SELECT CASE WHEN COALESCE((SELECT SUM(amount) FROM pos_sale_payments
+  SELECT CASE WHEN ROUND(COALESCE((SELECT SUM(amount) FROM pos_sale_payments
       WHERE sale_id=NEW.id AND store_id=NEW.store_id),0),2) != ROUND(NEW.total,2)
     THEN RAISE(ABORT,'POS payments do not reconcile with sale total') END;
   SELECT CASE WHEN NOT EXISTS(
