@@ -143,3 +143,30 @@ The current schema and route implementation were inspected before proposing new 
 
 No new financial migration or production posting was created by this audit. The next implementation unit should be the backward-compatible currency/amount foundation and inventory movement hardening, each with migration and route tests before purchase or accounting screens are exposed.
 
+
+## 12. Warehouse and append-only movement foundation (migration 0027)
+
+Migration \`0027_inventory_warehouse_ledger.sql\` implements the first compatible inventory-ledger increment:
+
+- Adds \`inventory_warehouses\` and provisions one default MAIN warehouse for every existing store and every newly created store.
+- Adds \`warehouse_id\`, \`unit_code\`, \`source_type\`, \`source_id\`, \`idempotency_key\`, \`effective_at\`, \`posted_at\` and \`reversal_of_id\` to the existing \`inventory_movements\` table. It does not replace the table or discard historical columns.
+- Backfills legacy movements into the store's default warehouse, preserving their recorded timestamp and existing reference as a source ID with source type \`legacy\`. This deliberately does not guess the original document type.
+- Adds a per-store unique idempotency key and source/time indexes.
+- Adds \`inventory_warehouse_stock\` as a warehouse-specific quantity projection. Existing product/variant stock values are copied as the opening snapshot at migration time. Historical movements are not replayed on top of that snapshot.
+- New movements update the corresponding warehouse projection inside the same database statement. The projection rejects a movement that would make its warehouse quantity negative.
+- A movement that omits \`warehouse_id\` for backward compatibility is assigned once to the store's default warehouse. Explicit warehouse IDs are checked against the movement's store.
+- Posted movement rows cannot be edited or deleted. The only permitted update is the one-time default-warehouse assignment for a legacy-compatible insert.
+- Corrections use a new movement with \`reversal_of_id\`. Reversals must target an original movement for the same store/product/variant, have the opposite sign, and cannot cumulatively exceed the original quantity.
+
+### Compatibility boundaries
+
+- Existing \`products.stock_quantity\` and \`product_variants.stock_quantity\` remain in place and continue to be maintained by the existing order and catalog workflows. The new warehouse projection is updated by every inserted movement.
+- Existing order reservation and cancellation triggers continue to create \`sale\` and \`return\` movement rows. The new projection follows those rows; it does not reinterpret their historical meaning.
+- Existing catalog inventory adjustment still operates against the legacy store-wide quantity and therefore currently posts to the default warehouse through backward-compatible assignment. Warehouse selection and transfer workflows are not exposed yet.
+- Warehouse stock is a quantity projection, not a valuation ledger. No FIFO/weighted-average cost, purchase receipt UI, inter-warehouse transfer, or financial posting is enabled by this migration.
+- The \`unit_code\` default of \`unit\` is a compatibility placeholder for the current integer quantity model. A governed unit-of-measure catalogue and fractional quantities require a separate design.
+- Movement deletion protection intentionally favors audit retention. Store/product hard-delete workflows must use archival/retention rules rather than attempting to erase posted history.
+
+### Migration test coverage
+
+The migration test suite now checks default warehouse creation, stock projection updates, store-scoped idempotency, cross-store warehouse rejection, update/delete protection, valid partial reversal, and rejection of excessive reversal. Full D1 deployment validation and operational rollout remain separate from the SQLite migration test.
