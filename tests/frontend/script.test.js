@@ -236,6 +236,10 @@ test("Merchant portal is a separate store-only interface", async () => {
   assert.match(html, /\/api\/auth\/me/);
   assert.match(html, /\/api\/stores\//);
   assert.doesNotMatch(html, /\/api\/admin\//);
+  assert.match(html, /data-pay/);
+  assert.match(html, /payment_status:"paid"/);
+  assert.match(html, /سجّل استلام المبلغ أولاً قبل إكمال الطلب/);
+
   assert.doesNotMatch(html, /id="adminPanel"|id="accountGrid"|إدارة المنصة المركزية/);
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
   assert.ok(scripts.length > 0, "merchant portal script must exist");
