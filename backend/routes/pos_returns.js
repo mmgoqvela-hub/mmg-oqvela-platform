@@ -102,7 +102,7 @@ export async function handlePosReturns(request,env){
   if(Math.round((Number(refunded?.amount||0)+refundTotal)*100)>Math.round(Number(sale.total)*100))
     return json({error:"Cumulative refunds cannot exceed the original sale total"},409);
   const saleItems=await env.DB.prepare(`
-    SELECT id,product_id,variant_id,quantity,line_total,currency FROM pos_sale_items
+    SELECT id,product_id,variant_id,quantity,line_total,currency,sale_unit FROM pos_sale_items
     WHERE sale_id=? AND store_id=?
   `).bind(saleId,storeId).all();
   const itemMap=new Map((saleItems.results||[]).map(item=>[item.id,item]));
@@ -133,9 +133,9 @@ export async function handlePosReturns(request,env){
       return json({error:"Returned quantity exceeds the remaining sold quantity"},409);
     const returnItemId=crypto.randomUUID();
     statements.push(env.DB.prepare(`
-      INSERT INTO pos_sale_return_items(id,return_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,restock,currency)
-      VALUES(?,?,?,?,?,?,?,?,?,?)
-    `).bind(returnItemId,returnId,saleId,storeId,saleItemId,item.product_id,item.variant_id,quantity,restock?1:0,item.currency));
+      INSERT INTO pos_sale_return_items(id,return_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,restock,currency,sale_unit)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(returnItemId,returnId,saleId,storeId,saleItemId,item.product_id,item.variant_id,quantity,restock?1:0,item.currency,item.sale_unit||\"piece\"));
     if(restock){
       const original=await env.DB.prepare("SELECT id,warehouse_id FROM inventory_movements WHERE store_id=? AND idempotency_key=? LIMIT 1")
         .bind(storeId,"pos-sale:"+saleId+":"+saleItemId).first();
@@ -148,16 +148,16 @@ export async function handlePosReturns(request,env){
           INSERT INTO inventory_movements(id,store_id,product_id,variant_id,movement_type,quantity_change,
             reference_id,notes,created_by,warehouse_id,unit_code,movement_reason,source_type,source_id,
             idempotency_key,effective_at,posted_at,reversal_of_id)
-          VALUES(?,?,?,?, 'return',?,?,?,?,?,'unit','pos_return','pos_return',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)
-        `).bind(crypto.randomUUID(),storeId,item.product_id,variant,quantity,saleId,
-          "POS return "+returnNumber,session.user_id,original.warehouse_id,returnId,
+          VALUES(?,?,?,?, 'return',?,?,?,?,?,?,'pos_return','pos_return',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)
+        `).bind(crypto.randomUUID(),storeId,item.product_id,variant,quantity*(item.sale_unit==="kg"?50:1),saleId,
+          "POS return "+returnNumber,session.user_id,original.warehouse_id,item.sale_unit==="kg"?"g":"piece",returnId,
           "pos-return:"+returnId+":"+returnItemId,original.id));
         if(variant){
           statements.push(env.DB.prepare("UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=? AND product_id=? AND store_id=?")
-            .bind(quantity,variant,item.product_id,storeId));
+            .bind(quantity*(item.sale_unit==="kg"?50:1),variant,item.product_id,storeId));
         }else{
           statements.push(env.DB.prepare("UPDATE products SET stock_quantity=stock_quantity+? WHERE id=? AND store_id=?")
-            .bind(quantity,item.product_id,storeId));
+            .bind(quantity*(item.sale_unit==="kg"?50:1),item.product_id,storeId));
         }
       }
     }
