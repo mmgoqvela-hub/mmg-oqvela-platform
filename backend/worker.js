@@ -90,6 +90,14 @@ export default {
       }
     }
 
+    if ((url.pathname === "/merchant" || url.pathname === "/merchant/") && request.method === "GET") {
+      const merchantUrl = new URL("/index.html", request.url);
+      return env.ASSETS.fetch(new Request(merchantUrl.toString(), {
+        method: "GET",
+        headers: request.headers
+      }));
+    }
+
     const posPagePath = url.pathname.match(/^\/pos\/[^/]+\/?$/);
     if (posPagePath && request.method === "GET") {
       const assetUrl = new URL("/pos.html", request.url);
