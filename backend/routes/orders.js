@@ -358,16 +358,61 @@ export async function handleOrders(request,env){
   const reportsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/reports$/);
   const customersMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/customers(?:\/([^/]+))?$/);
   const notificationsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/notifications(?:\/([^/]+)\/read)?$/);
+  const rejectionReasonsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/order-rejection-reasons(?:\/([^/]+))?$/);
   const orderMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([^/]+))?$/);
-  if(!settingsMatch&&!orderMatch&&!reportsMatch&&!customersMatch&&!notificationsMatch)return null;
+  if(!settingsMatch&&!orderMatch&&!reportsMatch&&!customersMatch&&!notificationsMatch&&!rejectionReasonsMatch)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   const session=await getAuthenticatedSession(request,env.DB);
   if(!session)return json({error:"Authentication required"},401);
   let storeId;
-  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch||customersMatch||notificationsMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
+  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch||customersMatch||notificationsMatch||rejectionReasonsMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
   const access=await getAccess(env.DB,storeId,session.user_id);
   if(!access)return json({error:"Store not found"},404);
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
+
+  if(rejectionReasonsMatch){
+    if(request.method==="GET"){
+      if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
+      try{
+        await env.DB.batch(DEFAULT_REJECTION_REASONS.map((reason,index)=>env.DB.prepare(`
+          INSERT OR IGNORE INTO store_order_rejection_reasons(id,store_id,reason_text,is_enabled,sort_order)
+          VALUES(?,?,?,1,?)
+        `).bind(crypto.randomUUID(),storeId,reason,index+1)));
+        const rows=await env.DB.prepare(`
+          SELECT id,reason_text,is_enabled,sort_order,created_at
+          FROM store_order_rejection_reasons WHERE store_id=?
+          ORDER BY sort_order,created_at
+        `).bind(storeId).all();
+        return json({status:"ok",reasons:rows.results||[]});
+      }catch{return json({error:"Unable to load rejection reasons"},500);}
+    }
+    if(!allowed(access,"orders.manage"))return json({error:"Orders manage permission required"},403);
+    const parsed=await readBody(request);
+    if(parsed.error)return json({error:parsed.error},parsed.status);
+    if(rejectionReasonsMatch[2]){
+      if(request.method!=="PATCH")return json({error:"Method not allowed"},405);
+      if(typeof parsed.body.is_enabled!=="boolean")return json({error:"is_enabled must be true or false"},400);
+      const result=await env.DB.prepare(`
+        UPDATE store_order_rejection_reasons SET is_enabled=?,updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND store_id=?
+      `).bind(parsed.body.is_enabled?1:0,rejectionReasonsMatch[2],storeId).run();
+      if(!result.meta?.changes)return json({error:"Rejection reason not found"},404);
+      return json({status:"ok"});
+    }
+    if(request.method!=="POST")return json({error:"Method not allowed"},405);
+    const reason=typeof parsed.body.reason_text==="string"?parsed.body.reason_text.trim():"";
+    if(reason.length<3||reason.length>160)return json({error:"Reason must be between 3 and 160 characters"},400);
+    try{
+      await env.DB.prepare(`
+        INSERT INTO store_order_rejection_reasons(id,store_id,reason_text,is_enabled,sort_order)
+        VALUES(?,?,?,1,COALESCE((SELECT MAX(sort_order)+1 FROM store_order_rejection_reasons WHERE store_id=?),1))
+      `).bind(crypto.randomUUID(),storeId,reason,storeId).run();
+      return json({status:"ok"});
+    }catch(error){
+      if(/unique/i.test(String(error?.message||"")))return json({error:"This rejection reason already exists"},409);
+      return json({error:"Unable to add rejection reason"},409);
+    }
+  }
 
   if(notificationsMatch){
     if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
