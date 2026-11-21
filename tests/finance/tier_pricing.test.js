@@ -36,3 +36,15 @@ test("selects the highest enabled quantity tier and requires configured margin",
     { tier_code: "retail", min_quantity: 1, profit_margin_bps: null, is_enabled: 1 }
   ]), /no configured profit percentage/);
 });
+
+import { parseProfitPercentToBps } from "../../backend/finance/tier_pricing.js";
+
+test("parses configured profit percentages exactly into basis points", () => {
+  assert.equal(parseProfitPercentToBps("0"), 0);
+  assert.equal(parseProfitPercentToBps("12.5"), 1250);
+  assert.equal(parseProfitPercentToBps("37.25"), 3725);
+  assert.equal(parseProfitPercentToBps("10000"), 1000000);
+  for (const value of [12.5, "-1", "01", "1.234", "10000.01", " 5", "5 "]) {
+    assert.throws(() => parseProfitPercentToBps(value));
+  }
+});
