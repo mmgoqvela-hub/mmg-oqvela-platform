@@ -581,3 +581,47 @@ Provide a modular set of customer-facing growth tools that stores can enable acc
 - Apply stronger privacy controls to clinics, pharmacies and other sensitive profiles. Never use patient, prescription, diagnosis or similarly sensitive records for marketing segmentation or advertising.
 - Keep marketing features optional and progressively deployable. An unfinished integration must be labelled unavailable, not shown as an active delivery channel.
 
+
+
+### 9.22 Unified receivables and payables (customer and supplier debts)
+
+Every store must have one clear **Debts / Balances** workspace with two distinct sides: **Receivable — owed to the store (له)** and **Payable — owed by the store (عليه)**. This is a unified navigation and reporting experience, not one mixed balance. Customer receivables and supplier payables remain separate subledgers and must never be netted against each other automatically.
+
+#### Customer receivables — money owed to the store
+- Maintain a store-scoped customer account and a complete statement of account, including opening balance (only through a controlled migration/opening-balance document), posted sales invoices, debit/credit notes, returns, discounts/adjustments, receipts, allocations, refunds, write-offs and reversals.
+- Allow configurable credit sales and payment terms per customer: due on receipt, fixed days, or an explicit due date. Capture invoice date, due date, currency, branch, salesperson and source order where applicable.
+- Support partial payments, full settlement, advance payments and unapplied customer credits. A receipt may be allocated across one or more eligible invoices; remaining unapplied funds stay visible as customer credit and cannot silently reduce another customer's debt.
+- Show customer credit limit, available credit, overdue exposure and optional block/warn policy. Credit limits are controls, not money or receivable balances.
+- Support customer returns, credit notes, refunds and controlled write-offs with reasons and permissions. Preserve the original invoice and receipt history; never erase a posted debt to make a balance disappear.
+
+#### Supplier payables — money the store owes
+- Maintain a store-scoped supplier statement with supplier bills/invoices, linked purchase orders and goods receipts, debit/credit notes, supplier returns, payments, allocations, advances, adjustments and reversals.
+- A purchase order is not a supplier debt. A goods receipt changes stock only when posted and does not by itself create a payable unless a separately configured and audited accounting policy explicitly recognizes a receipt accrual. A supplier bill is the source document for the payable in the initial workflow.
+- Support invoice matching against approved purchase-order quantities/prices and posted receipt quantities. Flag quantity/price discrepancies, duplicate supplier invoice references, missing receipts, over-billing and supplier credits for review; do not silently force-match.
+- Support partial/full supplier payments, payment terms, due dates, supplier advances and unapplied supplier credits. Prevent allocation beyond the open amount and prevent cross-supplier/cross-store allocations.
+- Supplier returns and credit notes must reduce the payable through linked documents, not by editing the supplier balance.
+
+#### Shared behavior and user experience
+- The Debts workspace must have separate tabs or views for **له / Receivables** and **عليه / Payables**, with filters for party, branch, date, due date, currency, document status, overdue state and outstanding amount.
+- Provide party detail pages with a chronological statement, opening/closing balance per currency, document links, payment allocations, running balance per currency, notes and print/export actions.
+- Show original amount, paid/allocated amount, remaining amount, unapplied credit, due date, days overdue and aging buckets (current, 1–30, 31–60, 61–90, 90+ days). Aging is calculated per currency and reporting date.
+- Provide collection and payment work queues, due/overdue alerts, optional internal reminders, follow-up notes and next-action dates. External email/WhatsApp/SMS reminders require consent, configured provider and cost disclosure.
+- Dashboard summaries must show receivables and payables separately, split by currency, branch and aging bucket. Never add USD and SYP together or present gross cash received as debt collection without allocation.
+- Allow controlled statement and aging exports (PDF/CSV where implemented), with store identity, selected period, currency, report date, filters and audit log. Printed statements must clearly identify whether they are account statements or tax invoices.
+- Provide owner-configurable credit terms, credit limits, payment methods and approval thresholds. Staff can view, collect, allocate or approve only within explicit role permissions.
+- Support Arabic RTL and English LTR, mobile-friendly entry, search, pagination and accessible status indicators.
+
+#### Financial integrity, security and audit
+- Derive every balance from immutable posted source documents and payment allocations. Never allow direct editing of a customer or supplier balance field as the accounting source of truth.
+- Store payments and allocations must use dedicated store-level payment records; do not reuse the platform subscription `payments` table. A payment is distinct from its allocation, and a payment can be partially or wholly unapplied.
+- Enforce idempotency, tenant/party/currency consistency, valid allocation limits, concurrency-safe settlement and atomic document/payment/allocation posting. A retry must not duplicate a receipt, payment, allocation or journal entry.
+- Posted invoices, receipts, bills, credit notes, payments and allocations are immutable. Corrections use linked reversals, refunds or credit/debit notes with actor, timestamp and mandatory reason.
+- Keep each currency in its own ledger balance. Capture exact amount representation, currency precision, exchange-rate ID/value/version, effective time and rounding rule whenever a conversion is explicitly performed. Do not invent SYP minor-unit precision or redenomination rules.
+- When double-entry accounting is enabled, customer and supplier subledgers must reconcile to their respective control accounts; every journal batch must balance. Period locks and controlled reopen approvals apply to financial corrections.
+- Enforce store/branch scope, permission checks, audit logs, privacy controls and export restrictions. Sensitive clinic/pharmacy records must not be exposed through general debt lists or used for marketing.
+- Tests must cover partial/full/unapplied payments, multi-invoice allocations, over-allocation rejection, duplicate references, cross-tenant isolation, multi-currency separation, due-date aging, returns/credit notes, reversals, concurrent payment attempts, period locks and reconciliation.
+
+#### Delivery boundaries
+- This is a required complete business capability, not a claim that the debt page or ledgers are already implemented.
+- Implement in dependency order: verified currency/amount foundation; supplier goods receipts and supplier bills; store-level payment and allocation ledger; customer sales invoices/receivables; supplier payables; reconciliation and reports; then the unified Debts UI.
+- Do not create a payable from a purchase order alone, or a receivable from an unpaid/unposted draft. Do not activate live balances until migrations, APIs, permissions, rollback tests and source-document reconciliation pass.
