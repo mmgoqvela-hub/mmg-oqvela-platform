@@ -391,12 +391,22 @@ def main():
         "a purchase order cannot use another store's supplier"
     )
     connection.execute(
-        "INSERT INTO purchase_orders (id,store_id,supplier_id,order_number,total_minor_units) VALUES (?,?,?,?,?)",
-        ("po-a","tenant-store-a","supplier-a","PO-0001",2500)
+        "INSERT INTO purchase_orders (id,store_id,supplier_id,order_number) VALUES (?,?,?,?)",
+        ("po-a","tenant-store-a","supplier-a","PO-0001")
     )
     connection.execute(
         "INSERT INTO purchase_order_items (id,store_id,purchase_order_id,product_id,product_name_snapshot,quantity,unit_cost_minor_units,line_total_minor_units) VALUES (?,?,?,?,?,?,?,?)",
         ("po-a-item-1","tenant-store-a","po-a","tenant-product-a","Product A",2,1250,2500)
+    )
+    if connection.execute(
+        "SELECT total_minor_units FROM purchase_orders WHERE id='po-a'"
+    ).fetchone() != (2500,):
+        raise SystemExit("Purchase order total was not recalculated from exact line totals")
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE purchase_orders SET status='approved' WHERE id='po-a'"
+        ),
+        "a draft purchase order cannot skip the submitted state"
     )
     connection.execute(
         "UPDATE purchase_orders SET status='submitted' WHERE id='po-a' AND store_id='tenant-store-a'"
