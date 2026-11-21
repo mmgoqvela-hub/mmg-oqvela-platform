@@ -425,7 +425,7 @@ async function getSale(env,storeId,saleId){
 }
 export async function handlePos(request,env){
   const url=new URL(request.url);
-  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/pos\/(quote|sales(?:\/[^/]+)?|cash-sessions(?:\/[^/]+)?)$/);
+  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/pos\/(quote|reports|sales(?:\/[^/]+)?|cash-sessions(?:\/[^/]+)?)$/);
   if(!match)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   let storeId;
