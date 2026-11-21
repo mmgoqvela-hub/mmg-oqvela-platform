@@ -535,7 +535,7 @@
         const orders=ordersData.orders||[];
         if(!orders.length){list.textContent=t("noOrders");}
         for(const order of orders){
-          const card=document.createElement("article");card.className="customer-order";
+          const card=document.createElement("article");card.className="customer-order";card.dataset.customerOrder=order.id;
           const title=document.createElement("strong");title.textContent=t("orderNumber")+" "+order.order_number+" — "+decisionLabel(order);
           const detail=document.createElement("small");
           detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"))+" · "+(order.payment_status==="paid"?(language==="ar"?"تم التحصيل":"Collected"):(language==="ar"?"لم يتم التحصيل بعد":"Not collected yet"))+" · هاتف المحل: "+(order.store_phone_snapshot||ordersData.store?.whatsapp_phone||"غير محدد")+" · العنوان: "+(order.shipping_address||"");
@@ -561,6 +561,9 @@
           const title=document.createElement("strong");title.textContent=item.title;
           const message=document.createElement("p");message.textContent=item.message;
           row.append(title,message);
+          const openOrder=document.createElement("button");openOrder.type="button";openOrder.className="lang";openOrder.textContent=language==="ar"?"عرض الطلب":"View order";
+          openOrder.addEventListener("click",()=>{const card=Array.from(document.querySelectorAll("[data-customer-order]")).find(node=>node.dataset.customerOrder===item.order_id);card?.scrollIntoView({behavior:"smooth",block:"center"});});
+          row.append(openOrder);
           if(!item.read_at){
             const read=document.createElement("button");read.type="button";read.className="lang";read.textContent=language==="ar"?"تمت القراءة":"Mark read";
             read.addEventListener("click",async()=>{await fetch(base+"notifications/"+encodeURIComponent(item.id)+"/read",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:"{}"});loadCustomerPortal();});
