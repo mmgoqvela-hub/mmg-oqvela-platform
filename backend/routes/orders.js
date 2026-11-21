@@ -583,18 +583,24 @@ export async function handleOrders(request,env){
       return json({error:"Enter the Sham Cash transaction number and sender name after verifying receipt"},400);
     if(!["cash_on_delivery","shamcash"].includes(existing.customer_payment_method))
       return json({error:"Invalid selected payment method"},409);
-    const result=await env.DB.prepare(`
-      UPDATE store_orders
-      SET order_status='completed',payment_status='paid',
-        delivered_at=CURRENT_TIMESTAMP,payment_collected_at=CURRENT_TIMESTAMP,
-        payment_collected_by=?,payment_reference=?,payment_sender_name=?,
-        updated_by=?,updated_at=CURRENT_TIMESTAMP
-      WHERE id=? AND store_id=? AND customer_decision='accepted'
-        AND order_status!='completed' AND payment_status IN ('unpaid','pending')
-    `).bind(session.user_id,
-      existing.customer_payment_method==="shamcash"?reference:null,
-      existing.customer_payment_method==="shamcash"?sender:null,
-      session.user_id,orderId,storeId).run();
+    let result;
+    try{
+      result=await env.DB.prepare(`
+        UPDATE store_orders
+        SET order_status='completed',payment_status='paid',
+          delivered_at=CURRENT_TIMESTAMP,payment_collected_at=CURRENT_TIMESTAMP,
+          payment_collected_by=?,payment_reference=?,payment_sender_name=?,
+          updated_by=?,updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND store_id=? AND customer_decision='accepted'
+          AND order_status!='completed' AND payment_status IN ('unpaid','pending')
+      `).bind(session.user_id,
+        existing.customer_payment_method==="shamcash"?reference:null,
+        existing.customer_payment_method==="shamcash"?sender:null,
+        session.user_id,orderId,storeId).run();
+    }catch(error){
+      if(/unique/i.test(String(error?.message||"")))return json({error:"رقم عملية شام كاش مستخدم سابقاً في هذا المتجر."},409);
+      return json({error:"Unable to record payment collection"},409);
+    }
     if(!result.meta?.changes)return json({error:"Order changed; refresh and retry"},409);
     return json({status:"ok",order:{id:orderId,order_status:"completed",
       payment_status:"paid",payment_method:existing.customer_payment_method}});
