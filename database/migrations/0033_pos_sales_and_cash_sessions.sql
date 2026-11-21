@@ -48,7 +48,7 @@ CREATE TABLE pos_sales (
   discount_amount REAL NOT NULL DEFAULT 0 CHECK(discount_amount>=0),
   discount_reason TEXT,
   total REAL NOT NULL CHECK(total>=0),
-  status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('posted','voided','partially_refunded','refunded')),
+  status TEXT NOT NULL DEFAULT 'posted' CHECK(status IN ('draft','posted','voided','partially_refunded','refunded')),
   payment_status TEXT NOT NULL DEFAULT 'paid' CHECK(payment_status IN ('paid','partially_refunded','refunded')),
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -152,11 +152,31 @@ CREATE TABLE pos_cash_session_events (
 CREATE INDEX idx_pos_cash_events_session ON pos_cash_session_events(store_id,session_id,created_at);
 
 CREATE TRIGGER trg_pos_sale_created_event
-AFTER INSERT ON pos_sales
+AFTER UPDATE OF status ON pos_sales
+WHEN OLD.status='draft' AND NEW.status='posted'
 BEGIN
   INSERT INTO pos_sale_events(id,sale_id,store_id,actor_user_id,event_type,details_json)
   VALUES(lower(hex(randomblob(16))),NEW.id,NEW.store_id,NEW.created_by,'posted',
     json_object('sale_number',NEW.sale_number,'total',NEW.total,'currency',NEW.currency));
+END;
+
+-- A sale cannot become posted unless its item totals and split payments reconcile exactly.
+CREATE TRIGGER trg_pos_sale_post_reconcile
+BEFORE UPDATE OF status ON pos_sales
+WHEN OLD.status='draft' AND NEW.status='posted'
+BEGIN
+  SELECT CASE WHEN NEW.total != NEW.subtotal-NEW.discount_amount
+    THEN RAISE(ABORT,'POS sale total does not reconcile with subtotal and discount') END;
+  SELECT CASE WHEN COALESCE((SELECT SUM(line_total) FROM pos_sale_items
+      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0) != NEW.subtotal
+    THEN RAISE(ABORT,'POS sale items do not reconcile with subtotal') END;
+  SELECT CASE WHEN COALESCE((SELECT SUM(amount) FROM pos_sale_payments
+      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0) != NEW.total
+    THEN RAISE(ABORT,'POS payments do not reconcile with sale total') END;
+  SELECT CASE WHEN NOT EXISTS(
+    SELECT 1 FROM pos_cash_sessions cs WHERE cs.id=NEW.cash_session_id
+      AND cs.store_id=NEW.store_id AND cs.status='open' AND cs.currency=NEW.currency
+  ) THEN RAISE(ABORT,'POS cash session is not open') END;
 END;
 
 CREATE TRIGGER trg_pos_sale_item_validate
@@ -166,7 +186,7 @@ BEGIN
     SELECT 1 FROM pos_sales s JOIN pos_cash_sessions cs
       ON cs.id=s.cash_session_id AND cs.store_id=s.store_id
     WHERE s.id=NEW.sale_id AND s.store_id=NEW.store_id
-      AND s.status='posted' AND cs.status='open'
+      AND s.status='draft' AND cs.status='open'
   ) THEN RAISE(ABORT,'POS sale requires an open cash session') END;
   SELECT CASE WHEN NOT EXISTS(
     SELECT 1 FROM products p WHERE p.id=NEW.product_id AND p.store_id=NEW.store_id AND p.status='active'
@@ -238,6 +258,6 @@ BEGIN
       ON cs.id=s.cash_session_id AND cs.store_id=s.store_id
     WHERE s.id=NEW.sale_id AND s.store_id=NEW.store_id
       AND s.cash_session_id=NEW.cash_session_id AND s.currency=NEW.currency
-      AND cs.currency=NEW.currency AND cs.status='open'
+      AND s.status='draft' AND cs.currency=NEW.currency AND cs.status='open'
   ) THEN RAISE(ABORT,'POS payment session is closed or currency does not match') END;
 END;
