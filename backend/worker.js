@@ -151,7 +151,7 @@ export default {
     // to responses returned by Worker code.
     if (
       request.method === "GET" &&
-      /^\\/cdn-(?:test-photo\\.(?:jpg|webp)|test-[^/]+\\.svg|size-(?:100kb|500kb|1mb)\\.jpg)$/.test(url.pathname) &&
+      /^\/cdn-(?:test-photo\.(?:jpg|webp)|test-[^/]+\.svg|size-(?:100kb|500kb|1mb)\.jpg)$/.test(url.pathname) &&
       assetResponse.status === 200
     ) {
       const headers = new Headers(assetResponse.headers);
