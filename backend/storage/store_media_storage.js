@@ -1,32 +1,18 @@
 /**
  * Provider-neutral adapter for store media object storage.
  *
- * The configured provider is injected through env.STORE_MEDIA. Routes use
- * this narrow interface instead of depending directly on a vendor binding.
+ * Each storage capability is exposed independently. This supports providers
+ * and test doubles that implement only the operations needed by a route.
  */
 export function createStoreMediaStorage(env) {
   const binding = env?.STORE_MEDIA;
-  if (!binding || typeof binding.get !== "function" || typeof binding.put !== "function") {
-    return null;
-  }
+  if (!binding || typeof binding !== "object") return null;
 
-  const storage = {
-    get(key) {
-      return binding.get(key);
-    },
-    put(key, value, options) {
-      return binding.put(key, value, options);
+  const storage = {};
+  for (const method of ["get", "put", "head", "delete"]) {
+    if (typeof binding[method] === "function") {
+      storage[method] = (...args) => binding[method](...args);
     }
-  };
-
-  // Optional capabilities keep simple read/write providers usable while
-  // allowing product galleries to verify ownership and clean up unused files.
-  if (typeof binding.head === "function") {
-    storage.head = key => binding.head(key);
   }
-  if (typeof binding.delete === "function") {
-    storage.delete = key => binding.delete(key);
-  }
-
-  return Object.freeze(storage);
+  return Object.keys(storage).length ? Object.freeze(storage) : null;
 }
