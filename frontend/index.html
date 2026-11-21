@@ -3355,6 +3355,55 @@ footer{
           panel.append(settingsHeading,form);
         }
 
+        const customersHeading=document.createElement("h4");
+        customersHeading.textContent="سجل الزبائن";
+        const customersNote=document.createElement("p");customersNote.className="muted";
+        customersNote.textContent="يُجمع سجل كل زبون حسب رقم هاتفه داخل هذا المتجر فقط.";
+        const customersList=document.createElement("div");customersList.className="account-grid";
+        const customerDetails=document.createElement("div");
+        const customerRefresh=document.createElement("button");customerRefresh.type="button";customerRefresh.className="secondary";customerRefresh.textContent="تحديث سجل الزبائن";
+        async function loadCustomers(){
+          customersList.replaceChildren();customerDetails.replaceChildren();customerRefresh.disabled=true;
+          try{
+            const customers=(await api("/api/stores/"+encodeURIComponent(store.id)+"/customers")).customers||[];
+            if(!customers.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا يوجد زبائن مسجلون بعد.";customersList.append(empty);}
+            for(const customer of customers){
+              const item=document.createElement("article");item.className="account-card";
+              const name=document.createElement("strong");name.textContent=customer.customer_name||"زبون";
+              const phone=document.createElement("p");phone.className="muted";phone.textContent=customer.customer_phone;
+              const summary=document.createElement("p");summary.className="muted";
+              summary.textContent="عدد الطلبات: "+formatNumber(customer.orders_count)+" — إجمالي الطلبات: "+formatNumber(customer.total_orders_value)+" — آخر طلب: "+formatDateTime(customer.last_order_at);
+              const open=document.createElement("button");open.type="button";open.className="secondary";open.textContent="عرض سجل الطلبات";
+              open.addEventListener("click",async()=>{
+                customerDetails.replaceChildren();
+                try{
+                  const history=(await api("/api/stores/"+encodeURIComponent(store.id)+"/customers/"+encodeURIComponent(customer.phone_key))).orders||[];
+                  const title=document.createElement("h5");title.textContent="طلبات "+(customer.customer_name||customer.customer_phone);customerDetails.append(title);
+                  if(!history.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا توجد طلبات لهذا الزبون.";customerDetails.append(empty);}
+                  for(const order of history){
+                    const card=document.createElement("article");card.className="account-card";
+                    const heading=document.createElement("strong");heading.textContent=order.order_number+" — "+formatDateTime(order.created_at);
+                    const status=document.createElement("p");status.className="muted";status.textContent="الحالة: "+order.order_status+" — الدفع: "+order.payment_status+" — الإجمالي: "+formatNumber(order.total)+" "+order.currency;
+                    card.append(heading,status);
+                    for(const line of order.items||[]){
+                      const row=document.createElement("p");row.className="muted";
+                      row.textContent=line.product_name+(line.variant_name?" / "+line.variant_name:"")+" × "+(line.sale_unit==="kg"?(Number(line.quantity)/1000).toLocaleString("ar")+" كغ":line.quantity+" قطعة")+" — "+formatNumber(line.line_total)+" "+line.currency;card.append(row);
+                    }
+                    if(order.shipping_address){const address=document.createElement("p");address.className="muted";address.textContent="العنوان: "+order.shipping_address;card.append(address);}
+                    if(order.customer_notes){const notes=document.createElement("p");notes.className="muted";notes.textContent="ملاحظات: "+order.customer_notes;card.append(notes);}
+                    customerDetails.append(card);
+                  }
+                }catch(error){const failure=document.createElement("p");failure.className="message error";failure.textContent="تعذر تحميل سجل الزبون: "+error.message;customerDetails.append(failure);}
+              });
+              item.append(name,phone,summary,open);customersList.append(item);
+            }
+          }catch(error){const failure=document.createElement("p");failure.className="message error";failure.textContent="تعذر تحميل سجل الزبائن: "+error.message;customersList.append(failure);}
+          finally{customerRefresh.disabled=false;}
+        }
+        customerRefresh.addEventListener("click",loadCustomers);
+        panel.append(customersHeading,customersNote,customerRefresh,customersList,customerDetails);
+        await loadCustomers();
+
         const reportsHeading=document.createElement("h4");
         reportsHeading.textContent="تقارير المتجر";
         const reportToolbar=document.createElement("div");reportToolbar.className="notification-toolbar";
