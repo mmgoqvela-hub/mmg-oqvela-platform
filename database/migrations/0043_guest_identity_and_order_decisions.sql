@@ -174,6 +174,21 @@ BEGIN
   HAVING SUM(im.quantity_change)<0;
 END;
 
+-- Replace the legacy pre-payment notification with the accepted decision-only workflow.
+DROP TRIGGER IF EXISTS trg_notify_store_order_created;
+CREATE TRIGGER trg_notify_store_order_created
+AFTER INSERT ON store_orders
+BEGIN
+  INSERT OR IGNORE INTO user_notifications
+    (id,user_id,notification_type,title,message,entity_type,entity_id,dedupe_key)
+  SELECT lower(hex(randomblob(16))),a.owner_user_id,'store_order',
+    'طلب جديد في متجرك',
+    'تم استلام طلب جديد ويحتاج إلى قرار قبول أو رفض. يتم تحصيل المبلغ عند تسليم الطلب.',
+    'store_order',NEW.id,'store-order-created:' || NEW.id
+  FROM stores s JOIN accounts a ON a.id=s.account_id
+  WHERE s.id=NEW.store_id;
+END;
+
 -- Preserve the full decision history; never overwrite earlier decisions.
 CREATE TRIGGER trg_store_order_decision_event
 AFTER UPDATE OF customer_decision ON store_orders
