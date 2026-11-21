@@ -1,6 +1,10 @@
 -- MMG OQVELA
 -- Migration 0033: POS cash sessions, posted sales, split tenders and atomic stock movements.
 
+INSERT OR IGNORE INTO permissions(id,code,description) VALUES
+  ('perm-pos-cash-close','pos.cash_session.close','Close POS cash sessions and reconcile cash'),
+  ('perm-pos-sale-discount','pos.sale.discount','Apply discounts to POS sales with a reason');
+
 CREATE TABLE pos_cash_sessions (
   id TEXT PRIMARY KEY,
   store_id TEXT NOT NULL,
