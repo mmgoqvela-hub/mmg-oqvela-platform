@@ -312,6 +312,69 @@ async function createSale(request,env,storeId,session,access){
   return json({status:"ok",sale:{id,sale_number:saleNumber,currency:quote.currency,subtotal:quote.total,
     discount_amount:discount,total,status:"posted",payment_status:"paid"},items:quote.lines.map(publicPosLine)},201);
 }
+async function posReport(env,storeId,url){
+  const from=url.searchParams.get("from");
+  const to=url.searchParams.get("to");
+  const currency=url.searchParams.get("currency");
+  if(from&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(from))return json({error:"Invalid start date"},400);
+  if(to&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(to))return json({error:"Invalid end date"},400);
+  if(from&&to&&from>to)return json({error:"Start date must not be after end date"},400);
+  if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency filter"},400);
+  const filter="s.store_id=? AND s.status!='draft' AND (? IS NULL OR s.currency=?) AND (? IS NULL OR date(s.created_at)>=date(?)) AND (? IS NULL OR date(s.created_at)<=date(?))";
+  const values=[storeId,currency||null,currency||null,from||null,from||null,to||null,to||null];
+  const [totals,daily,payments,topProducts]=await Promise.all([
+    env.DB.prepare(`
+      SELECT COUNT(*) AS sale_count,
+        SUM(CASE WHEN s.status='voided' THEN 1 ELSE 0 END) AS void_count,
+        SUM(CASE WHEN s.status IN ('posted','partially_refunded','refunded') THEN 1 ELSE 0 END) AS completed_count,
+        ROUND(COALESCE(SUM(CASE WHEN s.status!='voided' THEN s.subtotal ELSE 0 END),0),2) AS gross_sales,
+        ROUND(COALESCE(SUM(CASE WHEN s.status!='voided' THEN s.discount_amount ELSE 0 END),0),2) AS discounts,
+        ROUND(COALESCE(SUM(CASE WHEN s.status!='voided' THEN s.total ELSE 0 END),0),2) AS sales_total,
+        ROUND(COALESCE((SELECT SUM(r.refund_total) FROM pos_sale_returns r
+          JOIN pos_sales rs ON rs.id=r.sale_id AND rs.store_id=r.store_id
+          WHERE r.store_id=? AND r.status='posted' AND (? IS NULL OR rs.currency=?)
+            AND (? IS NULL OR date(r.created_at)>=date(?)) AND (? IS NULL OR date(r.created_at)<=date(?))),0),2) AS returns_total,
+        ROUND(COALESCE((SELECT SUM(v.refund_total) FROM pos_sale_voids v
+          JOIN pos_sales vs ON vs.id=v.sale_id AND vs.store_id=v.store_id
+          WHERE v.store_id=? AND v.status='posted' AND (? IS NULL OR vs.currency=?)
+            AND (? IS NULL OR date(v.created_at)>=date(?)) AND (? IS NULL OR date(v.created_at)<=date(?))),0),2) AS voids_total
+      FROM pos_sales s WHERE ${filter}
+    `).bind(...values,...values.slice(0,0),storeId,currency||null,currency||null,from||null,from||null,to||null,to||null,storeId,currency||null,currency||null,from||null,from||null,to||null,to||null).first(),
+    env.DB.prepare(`
+      SELECT date(s.created_at) AS day,COUNT(*) AS sale_count,
+        ROUND(SUM(CASE WHEN s.status!='voided' THEN s.total ELSE 0 END),2) AS sales_total
+      FROM pos_sales s WHERE ${filter}
+      GROUP BY date(s.created_at) ORDER BY day
+    `).bind(...values).all(),
+    env.DB.prepare(`
+      SELECT p.payment_method,ROUND(COALESCE(SUM(p.amount),0),2) AS received
+      FROM pos_sale_payments p JOIN pos_sales s ON s.id=p.sale_id AND s.store_id=p.store_id
+      WHERE ${filter} AND s.status!='voided'
+      GROUP BY p.payment_method ORDER BY p.payment_method
+    `).bind(...values).all(),
+    env.DB.prepare(`
+      SELECT i.product_id,i.product_name,i.sale_unit,
+        SUM(i.quantity) AS quantity,
+        ROUND(SUM(i.line_total),2) AS sales_total,
+        CASE WHEN i.sale_unit='kg' THEN ROUND(SUM(i.quantity)*0.05,2) ELSE SUM(i.quantity) END AS display_quantity
+      FROM pos_sale_items i JOIN pos_sales s ON s.id=i.sale_id AND s.store_id=i.store_id
+      WHERE ${filter} AND s.status!='voided'
+      GROUP BY i.product_id,i.product_name,i.sale_unit
+      ORDER BY sales_total DESC LIMIT 10
+    `).bind(...values).all()
+  ]);
+  const summary=totals||{};
+  const salesTotal=Number(summary.sales_total||0);
+  const returnsTotal=Number(summary.returns_total||0);
+  const voidsTotal=Number(summary.voids_total||0);
+  return json({status:"ok",filters:{from,to,currency},
+    totals:{sale_count:Number(summary.sale_count||0),completed_count:Number(summary.completed_count||0),
+      void_count:Number(summary.void_count||0),gross_sales:Number(summary.gross_sales||0),
+      discounts:Number(summary.discounts||0),sales_total:salesTotal,returns_total:returnsTotal,
+      voids_total:voidsTotal,net_sales:Math.round((salesTotal-returnsTotal)*100)/100,
+      net_after_voids:Math.round((salesTotal-returnsTotal)*100)/100},
+    daily:daily.results||[],payments:payments.results||[],top_products:topProducts.results||[]});
+}
 async function listSales(env,storeId,url){
   const rawLimit=Number(url.searchParams.get("limit")||50);
   const limit=Number.isInteger(rawLimit)?Math.min(100,Math.max(1,rawLimit)):50;
@@ -374,7 +437,7 @@ export async function handlePos(request,env){
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
   if(!hasPermission(access,"pos.access"))return json({error:"Point-of-sale access permission required"},403);
   const resource=match[2];
-  if(resource==="quote"){
+  if(resource==="reports"){\n    if(request.method!=="GET")return json({error:"Method not allowed"},405);\n    return posReport(env,storeId,url);\n  }\n  if(resource==="quote"){
     if(request.method!=="POST")return json({error:"Method not allowed"},405);
     const parsed=await readBody(request);if(parsed.error)return json({error:parsed.error},parsed.status);
     const quote=await quoteItems(env.DB,storeId,access,parsed.body.items);
