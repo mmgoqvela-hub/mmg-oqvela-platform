@@ -421,3 +421,72 @@ Syria is the initial target market for store operations. The platform must suppo
 - All rate changes, automatic price recalculations, manual overrides, tax/customs changes and approvals must create immutable audit events.
 - Before live financial use, validate the current Syrian currency conventions, tax rules, customs treatment, required invoice content, fiscal numbering and record-retention obligations with authoritative local sources and qualified local advice. The platform must not claim compliance merely because configurable fields exist.
 
+
+### 9.15 Mandatory USD procurement and dual-currency sales policy for Syria
+
+For the initial Syria-focused store configuration, the following is the default operating rule. It is distinct from the platform's ability to support other countries and currencies later.
+
+- All merchandise procurement is recorded in USD: supplier purchase orders, supplier invoices/bills, goods-receipt purchase cost, supplier credit balances and supplier payments are denominated in USD. The original supplier document amount and currency must be retained.
+- Inventory acquisition cost and the base product cost are maintained in USD. Additional import/customs/freight/clearance costs must be recorded with their original currency and converted/allocated into the USD inventory cost using an explicitly recorded rate and approved costing policy. Do not silently discard non-USD source costs.
+- Store sales may be priced and completed in USD or the new Syrian pound, according to the store's enabled currencies and the customer's selected payment currency. A single sale must have a clearly defined invoice currency; mixed tender is permitted only through explicit multi-payment settlement lines.
+- When a product's selling price is maintained as a USD base price, the new-Syrian-pound display/charge amount is derived from the approved store rate and configured rounding/markup policy. A store may explicitly maintain a separate fixed SYP price where permitted; the system must show whether a price is USD-linked, SYP-fixed or manually overridden.
+- A sale paid in SYP must retain: the SYP invoice/receipt amount, USD reference/base amount, exact USD/SYP rate and version, rate timestamp/source, rounding result, payment amount/currency and any settlement difference. The system must not record the same sale as two revenues.
+- Supplier payable ledgers and purchase analytics remain USD-based for this Syria policy. Customer receivables and cash/bank balances retain their actual transaction currencies; cross-currency settlement creates an explicit conversion record rather than mutating the underlying debt.
+- Cost of goods sold and gross margin are calculated from the USD inventory cost basis. For a SYP sale, convert the sale value to the reporting/functional currency using the transaction's captured rate, then compare it with USD cost under a documented accounting translation policy. Reports must disclose the translation basis and must not compare raw SYP revenue directly with USD cost.
+- Exchange-rate movements after a posted sale or purchase must not rewrite historical cost, revenue, debt, supplier balances or profit. Any realized exchange difference is recorded separately through the configured accounting policy.
+- If a supplier invoice is received in a currency other than USD, the system must flag it as an exception requiring an authorized conversion/approval into the USD procurement ledger; it must not silently accept it as an ordinary USD invoice.
+
+### 9.16 Professional store dashboard and operational command center
+
+Each store owner/admin needs a polished, comprehensive, responsive dashboard that acts as the store's command center. Dashboard data must be calculated from authoritative posted documents, inventory movements, payment allocations and ledgers—not from duplicated manually maintained totals.
+
+#### Financial overview and period comparisons
+
+- Provide daily, weekly, monthly and yearly views, plus custom date ranges, with clear timezone and period boundaries.
+- Show sales/revenue, cost of goods sold, gross profit, operating expenses, net operating result/profit or loss, refunds/returns, discounts, taxes collected/payable, outstanding customer receivables, supplier payables and cash/bank movements as separate metrics.
+- Clearly distinguish gross sales, net sales, cash collected, unpaid sales, gross profit and net profit. Never label revenue or cash received as profit.
+- Show comparisons with the previous equivalent period and trends over time, with drill-down to the source invoices, receipts, expenses, returns and journal entries.
+- Present amounts grouped by currency (USD and new Syrian pound). A consolidated converted view is optional and must disclose the reporting currency, conversion rate/version and timestamp. Never sum unlike currencies without conversion disclosure.
+- Show gross margin and net margin with documented formulas. Loss periods must be visibly represented as losses, not hidden by positive revenue.
+- Include best-selling products, low-performing products, sales by category, sales channel, cashier, payment method and branch/warehouse where relevant.
+- Include purchases from suppliers, purchase cost, landed/import costs and supplier due amounts as separate purchasing indicators.
+
+#### Daily cash box and shift control
+
+- Provide a daily cash-box view for each register/drawer and payment account, with separate USD and SYP balances.
+- Show opening balance, cash sales received, other receipts, supplier payments, expenses, refunds, transfers, cash paid out, expected closing balance and counted closing balance, with variance and explanation.
+- Support cashier/register opening and closing shifts, cash handover, reviewer approval and immutable close records. The dashboard must show open shifts and shifts awaiting reconciliation.
+- Bank, digital payment and clearing-account balances must be distinguished from physical cash. Transfers between accounts must not appear as income or expense.
+- Allow authorized users to drill into each cash movement and its source document; do not permit editing a balance directly.
+
+#### Inventory health and configurable low-stock alerts
+
+- Each product/variant can have a reorder threshold/minimum stock quantity configurable by the store owner; thresholds may differ by warehouse/branch.
+- When available stock reaches or falls below the configured threshold, create an alert/notification with product, variant, warehouse, current available quantity, threshold, reserved quantity and suggested reorder quantity where configured.
+- Support separate alerts for out-of-stock, critically low stock, expiry approaching, expired stock, slow-moving stock and pending stock-count discrepancies when the relevant capabilities are enabled.
+- Avoid alert floods: deduplicate active alerts, support acknowledged/snoozed/resolved states, and re-open only when a meaningful new condition occurs. Notify only users with relevant permissions/preferences.
+- Calculate available stock consistently from on-hand minus reservations and other unavailable/in-transit quantities according to the inventory model. A threshold alert must not mistake reserved or in-transit stock for freely available stock.
+- Provide a low-stock list with filters and a path to create a draft purchase order; never place an order with a supplier automatically without explicit authorization.
+
+#### Alerts, notifications and action center
+
+- Provide a central dashboard notification/action center for low stock, out of stock, rate changes/stale rates, price recalculation awaiting approval, supplier bills due/overdue, customer debts overdue, unpaid expenses, cash variance, open shifts, pending orders, delivery exceptions, failed payments, expiring batches and approval requests.
+- Every alert must link to the relevant record/action, include severity, created time, current status and responsible role/user where applicable.
+- Support in-app persistent notifications, unread counts, mark-read/acknowledge, filters and permission-aware visibility. External email/push/WhatsApp delivery is optional and must not be claimed until configured.
+- Let the owner configure alert thresholds, notification recipients, quiet periods and enabled alert types without weakening mandatory security or accounting controls.
+
+#### Dashboard customization, drill-down and reliability
+
+- Use a professional responsive layout with clear KPI hierarchy, charts, trend indicators, tables, quick actions and compact mobile presentation. Provide Arabic RTL and English LTR, accessible contrast and light/dark themes consistent with platform settings.
+- Allow authorized owners/admins to reorder, show/hide and resize dashboard widgets, save personal or store-wide layouts, and choose the default reporting period. Customization must never hide critical security, payment or reconciliation warnings from authorized responsible users.
+- Provide role-aware dashboards: a cashier sees POS/shift tasks; inventory staff see stock and receiving; purchasing staff see suppliers and due bills; owners/admins see the complete financial and operational picture. Permissions must also be enforced on drill-down APIs.
+- Include last-updated timestamps and clear empty/loading/error states. If a data source is unavailable or a background calculation is delayed, show that fact rather than presenting stale numbers as current.
+- KPI calculations must be documented and tested against source ledgers, including refunds, partial payments, multi-currency sales, discounts, tax, delivery fees, supplier returns, expenses, stock adjustments and exchange differences.
+- Dashboard widgets are views over source records; they must not become independent financial ledgers or allow direct editing of derived totals.
+- Provide exports only with role authorization, tenant isolation, audit logging and currency/rate metadata.
+
+#### Delivery and implementation status
+
+- These dashboard and Syria procurement/sales rules are requirements, not evidence that the dashboard or ERP modules are implemented.
+- Implement the dashboard after the relevant ledgers and posting workflows exist, so profit/loss, cash and inventory figures reconcile. Early dashboard shells may show only verified existing metrics and must label missing modules as unavailable rather than fabricate totals.
+
