@@ -436,6 +436,20 @@ def main():
         "approved purchase orders cannot be reopened"
     )
 
+    connection.execute(
+        "UPDATE purchase_orders SET status='cancelled',cancelled_at=CURRENT_TIMESTAMP WHERE id='po-a'"
+    )
+    if connection.execute(
+        "SELECT status FROM purchase_orders WHERE id='po-a'"
+    ).fetchone() != ("cancelled",):
+        raise SystemExit("An approved but unreceived purchase order could not be cancelled")
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE purchase_orders SET status='approved' WHERE id='po-a'"
+        ),
+        "a cancelled purchase order cannot be reopened"
+    )
+
     print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
