@@ -548,3 +548,36 @@ The platform serves more than conventional product shops. Each store selects one
 - Before activating a regulated workflow, verify current local laws, licensing, tax rules and required records with authoritative sources and qualified local professionals. The platform must not claim legal or clinical compliance by default.
 - The first release should prioritize the shared foundations and a limited set of complete business profiles; do not expose unfinished profile features as operational merely because their settings or navigation exist.
 
+### 9.20 Store QR codes and public digital menus/catalogs
+
+QR access is a first-class customer acquisition and in-store service feature. It is distinct from product barcodes: QR codes open a web destination; product barcodes identify sellable stock units for POS and inventory workflows.
+
+- Each store receives a permanent, store-scoped QR destination that opens its public storefront or configured landing page. Owners/operators can preview, download and print the QR in common print-friendly formats when implemented, with clear instructions for table tents, windows, receipts, packaging and business cards.
+- Support multiple named QR campaigns/destinations per store, such as the main storefront, a restaurant menu, a branch, a table, a counter, a promotion, a product collection or a feedback page. Each code has an owner, purpose, destination, status and creation/change history.
+- Restaurant/cafe QR menus should open quickly in a mobile browser without requiring an app or customer account. Show categories, item descriptions, current prices, optional images, modifiers/add-ons, allergens or dietary labels where configured, and item availability. Do not expose internal cost, stock valuation or staff-only notes.
+- Menu/catalog content and prices must always come from the store's current authorized public data. A price or availability change should be reflected at the destination without reprinting the QR, unless the owner deliberately creates a fixed campaign or archived menu.
+- Allow table-specific QR destinations to identify a table or service area and optionally start a table order or call-staff request, but require server-side validation and explicit store activation. Never trust a table identifier from a QR as proof of payment or customer identity.
+- Support branch-specific QR destinations and hours. A multi-branch brand may have a central QR landing page or a code that opens the selected branch, with location selection where needed.
+- Provide controlled destination updates and code revocation. A printed QR should not become broken when a store changes its template or public slug; use a stable redirect/destination identifier and preserve old links or show a clear retired destination page.
+- Track privacy-conscious aggregate scans and useful campaign attribution (scan count, approximate time bucket, destination, branch/campaign and resulting menu views or orders where consent and law permit). Avoid collecting precise location or personal identifiers merely to count scans. Disclose analytics behavior and respect applicable consent/privacy rules.
+- Protect against malicious destination changes, cross-tenant destination access and QR enumeration. Only authorized store roles may create, edit, disable or view analytics for that store's codes; validate all destinations and prevent open-redirect abuse.
+- QR menu pages must inherit store language, RTL/LTR, theme, accessibility, availability schedule and responsive storefront rules. Offer language selection where configured.
+- QR codes are not a replacement for product barcodes. Product/variant barcodes remain unique store-scoped identifiers used by inventory and POS; QR campaigns use separate identifiers and permissions.
+- Test print/read quality at common sizes, low-light/mobile scanning, long URLs, disabled/changed destinations, branch routing, stale menu data, permission isolation and repeated scans. Do not claim a printed QR asset has been generated until the actual file-generation and download flow exists.
+
+### 9.21 Customer growth, retention and reputation tools
+
+Provide a modular set of customer-facing growth tools that stores can enable according to their business profile and local rules. These features must use shared customer, order, consent and audit foundations rather than disconnected marketing databases.
+
+- Customer profiles and history should be store-scoped and permission-controlled, with guest checkout still available where configured. Keep contact preferences and communication consent explicit, timestamped and revocable.
+- Promotions should support scheduled start/end, eligible products/categories, branch/channel, minimum spend, usage limits, customer eligibility, stacking rules and clear exclusion rules. Validate discounts on the server at checkout and prevent negative or unintended prices.
+- Coupons and gift cards should use secure, non-guessable codes, defined balances/expiry/usage policies, redemption history and idempotent redemption. Gift-card liabilities and refunds require proper financial posting before activation.
+- Loyalty/rewards may support points, tiers, referrals and customer benefits, but every earning, adjustment and redemption must have an auditable ledger and configurable expiry/limits. Do not market points as cash or create unbacked monetary balances.
+- Support customer feedback and product/service reviews with moderation, abuse reporting and verified-purchase/appointment indicators where appropriate. Do not fabricate reviews, ratings or testimonials.
+- Support abandoned-cart and post-purchase follow-up only through enabled delivery channels and valid consent. Respect opt-outs, quiet hours and local anti-spam rules; avoid sending sensitive order details in insecure channels.
+- Provide shareable product/category/store links and social preview metadata. Search-engine metadata, canonical URLs, sitemap/robots controls and structured data should be generated safely from public content only.
+- Offer campaign attribution and basic conversion reporting with clear definitions. Distinguish visits, QR scans, cart additions, orders, paid orders and net revenue; do not present them as interchangeable.
+- Give owners controls to pause campaigns and set budgets/limits where paid promotion integrations are later introduced. No advertising spend or third-party messaging service may be activated without explicit configuration and cost disclosure.
+- Apply stronger privacy controls to clinics, pharmacies and other sensitive profiles. Never use patient, prescription, diagnosis or similarly sensitive records for marketing segmentation or advertising.
+- Keep marketing features optional and progressively deployable. An unfinished integration must be labelled unavailable, not shown as an active delivery channel.
+
