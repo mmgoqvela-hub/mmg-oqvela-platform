@@ -135,7 +135,7 @@ export async function handlePosReturns(request,env){
     statements.push(env.DB.prepare(`
       INSERT INTO pos_sale_return_items(id,return_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,restock,currency,sale_unit)
       VALUES(?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(returnItemId,returnId,saleId,storeId,saleItemId,item.product_id,item.variant_id,quantity,restock?1:0,item.currency,item.sale_unit||\"piece\"));
+    `).bind(returnItemId,returnId,saleId,storeId,saleItemId,item.product_id,item.variant_id,quantity,restock?1:0,item.currency,item.sale_unit||"piece"));
     if(restock){
       const original=await env.DB.prepare("SELECT id,warehouse_id FROM inventory_movements WHERE store_id=? AND idempotency_key=? LIMIT 1")
         .bind(storeId,"pos-sale:"+saleId+":"+saleItemId).first();
