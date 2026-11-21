@@ -40,3 +40,26 @@ test("exposes optional head and delete capabilities independently", async () => 
   assert.equal(storage.get, undefined);
   assert.equal(storage.put, undefined);
 });
+
+test("keeps provider method context and exposes an immutable capability surface", async () => {
+  const binding = {
+    marker: "provider-instance",
+    async put(key) {
+      assert.equal(this.marker, "provider-instance");
+      return key;
+    }
+  };
+  const storage = createStoreMediaStorage({ STORE_MEDIA: binding });
+  assert.equal(await storage.put("store/image.webp"), "store/image.webp");
+  assert.equal(Object.isFrozen(storage), true);
+  assert.deepEqual(Object.keys(storage), ["put"]);
+});
+
+test("ignores non-function provider properties and rejects non-object bindings", () => {
+  assert.equal(createStoreMediaStorage({ STORE_MEDIA: "bucket" }), null);
+  assert.equal(createStoreMediaStorage({ STORE_MEDIA: { get: true, put: null } }), null);
+  const storage = createStoreMediaStorage({
+    STORE_MEDIA: { get: async () => null, providerName: "example" }
+  });
+  assert.deepEqual(Object.keys(storage), ["get"]);
+});
