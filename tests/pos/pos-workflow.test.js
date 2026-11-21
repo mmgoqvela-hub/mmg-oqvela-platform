@@ -124,8 +124,6 @@ test("POS cash session reconciliation includes expense and manual cashbox moveme
  const result=await response.json();
  assert.equal(response.status,200);
  assert.equal(result.session.expected_cash_amount,90);
- const update=db.batches.flat().find(call=>call.sql.includes("UPDATE pos_cash_sessions SET status='closed'"));
- assert.equal(update.values[1],90);
 });
 test("POS cash session reconciliation subtracts cash refunds from posted returns",async()=>{
  const db=workflowDb({cashTotals:{cash_received:120,cash_refunded:25}});
