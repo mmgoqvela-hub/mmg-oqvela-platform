@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>MMG OQVELA · POS</title>
+<style>
+:root{color-scheme:light;--bg:#f3f6fb;--panel:#fff;--panel2:#f8fafc;--ink:#152238;--muted:#69788e;--line:#e3e9f1;--brand:#2764d8;--brand2:#eaf1ff;--good:#13865b;--danger:#c53b48;--shadow:0 12px 36px rgba(25,44,76,.08);--radius:18px}
+:root.dark{color-scheme:dark;--bg:#0d1421;--panel:#151f30;--panel2:#1b283b;--ink:#edf3ff;--muted:#9aaac0;--line:#2b3a50;--brand:#78a5ff;--brand2:#1c3153;--good:#4cc79a;--danger:#ff7e88;--shadow:0 12px 36px rgba(0,0,0,.24)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:11px 15px;background:var(--brand);color:white;font-weight:700;min-height:44px}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}.danger{background:var(--danger)}.quiet{background:transparent;color:var(--muted);border:1px solid var(--line)}input,select{width:100%;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:11px;padding:11px 12px;min-height:44px;outline:none}input:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 16%,transparent)}.topbar{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(20,35,60,.04)}.brand{font-weight:900;letter-spacing:.04em;white-space:nowrap}.brand span{color:var(--brand)}.store-title{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.top-spacer{flex:1}.top-actions{display:flex;gap:8px}.top-actions button{min-height:40px;padding:8px 12px}.page{max-width:1600px;margin:auto;padding:18px}.sessionbar{margin-bottom:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:var(--shadow)}.sessionbar .status{font-weight:800;color:var(--good)}.sessionbar .muted{color:var(--muted);font-size:13px}.sessionbar form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sessionbar form input,.sessionbar form select{width:auto;min-width:120px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;align-items:start}.catalog,.cart-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}.catalog{padding:18px}.cart-panel{position:sticky;top:82px;padding:18px}.section-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}.section-head h1,.section-head h2{margin:0;font-size:20px}.muted{color:var(--muted)}.search-row{display:grid;grid-template-columns:minmax(0,1fr) 145px;gap:10px;margin-bottom:15px}.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px}.product{border:1px solid var(--line);background:var(--panel2);border-radius:15px;padding:13px;display:flex;flex-direction:column;gap:9px;min-height:174px}.product h3{font-size:15px;margin:0;line-height:1.35}.sku{font-size:12px;color:var(--muted);direction:ltr;text-align:start}.product-price{font-size:18px;font-weight:900;color:var(--brand)}.product-bottom{margin-top:auto;display:grid;gap:8px}.product button{width:100%}.stock{font-size:12px;color:var(--muted)}.cart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.cart-head h2{margin:0;font-size:20px}.cart-list{display:grid;gap:10px;max-height:42vh;overflow:auto;padding-inline-end:3px}.cart-line{border:1px solid var(--line);border-radius:13px;padding:11px;display:grid;gap:8px}.line-title{display:flex;justify-content:space-between;gap:10px;font-weight:750}.line-sub{color:var(--muted);font-size:12px}.line-controls{display:grid;grid-template-columns:80px minmax(0,1fr) 38px;gap:8px;align-items:center}.line-controls input,.line-controls select{min-height:38px;padding:7px}.line-total{font-weight:850;text-align:end}.remove{background:transparent;color:var(--danger);border:1px solid var(--line);padding:5px;min-height:38px}.totals{border-top:1px solid var(--line);margin-top:13px;padding-top:12px;display:grid;gap:8px}.total-row{display:flex;justify-content:space-between;gap:10px}.total-row.grand{font-size:21px;font-weight:900}.field{display:grid;gap:5px}.field label{font-size:13px;color:var(--muted);font-weight:700}.checkout{display:grid;gap:11px;margin-top:14px}.payments{display:grid;gap:9px}.payment-line{display:grid;grid-template-columns:1fr 110px 36px;gap:7px;align-items:start}.payment-extra{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:7px}.payment-extra input{min-height:38px}.payment-line select,.payment-line input{min-height:40px;padding:8px}.small-button{min-height:38px;padding:6px 9px}.notice{padding:11px 13px;border-radius:12px;background:var(--brand2);color:var(--ink);font-size:13px}.error{color:var(--danger);font-size:13px;white-space:pre-wrap}.success{color:var(--good);font-weight:700}.empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}.modal-backdrop{position:fixed;inset:0;background:rgba(6,13,24,.55);display:grid;place-items:center;padding:16px;z-index:20}.modal{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}.modal h2{margin:0 0 8px}.modal .actions{display:flex;gap:8px;margin-top:16px}.modal .actions>*{flex:1}.hidden{display:none!important}.footer-note{text-align:center;color:var(--muted);font-size:12px;margin:15px}.receipt{display:grid;gap:8px}.receipt h2{text-align:center}.receipt .big{font-size:24px;font-weight:900;text-align:center}.receipt hr{border:0;border-top:1px dashed var(--line);width:100%}
+@media(max-width:1050px){.layout{grid-template-columns:minmax(0,1fr) 360px}.cart-panel{top:78px}}
+@media(max-width:800px){.page{padding:10px}.layout{grid-template-columns:1fr}.cart-panel{position:static}.cart-list{max-height:35vh}.topbar{padding:10px 12px;gap:8px}.brand{font-size:13px}.store-title{font-size:13px}.top-actions button{font-size:12px;padding:7px 9px}.sessionbar{padding:12px}.sessionbar form{width:100%}.sessionbar form input,.sessionbar form select{flex:1;min-width:100px}.products{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.products{grid-template-columns:1fr 1fr;gap:8px}.product{padding:10px;min-height:170px}.search-row{grid-template-columns:minmax(0,1fr) 105px}.payment-line{grid-template-columns:1fr 92px 34px}}
+@media print{body{background:white;color:black}.topbar,.sessionbar,.catalog,.cart-panel:not(.print-receipt),.footer-note{display:none!important}.modal-backdrop{position:static;background:white;padding:0}.modal{border:0;box-shadow:none;width:100%;color:black}.modal .actions{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+ <div class="brand">MMG <span>OQVELA</span></div>
+ <div class="store-title" id="storeName">نقطة البيع</div>
+ <div class="top-spacer"></div>
+ <div class="top-actions">
+  <button class="secondary" id="languageBtn" type="button">English</button>
+  <button class="secondary" id="themeBtn" type="button" aria-label="Theme">◐</button>
+  <button class="quiet" id="backBtn" type="button">رجوع</button>
+ </div>
+</header>
+<main class="page">
+ <section class="sessionbar" id="sessionBar">
+  <div><strong id="sessionTitle">جلسة الصندوق</strong><div class="muted" id="sessionHint">يجب فتح جلسة قبل اعتماد أي عملية بيع</div></div>
+  <div class="top-spacer"></div>
+  <div class="field"><label id="currencyLabel" for="currencySelect">عملة البيع</label><select id="currencySelect"><option value="USD">USD</option><option value="SYP">SYP</option></select></div>
+  <div id="sessionControls"></div>
+ </section>
+ <div class="layout">
+  <section class="catalog">
+   <div class="section-head"><h1 id="catalogTitle">المنتجات</h1><span class="muted" id="productCount"></span></div>
+   <div class="search-row">
+    <input id="searchInput" type="search" autocomplete="off" placeholder="ابحث بالاسم أو SKU أو امسح الباركود">
+    <select id="categoryFilter"><option value="">كل المنتجات</option></select>
+   </div>
+   <div id="products" class="products"><div class="empty">جارٍ تحميل المنتجات...</div></div>
+   <div id="catalogError" class="error"></div>
+  </section>
+  <aside class="cart-panel">
+   <div class="cart-head"><h2 id="cartTitle">سلة البيع</h2><button class="quiet small-button" id="clearCartBtn" type="button">إفراغ</button></div>
+   <div id="cartList" class="cart-list"><div class="empty" id="emptyCart">السلة فارغة</div></div>
+   <div class="totals">
+    <div class="total-row"><span id="subtotalLabel">المجموع</span><strong id="subtotalValue">—</strong></div>
+    <div class="field"><label id="discountLabel" for="discountInput">الخصم (اختياري)</label><input id="discountInput" type="number" min="0" step="0.01" value="0"></div>
+    <div class="field hidden" id="discountReasonWrap"><label id="discountReasonLabel" for="discountReason">سبب الخصم</label><input id="discountReason" maxlength="300"></div>
+    <div class="total-row grand"><span id="totalLabel">الإجمالي</span><span id="totalValue">—</span></div>
+   </div>
+   <div class="checkout">
+    <div class="section-head"><h3 id="paymentTitle">الدفع</h3><button class="secondary small-button" id="addPaymentBtn" type="button">+ تقسيم الدفع</button></div>
+    <div id="payments" class="payments"></div>
+    <div id="shamcashHelp" class="notice hidden">للدفع عبر شام كاش، أدخل رقم العملية واسم المرسل.</div>
+    <div id="quoteError" class="error"></div>
+    <div id="saleMessage" aria-live="polite"></div>
+    <button id="completeSaleBtn" type="button" disabled>اعتماد البيع</button>
+   </div>
+  </aside>
+ </div>
+ <div class="footer-note" id="footerNote">الأسعار والمخزون يعاد التحقق منهما على الخادم عند اعتماد البيع.</div>
+</main>
+<div id="modalRoot"></div>
+<script>
+(() => {
+ "use strict";
+ const $=id=>document.getElementById(id);
+ const translations={
+  ar:{pos:"نقطة البيع",back:"رجوع",session:"جلسة الصندوق",needSession:"يجب فتح جلسة قبل اعتماد أي عملية بيع",currency:"عملة البيع",openSession:"فتح جلسة",closeSession:"إغلاق الجلسة",openingCash:"رصيد بداية الصندوق",open:"فتح",products:"المنتجات",allProducts:"كل المنتجات",search:"ابحث بالاسم أو SKU أو امسح الباركود",cart:"سلة البيع",clear:"إفراغ",empty:"السلة فارغة",subtotal:"المجموع",discount:"الخصم (اختياري)",discountReason:"سبب الخصم",total:"الإجمالي",payment:"الدفع",split:"+ تقسيم الدفع",cash:"نقدي",card:"بطاقة",digital:"دفع رقمي",shamcash:"شام كاش",complete:"اعتماد البيع",add:"إضافة",stock:"المتاح",loading:"جارٍ التحميل...",noProducts:"لا توجد منتجات مطابقة",close:"إغلاق",countedCash:"النقد الفعلي في الصندوق",expectedCash:"النقد المتوقع",difference:"الفرق",confirmClose:"تأكيد الإغلاق",cancel:"إلغاء",transaction:"رقم العملية",sender:"اسم المرسل",saleDone:"تم اعتماد البيع بنجاح",print:"طباعة الإيصال",newSale:"بيع جديد",variant:"اختر المتغير",noSession:"لا توجد جلسة مفتوحة لهذه العملة",openFirst:"افتح جلسة الصندوق أولاً",quoteFailed:"تعذر تحديث السعر",requiredPayment:"يجب أن يساوي مجموع الدفعات إجمالي الفاتورة",remove:"حذف",quantity:"الكمية",unitPrice:"سعر الوحدة",lineTotal:"الإجمالي",currencyMismatch:"لا يمكن جمع عملات مختلفة في سلة واحدة",searchEmpty:"أدخل اسم المنتج أو SKU أو امسح الباركود",sessionOpened:"تم فتح جلسة الصندوق",sessionClosed:"تم إغلاق جلسة الصندوق",failed:"حدث خطأ",shamHelp:"للدفع عبر شام كاش، أدخل رقم العملية واسم المرسل.",footer:"الأسعار والمخزون يعاد التحقق منهما على الخادم عند اعتماد البيع.",closeNotes:"ملاحظات الإغلاق",openNotes:"ملاحظات الافتتاح",discountPermission:"لا تملك صلاحية الخصم أو لم تذكر سبباً صالحاً."},
+  en:{pos:"Point of Sale",back:"Back",session:"Cash session",needSession:"Open a cash session before completing a sale",currency:"Sale currency",openSession:"Open session",closeSession:"Close session",openingCash:"Opening cash",open:"Open",products:"Products",allProducts:"All products",search:"Search name / SKU or scan barcode",cart:"Sale cart",clear:"Clear",empty:"Cart is empty",subtotal:"Subtotal",discount:"Discount (optional)",discountReason:"Discount reason",total:"Total",payment:"Payment",split:"+ Split tender",cash:"Cash",card:"Card",digital:"Digital",shamcash:"Sham Cash",complete:"Complete sale",add:"Add",stock:"Available",loading:"Loading...",noProducts:"No matching products",close:"Close",countedCash:"Counted cash",expectedCash:"Expected cash",difference:"Difference",confirmClose:"Confirm close",cancel:"Cancel",transaction:"Transaction number",sender:"Sender name",saleDone:"Sale posted successfully",print:"Print receipt",newSale:"New sale",variant:"Choose variant",noSession:"No open session for this currency",openFirst:"Open a cash session first",quoteFailed:"Unable to refresh prices",requiredPayment:"Payment lines must equal the invoice total",remove:"Remove",quantity:"Qty",unitPrice:"Unit price",lineTotal:"Line total",currencyMismatch:"A cart cannot contain multiple currencies",searchEmpty:"Enter a product name, SKU or scan a barcode",sessionOpened:"Cash session opened",sessionClosed:"Cash session closed",failed:"Something went wrong",shamHelp:"For Sham Cash, enter the transaction number and sender name.",footer:"Prices and stock are revalidated by the server when posting a sale.",closeNotes:"Closing notes",openNotes:"Opening notes",discountPermission:"Discount permission is missing or a valid reason was not provided."}
+ };
+ let lang="ar",storeId="",store=null,products=[],variants={},cart=[],session=null,pricingMode="manual",tiers=[],quoteBusy=false,pendingKey=null,paymentLines=[{payment_method:"cash",amount:0,transaction_reference:"",sender_name:""}];
+ const t=key=>translations[lang][key]||translations.en[key]||key;
+ function setText(id,key){$(id).textContent=t(key);}
+ function money(value,currency=$("currencySelect").value){
+  const n=Number(value||0);
+  try{return new Intl.NumberFormat(lang==="ar"?"ar":"en",{style:"currency",currency,maximumFractionDigits:2}).format(n);}
+  catch{return n.toFixed(2)+" "+currency;}
+ }
+ function api(path,options={}){
+  return fetch(path,{credentials:"same-origin",...options,headers:{...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})}})
+   .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||t("failed"));return data;});
+ }
+ function storePath(suffix){return "/api/stores/"+encodeURIComponent(storeId)+suffix;}
+ function showError(id,error){$(id).textContent=error?.message||String(error||"");}
+ function updateDirection(){document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";$("languageBtn").textContent=lang==="ar"?"English":"العربية";document.title="MMG OQVELA · "+t("pos");}
+ function applyLabels(){
+  setText("sessionTitle","session");setText("sessionHint","needSession");setText("currencyLabel","currency");setText("catalogTitle","products");setText("cartTitle","cart");setText("clearCartBtn","clear");setText("emptyCart","empty");setText("subtotalLabel","subtotal");setText("discountLabel","discount");setText("discountReasonLabel","discountReason");setText("totalLabel","total");setText("paymentTitle","payment");setText("addPaymentBtn","split");setText("completeSaleBtn","complete");setText("footerNote","footer");$("searchInput").placeholder=t("search");$("categoryFilter").options[0].textContent=t("allProducts");updateDirection();renderPayments();renderCart();
+ }
+ function theme(){document.documentElement.classList.toggle("dark",localStorage.getItem("mmg-pos-theme")==="dark");}
+ $("themeBtn").addEventListener("click",()=>{localStorage.setItem("mmg-pos-theme",document.documentElement.classList.contains("dark")?"light":"dark");theme();});
+ $("languageBtn").addEventListener("click",()=>{lang=lang==="ar"?"en":"ar";applyLabels();renderProducts();renderSession();});
+ $("backBtn").addEventListener("click",()=>{location.href="/";});
+ function modal(content){$("modalRoot").innerHTML='<div class="modal-backdrop"><section class="modal">'+content+'</section></div>';}
+ function closeModal(){$("modalRoot").replaceChildren();}
+ function availableProducts(){return products.filter(p=>(p.currency||"USD")===$("currencySelect").value);}
+ async function load(){
+  const parts=location.pathname.split("/").filter(Boolean);storeId=decodeURIComponent(parts[1]||"");
+  if(!storeId){location.href="/";return;}
+  theme();applyLabels();
+  try{
+   const [storeData,productData,pricingData]=await Promise.all([
+    api("/api/stores/"+encodeURIComponent(storeId)),
+    api(storePath("/products?status=active&limit=100")),
+    api(storePath("/pricing")).catch(()=>({settings:{pricing_mode:"manual"},tiers:[]}))
+   ]);
+   store=storeData.store;$("storeName").textContent=store.name||t("pos");
+   products=productData.products||[];
+   pricingMode=pricingData.settings?.pricing_mode||"manual";
+   tiers=(pricingData.tiers||[]).filter(x=>x.is_enabled);
+   const variantResults=await Promise.all(products.map(async p=>{
+    try{return [p.id,(await api(storePath("/products/"+encodeURIComponent(p.id)+"/variants"))).variants||[]];}
+    catch{return [p.id,[]];}
+   }));
+   variants=Object.fromEntries(variantResults);
+   const currencies=[...new Set(products.map(p=>p.currency||"USD"))].filter(x=>["USD","SYP"].includes(x));
+   if(currencies.length&&!currencies.includes($("currencySelect").value))$("currencySelect").value=currencies[0];
+   renderProducts();await refreshSession();renderPayments();renderCart();
+  }catch(error){showError("catalogError",error);$("products").innerHTML='<div class="empty">'+escapeHtml(error.message)+'</div>';}
+ }
+ function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+ function renderProducts(){
+  const query=$("searchInput").value.trim().toLowerCase(),category=$("categoryFilter").value;
+  const list=availableProducts().filter(p=>(!category||p.category_id===category)&&(!query||[p.name,p.sku,...(variants[p.id]||[]).flatMap(v=>[v.name,v.sku])].some(x=>String(x||"").toLowerCase().includes(query))));
+  $("productCount").textContent=list.length;
+  const root=$("products");root.replaceChildren();
+  if(!list.length){root.innerHTML='<div class="empty">'+t("noProducts")+'</div>';return;}
+  for(const product of list){
+   const card=document.createElement("article");card.className="product";
+   const title=document.createElement("h3");title.textContent=product.name;
+   const sku=document.createElement("div");sku.className="sku";sku.textContent=product.sku||"";
+   const price=document.createElement("div");price.className="product-price";price.textContent=money(product.base_price,product.currency);
+   const stock=document.createElement("div");stock.className="stock";stock.textContent=product.track_inventory?t("stock")+": "+product.stock_quantity:"";
+   const bottom=document.createElement("div");bottom.className="product-bottom";
+   const productVariants=variants[product.id]||[];
+   let select=null;
+   if(productVariants.length){
+    select=document.createElement("select");
+    for(const v of productVariants){const o=document.createElement("option");o.value=v.id;o.textContent=v.name+" · "+money(v.price,product.currency);select.append(o);}
+    select.addEventListener("change",()=>{const v=productVariants.find(x=>x.id===select.value);price.textContent=money(v?.price??product.base_price,product.currency);});
+    const variantLabel=document.createElement("small");variantLabel.className="muted";variantLabel.textContent=t("variant");bottom.append(variantLabel,select);
+   }
+   const add=document.createElement("button");add.textContent="+ "+t("add");add.addEventListener("click",()=>addToCart(product,select?.value||null));
+   bottom.append(add);card.append(title,sku,price,stock,bottom);root.append(card);
+  }
+ }
+ function addToCart(product,variantId){
+  const variant=variantId?(variants[product.id]||[]).find(v=>v.id===variantId):null;
+  const key=product.id+":"+(variant?.id||"");
+  const found=cart.find(x=>x.key===key);
+  if(found)found.quantity+=1;
+  else cart.push({key,product_id:product.id,variant_id:variant?.id||null,name:product.name+(variant?" · "+variant.name:""),sku:variant?.sku||product.sku||"",currency:product.currency||"USD",quantity:1,tier_code:"retail",unit_price:Number(variant?.price??product.base_price),line_total:0});
+  pendingKey=null;refreshQuote();
+ }
+ function tierOptions(line){
+  if(pricingMode!=="cost_plus_margin")return [{tier_code:"retail",min_quantity:1}];
+  return tiers.map(x=>({tier_code:x.tier_code,min_quantity:x.min_quantity}));
+ }
+ async function refreshQuote(){
+  if(!cart.length){quoteBusy=false;renderCart();return;}
+  quoteBusy=true;$("completeSaleBtn").disabled=true;showError("quoteError","");
+  try{
+   const data=await api(storePath("/pos/quote"),{method:"POST",body:JSON.stringify({items:cart.map(x=>({product_id:x.product_id,variant_id:x.variant_id,quantity:x.quantity,tier_code:x.tier_code}))})});
+   for(const quoted of data.quote.items){const line=cart.find(x=>x.product_id===quoted.product_id&&x.variant_id===quoted.variant_id);if(line){line.unit_price=quoted.unit_price;line.line_total=quoted.line_total;line.tier_code=quoted.tier_code;}}
+   quoteBusy=false;renderCart();
+  }catch(error){quoteBusy=false;showError("quoteError",error);renderCart();}
+ }
+ function renderCart(){
+  const root=$("cartList");root.replaceChildren();
+  if(!cart.length){root.innerHTML='<div class="empty">'+t("empty")+'</div>';$("subtotalValue").textContent="—";$("totalValue").textContent="—";$("completeSaleBtn").disabled=true;return;}
+  let subtotal=0;
+  for(const line of cart){
+   subtotal+=Number(line.line_total||line.unit_price*line.quantity);
+   const card=document.createElement("div");card.className="cart-line";
+   const title=document.createElement("div");title.className="line-title";
+   const name=document.createElement("span");name.textContent=line.name;
+   const lineSum=document.createElement("span");lineSum.className="line-total";lineSum.textContent=money(line.line_total||line.unit_price*line.quantity,line.currency);
+   title.append(name,lineSum);
+   const sub=document.createElement("div");sub.className="line-sub";sub.textContent=(line.sku||"")+" · "+t("unitPrice")+": "+money(line.unit_price,line.currency);
+   const controls=document.createElement("div");controls.className="line-controls";
+   const qty=document.createElement("input");qty.type="number";qty.min="1";qty.max="999";qty.step="1";qty.value=line.quantity;qty.setAttribute("aria-label",t("quantity"));
+   qty.addEventListener("change",()=>{const n=Math.max(1,Math.min(999,Math.floor(Number(qty.value)||1)));line.quantity=n;pendingKey=null;refreshQuote();});
+   const tier=document.createElement("select");
+   for(const option of tierOptions(line)){const o=document.createElement("option");o.value=option.tier_code;o.textContent=(option.tier_code==="bulk_wholesale"?(lang==="ar"?"جملة الجملة":"Bulk wholesale"):option.tier_code==="wholesale"?(lang==="ar"?"الجملة":"Wholesale"):(lang==="ar"?"المفرق":"Retail"))+" · "+option.min_quantity+"+";o.selected=option.tier_code===line.tier_code;tier.append(o);}
+   tier.disabled=pricingMode!=="cost_plus_margin"||tier.options.length<2;
+   tier.addEventListener("change",()=>{line.tier_code=tier.value;pendingKey=null;refreshQuote();});
+   const remove=document.createElement("button");remove.className="remove";remove.textContent="×";remove.title=t("remove");remove.addEventListener("click",()=>{cart=cart.filter(x=>x.key!==line.key);pendingKey=null;refreshQuote();});
+   controls.append(qty,tier,remove);card.append(title,sub,controls);root.append(card);
+  }
+  const discount=Math.max(0,Number($("discountInput").value)||0);
+  const total=Math.max(0,Math.round((subtotal-discount)*100)/100);
+  $("subtotalValue").textContent=money(subtotal);
+  $("totalValue").textContent=money(total);
+  $("discountReasonWrap").classList.toggle("hidden",discount<=0);
+  if(paymentLines.length===1){paymentLines[0].amount=total;renderPayments();}
+  $("completeSaleBtn").disabled=quoteBusy||!session||!cart.length||!!$("quoteError").textContent||!paymentsMatch(total);
+ }
+ function paymentsMatch(total){return Math.abs(paymentLines.reduce((sum,p)=>sum+Math.round(Number(p.amount||0)*100),0)-Math.round(total*100))===0;}
+ function renderPayments(){
+  const root=$("payments");if(!root)return;root.replaceChildren();
+  paymentLines.forEach((payment,index)=>{
+   const row=document.createElement("div");row.className="payment-line";
+   const method=document.createElement("select");
+   for(const [value,key] of [["cash","cash"],["card","card"],["digital","digital"],["shamcash","shamcash"]]){const o=document.createElement("option");o.value=value;o.textContent=t(key);o.selected=value===payment.payment_method;method.append(o);}
+   method.addEventListener("change",()=>{payment.payment_method=method.value;renderPayments();});
+   const amount=document.createElement("input");amount.type="number";amount.min="0";amount.step="0.01";amount.value=payment.amount;amount.setAttribute("aria-label",t("payment"));
+   amount.addEventListener("change",()=>{payment.amount=Math.max(0,Number(amount.value)||0);renderCart();});
+   const remove=document.createElement("button");remove.className="remove";remove.textContent="×";remove.disabled=paymentLines.length===1;remove.addEventListener("click",()=>{paymentLines.splice(index,1);renderPayments();renderCart();});
+   row.append(method,amount,remove);
+   if(payment.payment_method==="shamcash"){
+    const extra=document.createElement("div");extra.className="payment-extra";
+    const ref=document.createElement("input");ref.placeholder=t("transaction");ref.maxLength=120;ref.value=payment.transaction_reference||"";ref.addEventListener("input",()=>payment.transaction_reference=ref.value);
+    const sender=document.createElement("input");sender.placeholder=t("sender");sender.maxLength=120;sender.value=payment.sender_name||"";sender.addEventListener("input",()=>payment.sender_name=sender.value);
+    extra.append(ref,sender);row.append(extra);
+   }
+   root.append(row);
+  });
+  $("shamcashHelp").classList.toggle("hidden",!paymentLines.some(p=>p.payment_method==="shamcash"));
+ }
+ $("addPaymentBtn").addEventListener("click",()=>{
+  const total=cart.reduce((sum,line)=>sum+Number(line.line_total||0),0)-Math.max(0,Number($("discountInput").value)||0);
+  const allocated=paymentLines.reduce((sum,p)=>sum+Number(p.amount||0),0);
+  paymentLines.push({payment_method:"card",amount:Math.max(0,Math.round((total-allocated)*100)/100),transaction_reference:"",sender_name:""});
+  renderPayments();renderCart();
+ });
+ $("clearCartBtn").addEventListener("click",()=>{cart=[];pendingKey=null;paymentLines=[{payment_method:"cash",amount:0}];refreshQuote();});
+ $("discountInput").addEventListener("input",()=>{pendingKey=null;renderCart();});
+ $("discountReason").addEventListener("input",()=>pendingKey=null);
+ $("searchInput").addEventListener("input",renderProducts);
+ $("searchInput").addEventListener("keydown",event=>{
+  if(event.key!=="Enter")return;event.preventDefault();
+  const q=$("searchInput").value.trim().toLowerCase();if(!q)return;
+  const exact=availableProducts().find(p=>String(p.sku||"").toLowerCase()===q)||
+    availableProducts().find(p=>(variants[p.id]||[]).some(v=>String(v.sku||"").toLowerCase()===q));
+  if(exact){const match=(variants[exact.id]||[]).find(v=>String(v.sku||"").toLowerCase()===q);addToCart(exact,match?.id||null);$("searchInput").value="";renderProducts();}
+ });
+ $("currencySelect").addEventListener("change",async()=>{
+  if(cart.length&&!confirm(t("currencyMismatch"))){$("currencySelect").value=cart[0].currency;return;}
+  if(cart.length){cart=[];paymentLines=[{payment_method:"cash",amount:0}];}
+  await refreshSession();renderProducts();renderCart();
+ });
+ async function refreshSession(){
+  session=null;renderSession();
+  try{const data=await api(storePath("/pos/cash-sessions?currency="+encodeURIComponent($("currencySelect").value)));session=data.session||null;}
+  catch(error){showError("catalogError",error);}
+  renderSession();renderCart();
+ }
+ function renderSession(){
+  const root=$("sessionControls");root.replaceChildren();
+  if(session){
+   const state=document.createElement("div");state.innerHTML='<span class="status">● '+(lang==="ar"?"مفتوحة":"Open")+'</span><div class="muted">'+escapeHtml(session.warehouse_name||"")+' · '+escapeHtml(session.currency)+'</div>';
+   const close=document.createElement("button");close.className="secondary";close.textContent=t("closeSession");close.addEventListener("click",showCloseSession);
+   root.append(state,close);
+  }else{
+   const form=document.createElement("form");form.innerHTML='<input id="openingAmount" type="number" min="0" step="0.01" value="0" required aria-label="'+t("openingCash")+'"><input id="openingNotes" maxlength="500" placeholder="'+t("openNotes")+'"><button type="submit">'+t("openSession")+'</button>';
+   form.addEventListener("submit",async e=>{e.preventDefault();const button=form.querySelector("button");button.disabled=true;
+    try{await api(storePath("/pos/cash-sessions/open"),{method:"POST",body:JSON.stringify({currency:$("currencySelect").value,opening_cash_amount:Number($("openingAmount").value),opening_notes:$("openingNotes").value})});await refreshSession();$("saleMessage").textContent=t("sessionOpened");}
+    catch(error){showError("saleMessage",error);}finally{button.disabled=false;}
+   });root.append(form);
+  }
+ }
+ function showCloseSession(){
+  modal('<h2>'+t("closeSession")+'</h2><p class="muted">'+t("countedCash")+'</p><input id="closingAmount" type="number" min="0" step="0.01" value="0"><input id="closingNotes" maxlength="500" placeholder="'+t("closeNotes")+'" style="margin-top:9px"><div class="actions"><button id="confirmClose">'+t("confirmClose")+'</button><button class="secondary" id="cancelClose">'+t("cancel")+'</button></div><div id="closeError" class="error"></div>');
+  $("cancelClose").addEventListener("click",closeModal);
+  $("confirmClose").addEventListener("click",async()=>{
+   const button=$("confirmClose");button.disabled=true;
+   try{const result=await api(storePath("/pos/cash-sessions/"+encodeURIComponent(session.id)),{method:"POST",body:JSON.stringify({closing_cash_amount:Number($("closingAmount").value),closing_notes:$("closingNotes").value})});
+    closeModal();session=null;renderSession();renderCart();$("saleMessage").textContent=t("sessionClosed")+" · "+t("expectedCash")+": "+money(result.session.expected_cash_amount)+" · "+t("difference")+": "+money(result.session.cash_difference);
+   }catch(error){showError("closeError",error);button.disabled=false;}
+  });
+ }
+ $("completeSaleBtn").addEventListener("click",async()=>{
+  if(!session||!cart.length||quoteBusy)return;
+  const subtotal=cart.reduce((sum,line)=>sum+Number(line.line_total||0),0);
+  const discount=Math.max(0,Number($("discountInput").value)||0);
+  const total=Math.max(0,Math.round((subtotal-discount)*100)/100);
+  if(!paymentsMatch(total)){showError("saleMessage",new Error(t("requiredPayment")));return;}
+  const reason=$("discountReason").value.trim();
+  if(discount>0&&!reason){showError("saleMessage",new Error(t("discountPermission")));return;}
+  const button=$("completeSaleBtn");button.disabled=true;showError("saleMessage","");
+  pendingKey=pendingKey||crypto.randomUUID();
+  try{
+   const result=await api(storePath("/pos/sales"),{method:"POST",body:JSON.stringify({
+    idempotency_key:pendingKey,cash_session_id:session.id,items:cart.map(line=>({product_id:line.product_id,variant_id:line.variant_id,quantity:line.quantity,tier_code:line.tier_code})),
+    payments:paymentLines.map(p=>({payment_method:p.payment_method,amount:Number(p.amount),transaction_reference:p.transaction_reference||undefined,sender_name:p.sender_name||undefined})),
+    discount_amount:discount,discount_reason:reason||undefined
+   })});
+   showReceipt(result.sale,result.items||[],paymentLines);cart=[];paymentLines=[{payment_method:"cash",amount:0}];pendingKey=null;$("discountInput").value="0";$("discountReason").value="";await loadProductsOnly();renderCart();renderPayments();
+  }catch(error){showError("saleMessage",error);}
+  finally{button.disabled=!session||!cart.length;}
+ });
+ async function loadProductsOnly(){
+  try{products=(await api(storePath("/products?status=active&limit=100"))).products||[];renderProducts();}
+  catch(error){showError("catalogError",error);}
+ }
+ function showReceipt(sale,items,payments){
+  modal('<div class="receipt"><div class="brand">MMG <span>OQVELA</span></div><h2>'+t("saleDone")+'</h2><div class="big">'+money(sale.total,sale.currency)+'</div><div class="muted" style="text-align:center">'+escapeHtml(sale.sale_number)+'</div><hr><div id="receiptItems"></div><hr><div>'+t("subtotal")+': '+money(sale.subtotal,sale.currency)+'</div><div>'+t("discount")+': '+money(sale.discount_amount,sale.currency)+'</div><div><strong>'+t("total")+': '+money(sale.total,sale.currency)+'</strong></div><div class="actions"><button id="printReceipt">'+t("print")+'</button><button class="secondary" id="receiptDone">'+t("newSale")+'</button></div></div>');
+  const root=$("receiptItems");for(const item of items){const row=document.createElement("div");row.className="total-row";const name=document.createElement("span");name.textContent=item.product_name+(item.variant_name?" · "+item.variant_name:"")+" × "+item.quantity;const amount=document.createElement("strong");amount.textContent=money(item.line_total,sale.currency);row.append(name,amount);root.append(row);}
+  $("printReceipt").addEventListener("click",()=>window.print());$("receiptDone").addEventListener("click",closeModal);
+ }
+ load();
+})();
+</script>
+</body>
+</html>
