@@ -102,7 +102,7 @@ document.addEventListener("click",async e=>{
  const refresh=e.target.closest("[data-refresh]");
  if(refresh){({orders:loadOrders,notifications:loadNotifications,products:loadProducts,inventory:async()=>{await loadProducts();await loadInventory()},customers:loadCustomers})[refresh.dataset.refresh]();return;}
  const openOrder=e.target.closest("[data-open-order]");
- if(openOrder){document.querySelector('[data-tab="orders"]')?.click();const card=document.querySelector('[data-order-card="'+CSS.escape(openOrder.dataset.openOrder)+'"]');card?.scrollIntoView({behavior:"smooth",block:"center"});return;}
+ if(openOrder){document.querySelector('[data-tab="orders"]')?.click();const card=Array.from(document.querySelectorAll("[data-order-card]")).find(node=>node.dataset.orderCard===openOrder.dataset.openOrder);card?.scrollIntoView({behavior:"smooth",block:"center"});return;}
  const read=e.target.closest("[data-read-notification]");
  if(read){read.disabled=true;try{await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/notifications/"+encodeURIComponent(read.dataset.readNotification)+"/read",{method:"POST",body:"{}"});await loadNotifications()}catch(err){message($("appMessage"),err.message,true);read.disabled=false}return;}
  const decision=e.target.closest("[data-decision]");
