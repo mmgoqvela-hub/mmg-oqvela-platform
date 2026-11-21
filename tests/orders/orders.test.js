@@ -70,7 +70,7 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
  const database=db({
   reportTotals:{total_orders:12,completed_orders:5,open_orders:4,cancelled_orders:3},
   reportRevenue:[{currency:"USD",paid_orders:4,paid_revenue:250}],
-  reportTopProducts:[{product_id:"p1",product_name:"Product A",sale_unit:"kg",quantity_base_units:10000,display_quantity:500,paid_sales:160}]
+  reportTopProducts:[{product_id:"p1",product_name:"Product A",sale_unit:"kg",quantity_base_units:10000,display_quantity:10,paid_sales:160}]
  });
  const response=await handleOrders(request("/api/stores/store-1/reports?period=7d","GET",undefined,true),{DB:database});
  const result=await response.json();
@@ -79,7 +79,7 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
  assert.equal(result.report.totals.total_orders,12);
  assert.equal(result.report.paid_revenue[0].paid_revenue,250);
  assert.equal(result.report.top_products[0].sale_unit,"kg");
- assert.equal(result.report.top_products[0].display_quantity,500);
+ assert.equal(result.report.top_products[0].display_quantity,10);
  const revenueQuery=database.calls.find(call=>call.sql.includes("paid_revenue"));
  assert.ok(revenueQuery.sql.includes("payment_status='paid'"));
  assert.ok(revenueQuery.sql.includes("store_id=?"));
