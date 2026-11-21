@@ -290,5 +290,17 @@ The store pricing model supports three quantity-based sales tiers:
 - New stores receive default manual-price settings and disabled, unconfigured tiers. Existing stores are backfilled the same way. No product or order price is changed by this migration.
 - Cost history is append-only and idempotent per store. A variant cost must belong to the specified product and store.
 - No automatic switch from current manual `base_price`/variant `price` is performed. No checkout or public catalog price is changed in this increment.
-- The pricing API, settings UI, cost entry workflow, product/variant override UI, checkout tier selection, immutable order-line snapshots and price-change audit are follow-up implementation units. Cost-plus mode must not be exposed as active until those paths and tests are complete.
+- Authenticated store-scoped APIs now support reading/updating tier settings, recording immutable manual/import USD cost versions with idempotency, and setting product/variant margin overrides. The settings UI, cost-entry UI, checkout tier selection, immutable order-line snapshots and price-change audit remain follow-up implementation units. The API configuration alone does not activate cost-plus checkout; no storefront or POS price changes in this increment.
 - Required tests include tier threshold boundaries, margin overrides, missing cost/margin, currency gating, rounding, historical cost versions, tenant isolation, concurrent price/cost updates and checkout snapshots.
+
+
+## 17. Pricing API increment
+
+The Worker now exposes authenticated, origin-validated, tenant-scoped endpoints:
+- `GET/PUT /api/stores/{storeId}/pricing` — read or save pricing mode, rounding increment and all three tier thresholds, percentages and enabled states. Retail must be enabled; wholesale and bulk thresholds must increase strictly.
+- `GET/POST /api/stores/{storeId}/products/{productId}/costs` — inspect cost history or append a manual/import USD cost version. POST requires a caller-supplied idempotency key; replays with matching payload are safe, conflicting reuse is rejected.
+- `GET/PUT /api/stores/{storeId}/products/{productId}/pricing-overrides` — inspect or set product-level/variant-level tier margin overrides. Variant ownership is checked against the same product and store.
+
+Permissions use existing catalog and inventory permission codes. All write paths validate tenant ownership server-side. Percentage inputs are decimal strings converted exactly to basis points; monetary costs are decimal strings parsed to USD cents. No endpoint exposes SYP cost entry or updates existing order prices.
+
+This increment is a backend foundation only: it does not yet calculate or apply customer-facing prices at checkout/POS, and it does not provide a dashboard screen. Cost-plus pricing must remain labelled as configuration until checkout snapshots and UI are implemented.
