@@ -506,7 +506,6 @@
         $("customerRegisterOpen").hidden=customerMode()==="account";
         $("customerLoginOpen").hidden=customerMode()==="account";
         if(!token){$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
-        renderCustomerQr();
         const headers={"X-Customer-Token":token,"Accept":"application/json"};
         const base="/api/public/stores/"+encodeURIComponent(slug)+"/customer/";
         const [ordersResponse,notificationsResponse]=await Promise.all([
@@ -524,6 +523,12 @@
           }
           $("customerOrdersList").textContent=ordersData.error||t("orderFailed");return;
         }
+        if(ordersData.customer_mode==="account")localStorage.setItem(customerModeStorageKey,"account");
+        else if(ordersData.customer_mode==="guest")localStorage.setItem(customerModeStorageKey,"guest");
+        $("customerLogout").hidden=customerMode()!=="account";
+        $("customerRegisterOpen").hidden=customerMode()==="account";
+        $("customerLoginOpen").hidden=customerMode()==="account";
+        renderCustomerQr();
         const list=$("customerOrdersList");list.replaceChildren();
         const orders=ordersData.orders||[];
         if(!orders.length){list.textContent=t("noOrders");}
