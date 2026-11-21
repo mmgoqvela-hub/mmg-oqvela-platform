@@ -87,6 +87,15 @@ export default {
       }
     }
 
+    const posPagePath = url.pathname.match(/^\/pos\/[^/]+\/?$/);
+    if (posPagePath && request.method === "GET") {
+      const assetUrl = new URL("/pos.html", request.url);
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), {
+        method: "GET",
+        headers: request.headers
+      }));
+    }
+
     const storefrontPath = url.pathname.match(/^\/s\/[^/]+\/?$/);
     if (storefrontPath && request.method === "GET") {
       const assetUrl = new URL("/storefront.html", request.url);
