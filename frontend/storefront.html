@@ -317,6 +317,9 @@
           row.append(info,actions);
           container.append(row);
         }
+                const fulfillmentMethod=$("fulfillmentMethod")?.value;
+        const deliveryFee=fulfillmentMethod==="delivery"?Number(storeData?.order_settings?.delivery_fee||0):0;
+        if(deliveryFee>0&&totals.size===1){const [currency,total]=totals.entries().next().value;totals.set(currency,total+deliveryFee);}
         $("cartTotal").textContent = [...totals.entries()].map(([currency,total]) => money(total,currency)).join(" + ");
       }
 
@@ -380,7 +383,7 @@
         if(choices.some(([value])=>value===previous))select.value=previous;
         const isDelivery=select.value==="delivery";
         $("shippingAddress").required=isDelivery;
-        $("addressLabel").textContent=isDelivery?t("address"):t("address")+" (اختياري)";
+        $("addressLabel").textContent=isDelivery?t("address"):t("address")+(language==="ar"?" (اختياري)":" (optional)");
       }
 
       function updateShamcashFields() {
@@ -734,7 +737,7 @@
       $("search").addEventListener("input",renderProducts);
       $("checkoutStart").addEventListener("click",() => { renderCheckoutMethods(); $("checkoutForm").hidden = false; $("checkoutResult").hidden = true; $("customerName").focus(); });
       $("paymentMethod").addEventListener("change",updateShamcashFields);
-      $("fulfillmentMethod").addEventListener("change",updateFulfillmentOptions);
+      $("fulfillmentMethod").addEventListener("change",()=>{updateFulfillmentOptions();renderCart();});
       $("checkoutForm").addEventListener("submit",submitOrder);
       setLanguage(language);
       $("storeName").textContent = t("loading");
