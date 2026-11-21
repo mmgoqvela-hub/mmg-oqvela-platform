@@ -76,6 +76,9 @@ ALTER TABLE store_orders ADD COLUMN store_phone_snapshot TEXT;
 
 CREATE INDEX idx_store_orders_customer_identity
   ON store_orders(store_id, customer_identity_id, created_at DESC);
+CREATE UNIQUE INDEX idx_store_orders_unique_payment_reference
+  ON store_orders(store_id,payment_reference)
+  WHERE payment_reference IS NOT NULL;
 
 -- Stock is no longer reserved when a customer merely submits an order.
 -- It is reserved only after the store accepts it.
