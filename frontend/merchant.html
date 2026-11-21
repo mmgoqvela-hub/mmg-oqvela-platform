@@ -32,7 +32,8 @@ label{display:block;color:#d7e1ef;font-size:14px}.section-head{display:flex;just
 <div class="panel"><div class="section-head"><div><div class="tag">لوحة التحكم</div><h1 id="storeName">متجرك</h1><div id="userLabel" class="muted"></div></div></div><div id="appMessage" class="notice hidden" role="status"></div>
 <div class="grid"><div class="tile"><div class="muted">المنتجات</div><h2 id="productCount">—</h2></div><div class="tile"><div class="muted">الطلبات</div><h2 id="orderCount">—</h2></div><div class="tile"><div class="muted">الزبائن</div><h2 id="customerCount">—</h2></div></div></div>
 <nav class="tabs" aria-label="أقسام المتجر"><button class="active" data-tab="orders">الطلبات</button><button data-tab="notifications">الإشعارات <span id="notificationCount"></span></button><button data-tab="products">المنتجات</button><button data-tab="inventory">المخزون</button><button data-tab="customers">سجل الزبائن</button></nav>
-<section id="orders" class="panel"><div class="section-head"><h2>طلبات المتجر</h2><button data-refresh="orders">تحديث</button></div><div id="ordersList" class="muted">جار التحميل…</div></section>
+<section id="orders" class="panel"><div class="section-head"><h2>طلبات المتجر</h2><div class="row"><button id="manageRejectionReasons">إدارة أسباب الرفض</button><button data-refresh="orders">تحديث</button></div></div><div id="ordersList" class="muted">جار التحميل…</div>
+<div id="rejectionReasonsPanel" class="item hidden"><h3>أسباب رفض الطلبات</h3><form id="addRejectionReasonForm" class="row"><input id="newRejectionReason" minlength="3" maxlength="160" placeholder="أضف سبب رفض جديداً" required><button type="submit">إضافة</button></form><div id="rejectionReasonsList"></div></div></section>
 <section id="notifications" class="panel hidden"><div class="section-head"><h2>إشعارات المتجر</h2><button data-refresh="notifications">تحديث</button></div><div id="notificationsList" class="muted">جار التحميل…</div></section>
 <section id="products" class="panel hidden"><div class="section-head"><h2>منتجات المتجر</h2><button data-refresh="products">تحديث</button></div>
 <form id="productForm" class="tile" style="margin:12px 0"><h3 id="productFormTitle">إضافة منتج</h3><input id="productId" type="hidden"><label for="productName">اسم المنتج</label><input id="productName" required minlength="2" maxlength="160" placeholder="مثال: منقوشة زعتر"><div class="row"><div><label for="productPrice">السعر</label><input id="productPrice" type="number" min="0" step="0.01" required></div><div><label for="productUnit">وحدة البيع</label><select id="productUnit"><option value="piece">قطعة</option><option value="kg">كيلو</option></select></div></div><div class="row"><div><label for="productStatus">حالة المنتج</label><select id="productStatus"><option value="active">متاح للبيع</option><option value="draft">مسودة</option><option value="archived">مؤرشف</option></select></div><div><label for="productCurrency">العملة</label><select id="productCurrency"><option value="SYP">ليرة سورية (SYP)</option></select></div></div><label for="productDescription">وصف المنتج (اختياري)</label><input id="productDescription" maxlength="10000" placeholder="وصف مختصر"><label for="productImageUrl">رابط صورة المنتج (HTTPS)</label><input id="productImageUrl" type="url" inputmode="url" maxlength="2000" placeholder="https://example.com/product.jpg"><div class="row"><button class="primary" type="submit">حفظ المنتج</button><button id="cancelProductEdit" type="button">إلغاء التعديل</button></div><div id="productFormMessage" class="notice hidden"></div></form><div id="productsList" class="muted">جار التحميل…</div></section>
@@ -48,7 +49,7 @@ const statusNames={pending:"بانتظار القرار",confirmed:"مقبول",
 function message(el,text,error=false){el.textContent=text;el.classList.remove("hidden","error","success");el.classList.add(error?"error":"success")}
 async function loadSession(){try{sessionData=await api("/api/auth/me");const stores=sessionData.stores||[];const matched=stores.find(s=>s.slug===requestedStoreSlug||(requestedStoreSlug==="omaya"&&s.slug==="omaya-pastries"));if(!matched){$("loginPanel").classList.remove("hidden");message($("loginMessage"),"هذا الحساب لا يملك صلاحية الوصول إلى هذا المتجر.",true);return}showApp(matched)}catch{$("loginPanel").classList.remove("hidden")}}
 function showApp(store){$("loginPanel").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden");$("userLabel").textContent=sessionData.user?.email||"";selectStore(store.id)}
-async function selectStore(id){activeStore=sessionData.stores.find(s=>s.id===id);if(!activeStore)return;$("storeName").textContent=activeStore.name;await Promise.all([loadOrders(),loadNotifications(),loadProducts(),loadCustomers(),loadInventory()]);startMerchantPolling()}
+async function selectStore(id){activeStore=sessionData.stores.find(s=>s.id===id);if(!activeStore)return;$("storeName").textContent=activeStore.name;await loadRejectionReasons();await Promise.all([loadOrders(),loadNotifications(),loadProducts(),loadCustomers(),loadInventory()]);startMerchantPolling()}
 async function loadOrders(){
  try{
   const d=await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/orders");
@@ -58,7 +59,7 @@ async function loadOrders(){
    const paymentMethod=o.customer_payment_method||o.payment_method;
    const paymentLabel=paymentMethod==="shamcash"?"شام كاش":"نقداً عند الاستلام";
    const statusLabel=decision==="accepted"?"مقبول":decision==="rejected"?"مرفوض":"بانتظار القرار";
-   const rejectionOptions=["المحل مغلق حالياً","المنتج غير متوفر حالياً","تعذر تأمين جميع المنتجات المطلوبة","عنوان الزبون خارج نطاق التوصيل","تعذر التواصل مع الزبون"];
+   const rejectionOptions=rejectionReasonsCache.filter(reason=>Number(reason.is_enabled)===1).map(reason=>reason.reason_text);
    const reasonOptions=rejectionOptions.map(reason=>'<option value="'+esc(reason)+'">'+esc(reason)+'</option>').join("")+'<option value="custom">سبب آخر</option>';
    const acceptButton='<button data-decision="accepted" data-order-id="'+esc(o.id)+'">قبول الطلب</button>';
    const rejectButton='<select data-rejection-reason="'+esc(o.id)+'">'+reasonOptions+'</select><input data-rejection-custom="'+esc(o.id)+'" placeholder="اكتب سبب الرفض" maxlength="1000" style="display:none"><button data-decision="rejected" data-order-id="'+esc(o.id)+'">رفض الطلب</button>';
@@ -69,6 +70,13 @@ async function loadOrders(){
    return '<article class="item" data-order-card="'+esc(o.id)+'"><strong>طلب #'+esc(o.order_number)+' — '+esc(o.customer_name)+'</strong><small>الهاتف: '+esc(o.customer_phone)+'<br>هاتف المحل: '+esc(o.store_phone_snapshot||activeStore.whatsapp_phone||"غير محدد")+(o.customer_email?"<br>البريد الإلكتروني: "+esc(o.customer_email):"")+'<br>العنوان: '+esc(o.shipping_address||"")+(o.customer_notes?"<br>ملاحظات الزبون: "+esc(o.customer_notes):"")+'<br>تاريخ الطلب: '+esc(o.created_at)+'<br>القرار: '+statusLabel+'<br>طريقة الاستلام: '+(o.fulfillment_method==="delivery"?"توصيل":"استلام من المحل")+'<br>طريقة الدفع المختارة: '+paymentLabel+'<br>قيمة المنتجات: '+money(o.subtotal,o.currency)+'<br>التوصيل: '+money(o.delivery_fee,o.currency)+'<br>الإجمالي: '+money(o.total,o.currency)+'<br>الدفع: '+(o.payment_status==="paid"?"تم التحصيل":"بانتظار التسليم والتحصيل")+(o.payment_reference?"<br>رقم العملية: "+esc(o.payment_reference):"")+(o.payment_sender_name?"<br>اسم المرسل: "+esc(o.payment_sender_name):"")+(o.delivered_at?"<br>تاريخ التسليم والتحصيل: "+esc(o.delivered_at):"")+'</small><p>'+((o.items||[]).map(i=>esc(i.product_name)+' × '+esc(i.quantity)+(i.sale_unit==="kg"?" غرام":"")+' — '+money(i.line_total,i.currency)).join("، "))+'</p>'+(o.rejection_reason?'<small>سبب الرفض: '+esc(o.rejection_reason)+'</small>':"")+decisionControls+deliveryControl+(history?'<p><small>سجل القرارات:<br>'+history+'</small></p>':"")+'</article>';
   }).join(""):'لا توجد طلبات حتى الآن.';
  }catch(e){$("ordersList").textContent=e.message}
+}
+async function loadRejectionReasons(){
+ try{
+  const d=await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/order-rejection-reasons");
+  rejectionReasonsCache=d.reasons||[];
+  $("rejectionReasonsList").innerHTML=rejectionReasonsCache.map(reason=>'<div class="row"><span>'+esc(reason.reason_text)+'</span><button data-toggle-rejection-reason="'+esc(reason.id)+'" data-enabled="'+(Number(reason.is_enabled)===1?"1":"0")+'">'+(Number(reason.is_enabled)===1?"تعطيل":"تفعيل")+'</button></div>').join("")||"لا توجد أسباب.";
+ }catch(e){$("rejectionReasonsList").textContent=e.message}
 }
 async function loadNotifications(){
  try{
@@ -94,6 +102,11 @@ document.addEventListener("click",async e=>{const edit=e.target.closest("[data-e
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});await loadSession()}catch(err){message($("loginMessage"),err.message,true)}finally{b.disabled=false}});
 $("logout").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST",body:"{}"})}finally{location.reload()}});
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));["orders","notifications","products","inventory","customers"].forEach(id=>$(id).classList.toggle("hidden",id!==b.dataset.tab))}));
+$("manageRejectionReasons").addEventListener("click",()=>{$("rejectionReasonsPanel").classList.toggle("hidden");loadRejectionReasons();});
+$("addRejectionReasonForm").addEventListener("submit",async e=>{
+ e.preventDefault();const reason=$("newRejectionReason").value.trim();if(!reason)return;
+ try{await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/order-rejection-reasons",{method:"POST",body:JSON.stringify({reason_text:reason})});$("newRejectionReason").value="";await loadRejectionReasons();await loadOrders();message($("appMessage"),"تمت إضافة سبب الرفض.")}catch(err){message($("appMessage"),err.message,true)}
+});
 document.addEventListener("change",e=>{
  const select=e.target.closest("[data-rejection-reason]");
  if(select){const card=select.closest("[data-order-card]");const input=card?.querySelector("[data-rejection-custom]");if(input)input.style.display=select.value==="custom"?"block":"none";}
@@ -101,6 +114,8 @@ document.addEventListener("change",e=>{
 document.addEventListener("click",async e=>{
  const refresh=e.target.closest("[data-refresh]");
  if(refresh){({orders:loadOrders,notifications:loadNotifications,products:loadProducts,inventory:async()=>{await loadProducts();await loadInventory()},customers:loadCustomers})[refresh.dataset.refresh]();return;}
+ const toggleReason=e.target.closest("[data-toggle-rejection-reason]");
+ if(toggleReason){toggleReason.disabled=true;try{await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/order-rejection-reasons/"+encodeURIComponent(toggleReason.dataset.toggleRejectionReason),{method:"PATCH",body:JSON.stringify({is_enabled:toggleReason.dataset.enabled!=="1"})});await loadRejectionReasons();await loadOrders()}catch(err){message($("appMessage"),err.message,true);toggleReason.disabled=false}return;}
  const openOrder=e.target.closest("[data-open-order]");
  if(openOrder){document.querySelector('[data-tab="orders"]')?.click();const card=Array.from(document.querySelectorAll("[data-order-card]")).find(node=>node.dataset.orderCard===openOrder.dataset.openOrder);card?.scrollIntoView({behavior:"smooth",block:"center"});return;}
  const read=e.target.closest("[data-read-notification]");
