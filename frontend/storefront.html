@@ -268,7 +268,7 @@
           return product && (!item.variantId || product.variants?.some(variant => variant.id === item.variantId));
         });
         if (valid.length !== cart.length) { cart = valid; saveCart(); }
-        const count = cart.reduce((sum,item) => sum + item.quantity,0);
+        const count = cart.length;
         $("cartCount").textContent = String(count);
         $("checkoutStart").hidden = count === 0;
         if (count === 0) $("checkoutForm").hidden = true;
@@ -286,14 +286,14 @@
           const variant = product?.variants?.find(option => option.id === item.variantId);
           const price = cartLinePrice(item);
           const currency = product.currency || "USD";
-          totals.set(currency, (totals.get(currency) || 0) + price * item.quantity);
+          totals.set(currency, (totals.get(currency) || 0) + price * (product.sale_unit === "kg" ? item.quantity / 1000 : item.quantity));
           const row = document.createElement("div");
           row.className = "cart-row";
           const info = document.createElement("div");
           const name = document.createElement("strong");
           name.textContent = product.name;
           const detail = document.createElement("small");
-          detail.textContent = (variant ? variant.name + " · " : "") + money(price,product.currency);
+          detail.textContent = (variant ? variant.name + " · " : "") + money(price,product.currency) + (product.sale_unit === "kg" ? (language === "ar" ? " / كغ" : " / kg") : (language === "ar" ? " / قطعة" : " / piece"));
           info.append(name,detail);
           const actions = document.createElement("div");
           actions.className = "cart-actions";
@@ -302,7 +302,7 @@
           minus.setAttribute("aria-label",language === "ar" ? "تقليل الكمية" : "Decrease quantity");
           minus.addEventListener("click",() => changeCartQuantity(item,-1));
           const qty = document.createElement("span");
-          qty.textContent = String(item.quantity);
+          qty.textContent = product.sale_unit === "kg" ? (item.quantity / 1000).toLocaleString(language === "ar" ? "ar" : "en") + (language === "ar" ? " كغ" : " kg") : String(item.quantity);
           const plus = document.createElement("button");
           plus.type = "button"; plus.textContent = "+";
           plus.setAttribute("aria-label",language === "ar" ? "زيادة الكمية" : "Increase quantity");
@@ -328,7 +328,7 @@
         const variant = product?.variants?.find(option => option.id === item.variantId);
         const stock = variant ? Number(variant.stock_quantity) : Number(product?.stock_quantity || 0);
         const tracked = Boolean(product?.track_inventory);
-        const next = item.quantity + delta;
+        const next = item.quantity + (product?.sale_unit === "kg" ? delta * 50 : delta);
         if (next <= 0) cart = cart.filter(line => line !== item);
         else if (!tracked || next <= stock) item.quantity = next;
         saveCart();
@@ -594,8 +594,8 @@
             buy.append(variantSelect);
           }
           const quantity = document.createElement("input");
-          quantity.type = "number"; quantity.min = "1"; quantity.step = "1"; quantity.value = "1";
-          quantity.inputMode = "numeric"; quantity.setAttribute("aria-label",t("quantity"));
+          quantity.type = "number"; quantity.min = product.sale_unit === "kg" ? "0.05" : "1"; quantity.step = product.sale_unit === "kg" ? "0.05" : "1"; quantity.value = product.sale_unit === "kg" ? "0.25" : "1";
+          quantity.inputMode = "decimal"; quantity.setAttribute("aria-label",t("quantity") + (product.sale_unit === "kg" ? (language === "ar" ? " بالكيلوغرام" : " in kilograms") : ""));
           if (product.track_inventory && !product.variants?.length) quantity.max = String(product.stock_quantity);
           buy.append(quantity);
           const add = document.createElement("button");
@@ -606,21 +606,22 @@
           add.disabled = noStock;
           if (noStock) add.textContent = t("outOfStock");
           add.addEventListener("click",() => {
-            const amount = Number(quantity.value);
+            const enteredAmount = Number(quantity.value);
+            const amount = product.sale_unit === "kg" ? Math.round(enteredAmount * 1000) : enteredAmount;
             const variant = variantSelect ? product.variants.find(option => option.id === variantSelect.value) : null;
-            if (!Number.isInteger(amount) || amount < 1 || (variantSelect && !variant)) {
+            if (!Number.isInteger(amount) || amount < (product.sale_unit === "kg" ? 50 : 1) || (product.sale_unit === "kg" && amount % 50 !== 0) || (product.sale_unit !== "kg" && amount > 999) || (variantSelect && !variant)) {
               quantity.focus(); return;
             }
             addToCart(product,variant,amount);
           });
           const updateDisplayedPrice = () => {
-            const amount = Math.max(1,Number(quantity.value)||1);
+            const amount = product.sale_unit === "kg" ? Math.max(0.05,Number(quantity.value)||0.25) : Math.max(1,Number(quantity.value)||1);
             const selectedVariant = variantSelect ? product.variants.find(option => option.id === variantSelect.value) : null;
             const tiers = selectedVariant?.public_tier_prices?.length ? selectedVariant.public_tier_prices : product.public_tier_prices;
             if (Array.isArray(tiers) && tiers.length) {
               const selectedTier = tiers.filter(tier => amount >= tier.min_quantity).sort((a,b)=>b.min_quantity-a.min_quantity)[0];
               const unitPrice = selectedTier?.unit_price ?? (selectedVariant?.price ?? product.base_price);
-              priceLine.textContent = money(unitPrice,product.currency) + (selectedTier ? " · " + selectedTier.min_quantity + "+" : "");
+              priceLine.textContent = money(unitPrice,product.currency) + (product.sale_unit === "kg" ? (language === "ar" ? " / كغ" : " / kg") : (language === "ar" ? " / قطعة" : " / piece")) + (selectedTier ? " · " + selectedTier.min_quantity + "+" : "");
             }
           };
           quantity.addEventListener("input",updateDisplayedPrice);
