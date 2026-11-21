@@ -268,3 +268,27 @@ This section is a target design, not an implemented ledger or UI. Current suppli
 - `store_currency_settings` links each store to an explicit verified currency-precision version. Database triggers reject activation of a pending/unverified currency and enforce one enabled default sale currency per store.
 - This migration does not convert, rewrite or reinterpret any historical `REAL` product price, order amount or invoice. It does not create exchange rates, customer receivables, supplier payables, payment allocations or journals.
 - Before financial ledgers are enabled, a separate migration must inventory every historical amount and currency, define a deterministic exact-decimal conversion/backfill with reconciliation and rollback tests, and preserve original values for audit. Do not round legacy REAL values silently or assume that a numeric amount can be safely converted without a documented rule.
+
+
+## 16. Three-level cost-plus pricing foundation (migration 0030)
+
+The store pricing model supports three quantity-based sales tiers:
+- `retail` — المفرق.
+- `wholesale` — الجملة.
+- `bulk_wholesale` — جملة الجملة.
+
+### Pricing policy
+- Profit percentage is a **markup on acquisition cost**: selling price = cost × (1 + percentage / 100). It is not a gross-margin percentage of the final selling price; the UI must label this clearly to avoid confusion.
+- Store settings hold the pricing mode (manual or cost-plus), cost currency (USD for this initial increment), and a configurable rounding increment in minor units.
+- Each tier has its own minimum quantity, enabled state and profit percentage in basis points. The schema seeds quantity thresholds of 1, 2 and 10 only as editable starting values; store owners must configure margins and may change thresholds before enabling cost-plus pricing. No profit percentages are guessed or enabled by default.
+- Product/variant-specific margin overrides can replace the store tier percentage. Variant overrides must refer to a variant of the same product and store.
+- Price calculation uses integer minor units and BigInt arithmetic with deterministic half-up rounding. It never uses JavaScript floating-point arithmetic for the calculated price.
+- Cost basis is stored as immutable, versioned USD minor-unit records. A product-level cost is the fallback for variants; a variant-specific cost takes precedence. Later posted purchase receipts may create cost versions with a source reference, but migration 0030 does not yet post receipts or calculate FIFO/weighted-average cost.
+- Every sale must snapshot the selected tier, quantity threshold, margin, cost version, calculated unit price, currency and rounding policy into the order/invoice line. A future exchange-rate conversion to SYP must capture its rate ID/value/version and effective timestamp; SYP remains unavailable to cost-plus pricing until its precision is verified.
+
+### Integrity and rollout boundaries
+- New stores receive default manual-price settings and disabled, unconfigured tiers. Existing stores are backfilled the same way. No product or order price is changed by this migration.
+- Cost history is append-only and idempotent per store. A variant cost must belong to the specified product and store.
+- No automatic switch from current manual `base_price`/variant `price` is performed. No checkout or public catalog price is changed in this increment.
+- The pricing API, settings UI, cost entry workflow, product/variant override UI, checkout tier selection, immutable order-line snapshots and price-change audit are follow-up implementation units. Cost-plus mode must not be exposed as active until those paths and tests are complete.
+- Required tests include tier threshold boundaries, margin overrides, missing cost/margin, currency gating, rounding, historical cost versions, tenant isolation, concurrent price/cost updates and checkout snapshots.
