@@ -77,3 +77,18 @@ test("POS refuses automatic pricing for non-USD products",async()=>{
  const response=await handlePos(req({items:[{product_id:"p-1",quantity:1}]}),{DB:database});
  assert.equal(response.status,409);
 });
+
+
+test("POS kilogram quote charges proportionally and reports the sale unit",async()=>{
+ const database=makeDb({
+  product:{id:"p-1",name:"Pastry",sku:"P-1",base_price:15,currency:"USD",track_inventory:1,stock_quantity:500,status:"active",sale_unit:"kg"},
+  settings:{pricing_mode:"manual",rounding_increment_minor_units:1}
+ });
+ const response=await handlePos(req({items:[{product_id:"p-1",quantity:5}]}),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.quote.items[0].sale_unit,"kg");
+ assert.equal(result.quote.items[0].quantity,5);
+ assert.equal(result.quote.items[0].line_total,3.75);
+ assert.equal(result.quote.total,3.75);
+});
