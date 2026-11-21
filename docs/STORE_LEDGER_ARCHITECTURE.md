@@ -94,3 +94,52 @@ Discrepancies create actionable alerts with source references. Never silently ch
 8. Add period close, audit and controlled correction workflows.
 
 No production migration, live financial posting or deployment should occur until migration tests, CI and explicit rollout checks pass.
+
+## 10. Repository audit findings (2026-11-21)
+
+The current schema and route implementation were inspected before proposing new tables. These are observed repository facts, not assumptions about a deployed database.
+
+### Existing records to reuse
+
+- Migration 0003 defines `products`, `product_variants`, `product_images` and `inventory_movements`. The movement table already records store, product, optional variant, movement type, signed quantity, reference, notes, actor and creation time.
+- Migration 0020 defines `store_orders`, `store_order_items`, `store_order_events` and checkout settings. Order items snapshot product name, SKU, quantity, unit price, line total and currency.
+- Migration 0020 uses database triggers to decrement product/variant stock and insert a `sale` inventory movement when an order item is inserted. Cancellation restores quantities and writes `return` movements.
+- Migration 0022 strengthens cancellation restoration by deriving the restored amount from the original `sale` movements, and enforces order/payment lifecycle transitions and consistency.
+- Migration 0007's `payments` table is linked to `store_subscriptions`; it is platform subscription-payment data, not a store checkout payment ledger. Do not reuse it for store sales receipts.
+- The current order route validates public order input, obtains authoritative product/variant prices from D1, inserts order headers and lines through `DB.batch`, and reports paid order totals grouped by currency.
+
+### Important gaps and risks confirmed by inspection
+
+- Product and variant prices, order line amounts and order totals currently use SQLite `REAL`; this is not an acceptable final authoritative money representation for the planned financial ledger. Existing data must be migrated with a deterministic, tested conversion plan; do not change column meaning in place without compatibility review.
+- Store orders currently represent one currency per order and have no separate payment transaction/allocation rows. A Sham Cash order is recorded as pending with a transaction reference and sender name; cash on delivery is unpaid. This is not a general receipt, split-tender, refund or settlement ledger.
+- The repository currently has no store-level supplier invoices, purchase receipts, expense documents, cash drawers, bank accounts, customer/supplier subledgers, chart of accounts or double-entry journal tables in migrations 0001-0026.
+- `inventory_movements` has no warehouse, unit-of-measure, cost layer, effective business date, source type, idempotency key or reversal link. It must be extended compatibly rather than replaced by a second movement table.
+- Stock quantity columns are projections updated by existing triggers/routes. New purchasing, returns, transfers and adjustments must update the projection and append the matching movement within one verified D1 transaction boundary.
+- Existing order cancellation currently restores reserved stock. A future fulfillment/dispatch model must distinguish reservation, shipment/consumption and customer return; do not reinterpret historical `sale` movements without a migration and regression plan.
+- The existing order report sums paid order totals, which is a cash/payment-status-oriented sales view, not a reconciled revenue, margin or profit statement. Do not relabel it as net profit.
+
+## 11. Safe implementation sequence after the audit
+
+1. Preserve all current tables, triggers, route contracts and historical rows. Add regression fixtures for the current order reservation, cancellation restoration, duplicate Sham Cash reference and lifecycle guards before financial schema work.
+2. Design a versioned currency/amount representation and a backfill/compatibility strategy for current `REAL` prices and order snapshots. Confirm currency precision and rounding policy before production activation; use integer minor units only where the currency precision is verified, otherwise use a documented exact-decimal representation.
+3. Add warehouse and inventory source metadata compatibly, plus append-only update/delete protection for posted movement records. Introduce new movement reasons through a migration that preserves all existing allowed values and historical rows.
+4. Implement supplier purchase orders and receipts first. A posted receipt creates inventory movements and updates stock projections exactly once; draft/ordered quantities do not become on-hand stock. Supplier bills and payments remain distinct.
+5. Implement store payment transactions and allocations independently of platform subscription `payments`. Support multiple tenders and partial settlement without duplicating revenue or cash receipt.
+6. Add cash/bank accounts and movements, expenses, customer/supplier balances and journal posting only after the source documents and allocation rules are testable.
+7. Introduce costing (beginning with an explicitly chosen and tested method) before reporting COGS, inventory valuation or gross margin as authoritative.
+8. Expose dashboard KPIs only when their underlying records reconcile. Keep unsupported KPIs clearly unavailable.
+
+### Mandatory acceptance tests before enabling financial posting
+
+- Applying all migrations from an empty SQLite database succeeds and `PRAGMA foreign_key_check` is clean.
+- Existing order creation reserves stock and creates one movement per line; any failed line rolls back the entire order batch.
+- Cancellation restores only the quantity reserved by that order, exactly once; repeated cancellation or retry cannot restore stock twice.
+- A duplicate store-scoped Sham Cash transaction reference is rejected without creating a second order.
+- Store payment rows cannot be confused with platform subscription payments.
+- Cross-store product, supplier, warehouse, payment, journal and allocation references are rejected at the database boundary.
+- Every posted source document is idempotent; reversal creates linked compensating records and does not delete or rewrite the original.
+- Debits equal credits for every posted journal batch; multi-currency balances are never summed as raw unlike-currency amounts.
+- All financial and inventory operations have deterministic rollback tests against the actual D1-supported batch/transaction behavior.
+
+No new financial migration or production posting was created by this audit. The next implementation unit should be the backward-compatible currency/amount foundation and inventory movement hardening, each with migration and route tests before purchase or accounting screens are exposed.
+
