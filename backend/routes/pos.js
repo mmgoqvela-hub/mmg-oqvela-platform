@@ -339,7 +339,7 @@ async function posReport(env,storeId,url){
           WHERE v.store_id=? AND v.status='posted' AND (? IS NULL OR vs.currency=?)
             AND (? IS NULL OR date(v.created_at)>=date(?)) AND (? IS NULL OR date(v.created_at)<=date(?))),0),2) AS voids_total
       FROM pos_sales s WHERE ${filter}
-    `).bind(...values,...values.slice(0,0),storeId,currency||null,currency||null,from||null,from||null,to||null,to||null,storeId,currency||null,currency||null,from||null,from||null,to||null,to||null).first(),
+    `).bind(storeId,currency||null,currency||null,from||null,from||null,to||null,to||null,storeId,currency||null,currency||null,from||null,from||null,to||null,to||null,...values).first(),
     env.DB.prepare(`
       SELECT date(s.created_at) AS day,COUNT(*) AS sale_count,
         ROUND(SUM(CASE WHEN s.status!='voided' THEN s.total ELSE 0 END),2) AS sales_total
