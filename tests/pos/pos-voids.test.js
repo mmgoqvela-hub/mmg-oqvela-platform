@@ -18,7 +18,7 @@ function makeDb(options={}){
    if(sql.includes("FROM inventory_movements WHERE store_id"))return Object.prototype.hasOwnProperty.call(options,"original")?options.original:{id:"move-1",warehouse_id:"wh-1"};
    return null;
   },
-  async run(){return {meta:{changes:1}};},
+  run: async()=>({meta:{changes:1}}),
   async all(){
    if(sql.includes("FROM pos_sale_items"))return {results:options.items??[{id:"item-1",product_id:"p-1",variant_id:null,quantity:3,currency:"USD"}]};
    if(sql.includes("FROM pos_sale_payments"))return {results:options.payments??[{payment_method:"cash",amount:20,currency:"USD"},{payment_method:"shamcash",amount:10,currency:"USD"}]};
