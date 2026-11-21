@@ -295,6 +295,53 @@ async function createSale(request,env,storeId,session,access){
   return json({status:"ok",sale:{id,sale_number:saleNumber,currency:quote.currency,subtotal:quote.total,
     discount_amount:discount,total,status:"posted",payment_status:"paid"},items:quote.lines.map(publicPosLine)},201);
 }
+async function listSales(env,storeId,url){
+  const rawLimit=Number(url.searchParams.get("limit")||50);
+  const limit=Number.isInteger(rawLimit)?Math.min(100,Math.max(1,rawLimit)):50;
+  const status=url.searchParams.get("status");
+  const currency=url.searchParams.get("currency");
+  const from=url.searchParams.get("from");
+  const to=url.searchParams.get("to");
+  if(status&&!["posted","voided","partially_refunded","refunded"].includes(status))
+    return json({error:"Invalid sale status filter"},400);
+  if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency filter"},400);
+  if(from&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(from))return json({error:"Invalid start date"},400);
+  if(to&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(to))return json({error:"Invalid end date"},400);
+  const rows=await env.DB.prepare(`
+    SELECT s.id,s.sale_number,s.customer_name,s.customer_phone,s.currency,s.subtotal,
+      s.discount_amount,s.total,s.status,s.payment_status,s.created_at,
+      COUNT(DISTINCT i.id) AS item_count,
+      COALESCE(SUM(i.quantity),0) AS unit_count
+    FROM pos_sales s LEFT JOIN pos_sale_items i ON i.sale_id=s.id AND i.store_id=s.store_id
+    WHERE s.store_id=? AND s.status!='draft'
+      AND (? IS NULL OR s.status=?) AND (? IS NULL OR s.currency=?)
+      AND (? IS NULL OR date(s.created_at)>=date(?))
+      AND (? IS NULL OR date(s.created_at)<=date(?))
+    GROUP BY s.id
+    ORDER BY s.created_at DESC,s.rowid DESC LIMIT ?
+  `).bind(storeId,status||null,status||null,currency||null,currency||null,
+    from||null,from||null,to||null,to||null,limit).all();
+  return json({status:"ok",sales:rows.results||[],limit});
+}
+async function getSale(env,storeId,saleId){
+  const sale=await env.DB.prepare(`
+    SELECT id,sale_number,customer_name,customer_phone,currency,subtotal,discount_amount,
+      discount_reason,total,status,payment_status,created_at,created_by
+    FROM pos_sales WHERE id=? AND store_id=? AND status!='draft' LIMIT 1
+  `).bind(saleId,storeId).first();
+  if(!sale)return json({error:"Sale not found"},404);
+  const [items,payments,events]=await Promise.all([
+    env.DB.prepare(`SELECT product_id,variant_id,product_name,variant_name,sku,quantity,
+      unit_price,line_total,currency,pricing_mode,pricing_tier_code
+      FROM pos_sale_items WHERE sale_id=? AND store_id=? ORDER BY rowid`).bind(saleId,storeId).all(),
+    env.DB.prepare(`SELECT payment_method,amount,currency,transaction_reference,sender_name,created_at
+      FROM pos_sale_payments WHERE sale_id=? AND store_id=? ORDER BY created_at,rowid`).bind(saleId,storeId).all(),
+    env.DB.prepare(`SELECT event_type,details_json,created_at FROM pos_sale_events
+      WHERE sale_id=? AND store_id=? ORDER BY created_at,rowid`).bind(saleId,storeId).all()
+  ]);
+  return json({status:"ok",sale,items:items.results||[],payments:payments.results||[],
+    events:(events.results||[]).map(event=>({...event,details:JSON.parse(event.details_json||"{}")}))});
+}
 export async function handlePos(request,env){
   const url=new URL(request.url);
   const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/pos\/(quote|sales|cash-sessions(?:\/[^/]+)?)$/);
@@ -318,8 +365,15 @@ export async function handlePos(request,env){
       note:"Indicative quote only. Stock, permissions and prices are revalidated during final sale posting."}});
   }
   if(resource==="sales"){
-    if(request.method!=="POST")return json({error:"Method not allowed"},405);
-    return createSale(request,env,storeId,session,access);
+    if(request.method==="GET")return listSales(env,storeId,url);
+    if(request.method==="POST")return createSale(request,env,storeId,session,access);
+    return json({error:"Method not allowed"},405);
+  }
+  const saleMatch=resource.match(/^sales\\/([^/]+)$/);
+  if(saleMatch){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    let saleId;try{saleId=decodeURIComponent(saleMatch[1]);}catch{return json({error:"Invalid sale ID"},400);}
+    return getSale(env,storeId,saleId);
   }
   if(resource==="cash-sessions"){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
