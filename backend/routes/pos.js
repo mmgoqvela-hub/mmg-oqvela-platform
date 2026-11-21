@@ -319,7 +319,7 @@ async function posReport(env,storeId,url){
   if(from&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(from))return json({error:"Invalid start date"},400);
   if(to&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(to))return json({error:"Invalid end date"},400);
   if(from&&to&&from>to)return json({error:"Start date must not be after end date"},400);
-  if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency filter"},400);
+  if(!currency||!["USD","SYP"].includes(currency))return json({error:"Select a valid report currency"},400);
   const filter="s.store_id=? AND s.status!='draft' AND (? IS NULL OR s.currency=?) AND (? IS NULL OR date(s.created_at)>=date(?)) AND (? IS NULL OR date(s.created_at)<=date(?))";
   const values=[storeId,currency||null,currency||null,from||null,from||null,to||null,to||null];
   const [totals,daily,payments,topProducts]=await Promise.all([
