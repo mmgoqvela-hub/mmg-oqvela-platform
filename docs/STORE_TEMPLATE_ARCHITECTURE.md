@@ -134,3 +134,30 @@ This is a confirmed platform requirement:
 - Shared components and design tokens should be versioned with compatibility rules so new templates can reuse them without breaking older templates.
 - The operator workspace should support catalog lifecycle states such as draft, tested, published and retired. Retiring a template prevents new selections but does not break stores already using it.
 - Automated regression tests must verify that publishing a new template does not alter existing stores' selected template versions or rendered configuration.
+
+## 11. Professional storefront experience, localization and themes
+
+These are platform-level storefront requirements, not one-off additions to individual templates:
+- Storefront templates must be professionally composed, visually distinct in layout and hierarchy, responsive across phones, tablets and desktop screens, and accessible.
+- Arabic RTL and English LTR must both be first-class layout modes. Direction, alignment, navigation, icons where directional, forms and component behavior must adapt correctly when the language changes.
+- Storefronts must provide a clear language switcher. The architecture must support adding further languages without rewriting templates.
+- Storefront content must use localization keys/resources rather than hard-coded interface strings. Store owners/operators must be able to provide translated store-specific content where the relevant feature supports it.
+- Provide light and dark themes with complete component-state coverage (backgrounds, text, borders, controls, cards, dialogs, focus and disabled states). Theme changes must preserve readable contrast and the store's brand identity.
+- Each store may define its default language and theme. A visitor's explicit language/theme choice should persist using an appropriate privacy-conscious mechanism, without overriding the store's configured defaults for other visitors.
+- Template previews must demonstrate language and theme variants so operators can verify them before publishing.
+- Automated tests must cover RTL/LTR layout behavior, translation completeness/fallbacks, theme contrast tokens and responsive breakpoints.
+
+## 12. Touch-first point-of-sale (POS) selling
+
+The platform should support a dedicated touch-first POS experience for in-person selling, alongside the public online storefront:
+- POS is an operational sales interface, not merely a storefront template or a visual theme.
+- The interface must be usable on touch-enabled tablets and touchscreen computers, with large touch targets, clear spacing, readable product cards and minimal dependence on keyboard or mouse.
+- Staff should be able to browse/search categories and products, add items to a cart with a tap, change quantities, remove items, apply permitted discounts, review totals and complete a sale through a guided workflow.
+- POS access must be authenticated and restricted by store and staff permissions. Every sale and sensitive action must be auditable.
+- POS transactions must use the same authoritative product, inventory, pricing and order/sales services as the rest of the platform; do not create a separate inconsistent stock ledger.
+- Inventory deduction and sale creation must be atomic and protected against duplicate submissions. Payment methods and receipt handling must follow the store's enabled configuration.
+- The POS must clearly handle unavailable products, insufficient stock, failed payment and interrupted connections without silently losing or duplicating a sale.
+- Receipt printing or digital receipt delivery may be supported through compatible browser/device capabilities, with a usable on-screen receipt fallback.
+- POS must be designed for future extension (for example barcode scanners, receipt printers and cash drawers) without requiring those peripherals for the initial usable touch workflow.
+- POS screens must support the store's enabled languages and light/dark themes, but POS workflows and permissions remain separate from customer-facing template selection.
+- Do not claim offline sales, card-terminal integration, fiscal compliance or hardware compatibility until each is separately implemented and tested for the target jurisdiction and device.
