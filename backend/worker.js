@@ -12,6 +12,16 @@ import { handleOrders } from "./routes/orders.js";
 import { handlePublicServiceRequests } from "./routes/service_requests.js";
 import { handleStoreMedia } from "./routes/store_media.js";
 
+function markNoStore(response) {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 export default {
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(Promise.all([
@@ -70,7 +80,7 @@ export default {
           status: "degraded",
           platform: "MMG OQVELA",
           database: { status: "error" }
-        }, { status: 503 });
+        }, { status: 503, headers: { "Cache-Control": "no-store" } });
       }
     }
 
@@ -84,54 +94,54 @@ export default {
     }
 
     const serviceRequestsResponse = await handlePublicServiceRequests(request, env);
-    if (serviceRequestsResponse) return serviceRequestsResponse;
+    if (serviceRequestsResponse) return markNoStore(serviceRequestsResponse);
 
     const ordersResponse = await handleOrders(request, env);
-    if (ordersResponse) return ordersResponse;
+    if (ordersResponse) return markNoStore(ordersResponse);
 
     const publicStoreResponse = await handlePublicStorefront(request, env);
-    if (publicStoreResponse) return publicStoreResponse;
+    if (publicStoreResponse) return markNoStore(publicStoreResponse);
 
     const notificationsResponse = await handleNotifications(request, env);
-    if (notificationsResponse) return notificationsResponse;
+    if (notificationsResponse) return markNoStore(notificationsResponse);
 
     const subscriptionsResponse = await handleSubscriptions(request, env);
 
     if (subscriptionsResponse) {
-      return subscriptionsResponse;
+      return markNoStore(subscriptionsResponse);
     }
 
     const teamResponse = await handleTeam(request, env);
-    if (teamResponse) return teamResponse;
+    if (teamResponse) return markNoStore(teamResponse);
 
     const catalogResponse = await handleCatalog(request, env);
 
     if (catalogResponse) {
-      return catalogResponse;
+      return markNoStore(catalogResponse);
     }
 
     const storesResponse = await handleStores(request, env);
 
     if (storesResponse) {
-      return storesResponse;
+      return markNoStore(storesResponse);
     }
 
     const trialResponse = await handleTrial(request, env);
 
     if (trialResponse) {
-      return trialResponse;
+      return markNoStore(trialResponse);
     }
 
     const adminResponse = await handleAdmin(request, env);
 
     if (adminResponse) {
-      return adminResponse;
+      return markNoStore(adminResponse);
     }
 
     const authResponse = await handleAuth(request, env);
 
     if (authResponse) {
-      return authResponse;
+      return markNoStore(authResponse);
     }
 
     const assetResponse = await env.ASSETS.fetch(request);
