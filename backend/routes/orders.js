@@ -40,8 +40,9 @@ async function loadSettings(db,storeId){
     SELECT cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions
     FROM store_order_settings WHERE store_id=? LIMIT 1
   `).bind(storeId).first() || {
-    cash_on_delivery_enabled:1,shamcash_enabled:1,
-    shamcash_recipient:null,shamcash_instructions:null
+    cash_on_delivery_enabled:1,shamcash_enabled:0,
+    shamcash_recipient:null,shamcash_instructions:null,
+    pickup_enabled:1,delivery_enabled:1,delivery_fee:0
   };
 }
 async function publicStore(db,slug){
@@ -90,15 +91,20 @@ async function createPublicOrder(request,env,slug){
   const address=b.shipping_address==null||b.shipping_address===""?null:typeof b.shipping_address==="string"?b.shipping_address.trim():undefined;
   const notes=b.customer_notes==null||b.customer_notes===""?null:typeof b.customer_notes==="string"?b.customer_notes.trim():undefined;
   const method=b.payment_method;
+  const fulfillment=b.fulfillment_method;
   if(!validText(name,2,120)||!validText(phone,6,30)||
     (email!==null&&(!validText(email,5,254)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))||
     (address!==null&&(typeof address!=="string"||address.length>1000))||
     (notes!==null&&(typeof notes!=="string"||notes.length>1000))||
     !["cash_on_delivery","shamcash"].includes(method)||
+    !["pickup","delivery"].includes(fulfillment)||
     !Array.isArray(b.items)||b.items.length<1||b.items.length>30){
     return json({error:"Invalid order details"},400);
   }
   const settings=await loadSettings(env.DB,store.id);
+  if(fulfillment==="pickup"&&!settings.pickup_enabled)return json({error:"Store pickup is unavailable"},400);
+  if(fulfillment==="delivery"&&!settings.delivery_enabled)return json({error:"Delivery is unavailable"},400);
+  if(fulfillment==="delivery"&&!validText(address||"",5,1000))return json({error:"A delivery address is required"},400);
   if(method==="cash_on_delivery"&&!settings.cash_on_delivery_enabled)return json({error:"Cash on delivery is unavailable"},400);
   if(method==="shamcash"&&(!settings.shamcash_enabled||!validText(settings.shamcash_recipient||"",2,160)))
     return json({error:"Sham Cash is not configured for this store"},400);
@@ -190,12 +196,15 @@ async function createPublicOrder(request,env,slug){
   const orderId=crypto.randomUUID();
   const orderNumber="MMG-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,5).toUpperCase();
   const paymentStatus=method==="shamcash"?"pending":"unpaid";
+  const deliveryFee=fulfillment==="delivery"?Math.max(0,Number(settings.delivery_fee)||0):0;
+  const total=Math.round((subtotal+deliveryFee)*100)/100;
   const statements=[env.DB.prepare(`
     INSERT INTO store_orders
       (id,store_id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
-       payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency)
-    VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',?,?,?,?,?)
-  `).bind(orderId,store.id,orderNumber,name,phone,email,address,notes,method,paymentStatus,reference,sender,subtotal,subtotal,currency)];
+       payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
+       fulfillment_method,delivery_fee)
+    VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',?,?,?,?,?,?,?)
+  `).bind(orderId,store.id,orderNumber,name,phone,email,address,notes,method,paymentStatus,reference,sender,subtotal,total,currency,fulfillment,deliveryFee)];
   for(const item of items){
     statements.push(env.DB.prepare(`
       INSERT INTO store_order_items
@@ -209,7 +218,8 @@ async function createPublicOrder(request,env,slug){
     await env.DB.batch(statements);
     return json({status:"ok",message:"Order received",order:{
       id:orderId,order_number:orderNumber,store_name:store.name,payment_method:method,
-      payment_status:paymentStatus,order_status:"pending",subtotal,total:subtotal,currency,
+      payment_status:paymentStatus,order_status:"pending",subtotal,delivery_fee:deliveryFee,total,currency,
+      fulfillment_method:fulfillment,
       shamcash:method==="shamcash"?{recipient:settings.shamcash_recipient,instructions:settings.shamcash_instructions||null}:null
     }},201);
   }catch(error){
@@ -297,22 +307,29 @@ export async function handleOrders(request,env){
     if(parsed.error)return json({error:parsed.error},parsed.status);
     const b=parsed.body;
     const cod=b.cash_on_delivery_enabled,sham=b.shamcash_enabled;
+    const pickup=b.pickup_enabled,delivery=b.delivery_enabled;
+    const deliveryFee=Number(b.delivery_fee);
     const recipient=typeof b.shamcash_recipient==="string"?b.shamcash_recipient.trim():"";
     const instructions=typeof b.shamcash_instructions==="string"?b.shamcash_instructions.trim():"";
     if(typeof cod!=="boolean"||typeof sham!=="boolean"||(!cod&&!sham)||
+      typeof pickup!=="boolean"||typeof delivery!=="boolean"||(!pickup&&!delivery)||
+      !Number.isFinite(deliveryFee)||deliveryFee<0||deliveryFee>100000000||
       recipient.length>160||instructions.length>2000||(sham&&!validText(recipient,2,160)))
       return json({error:"Enable at least one payment method and configure Sham Cash recipient details"},400);
     await env.DB.prepare(`
       INSERT INTO store_order_settings
-        (store_id,cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions,updated_by,updated_at)
-      VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)
+        (store_id,cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions,
+         pickup_enabled,delivery_enabled,delivery_fee,updated_by,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
       ON CONFLICT(store_id) DO UPDATE SET
         cash_on_delivery_enabled=excluded.cash_on_delivery_enabled,
         shamcash_enabled=excluded.shamcash_enabled,
         shamcash_recipient=excluded.shamcash_recipient,
         shamcash_instructions=excluded.shamcash_instructions,
+        pickup_enabled=excluded.pickup_enabled,delivery_enabled=excluded.delivery_enabled,
+        delivery_fee=excluded.delivery_fee,
         updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP
-    `).bind(storeId,cod?1:0,sham?1:0,recipient||null,instructions||null,session.user_id).run();
+    `).bind(storeId,cod?1:0,sham?1:0,recipient||null,instructions||null,pickup?1:0,delivery?1:0,deliveryFee,session.user_id).run();
     return json({status:"ok",message:"Checkout settings saved"});
   }
 
@@ -322,6 +339,7 @@ export async function handleOrders(request,env){
     const result=await env.DB.prepare(`
       SELECT id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
         payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
+        fulfillment_method,delivery_fee,
         created_at,updated_at
       FROM store_orders WHERE store_id=? ORDER BY created_at DESC LIMIT 100
     `).bind(storeId).all();
