@@ -258,3 +258,13 @@ The user-facing workspace is one **Debts** area with two strictly separate suble
 
 ### 14.7 Implementation status and dependency order
 This section is a target design, not an implemented ledger or UI. Current supplier and purchase-order records in migration 0028 do not create supplier payables. Implement the currency/amount compatibility foundation, posted goods receipts, supplier bills, store payment transactions/allocations, customer invoices and receivables, supplier payables, reconciliation, then the unified Debts UI. Do not expose calculated balances as authoritative until the complete source chain and tests are in place.
+
+
+## 15. Versioned currency precision foundation (migration 0029)
+
+- `currency_precision_versions` stores immutable, sequential precision definitions with effective dates, verification state, evidence reference and approver. A correction is a new version; historical definitions are never edited or deleted.
+- USD version 1 is registered as verified with two decimal places for the existing exact-USD purchase-order workflow.
+- SYP version 1 is intentionally registered as pending with no precision exponent. Its current legal definition, effective date, precision and any redenomination rules must be verified from authoritative sources before the store can activate it.
+- `store_currency_settings` links each store to an explicit verified currency-precision version. Database triggers reject activation of a pending/unverified currency and enforce one enabled default sale currency per store.
+- This migration does not convert, rewrite or reinterpret any historical `REAL` product price, order amount or invoice. It does not create exchange rates, customer receivables, supplier payables, payment allocations or journals.
+- Before financial ledgers are enabled, a separate migration must inventory every historical amount and currency, define a deterministic exact-decimal conversion/backfill with reconciliation and rollback tests, and preserve original values for audit. Do not round legacy REAL values silently or assume that a numeric amount can be safely converted without a documented rule.
