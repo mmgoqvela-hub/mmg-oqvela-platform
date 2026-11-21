@@ -16,6 +16,10 @@ async function readBody(request){
 function validText(value,min,max){return typeof value==="string"&&value.trim().length>=min&&value.trim().length<=max;}
 function moneyMinor(value){return Math.round(Number(value)*100);}
 function validMoney(value){const amount=Number(value);return Number.isFinite(amount)&&amount>=0&&Math.abs(amount*100-Math.round(amount*100))<1e-7;}
+function publicPosLine(line){
+  const {cost_version_id,cost_currency,cost_minor_units,profit_margin_bps,rounding_increment_minor_units,...safe}=line;
+  return safe;
+}
 async function getAccess(db,storeId,userId){
   return db.prepare(`
     SELECT s.id,s.status AS store_status,a.status AS account_status,au.role AS account_role,
@@ -289,7 +293,7 @@ async function createSale(request,env,storeId,session,access){
     return json({error:"Sale could not be posted; no sale or stock change was committed."},409);
   }
   return json({status:"ok",sale:{id,sale_number:saleNumber,currency:quote.currency,subtotal:quote.total,
-    discount_amount:discount,total,status:"posted",payment_status:"paid"},items:quote.lines},201);
+    discount_amount:discount,total,status:"posted",payment_status:"paid"},items:quote.lines.map(publicPosLine)},201);
 }
 export async function handlePos(request,env){
   const url=new URL(request.url);
@@ -310,7 +314,7 @@ export async function handlePos(request,env){
     const parsed=await readBody(request);if(parsed.error)return json({error:parsed.error},parsed.status);
     const quote=await quoteItems(env.DB,storeId,access,parsed.body.items);
     if(quote.error)return json({error:quote.error},quote.status);
-    return json({status:"ok",quote:{currency:quote.currency,total:quote.total,items:quote.lines,
+    return json({status:"ok",quote:{currency:quote.currency,total:quote.total,items:quote.lines.map(publicPosLine),
       note:"Indicative quote only. Stock, permissions and prices are revalidated during final sale posting."}});
   }
   if(resource==="sales"){
