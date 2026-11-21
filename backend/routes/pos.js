@@ -305,8 +305,8 @@ async function listSales(env,storeId,url){
   if(status&&!["posted","voided","partially_refunded","refunded"].includes(status))
     return json({error:"Invalid sale status filter"},400);
   if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency filter"},400);
-  if(from&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(from))return json({error:"Invalid start date"},400);
-  if(to&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(to))return json({error:"Invalid end date"},400);
+  if(from&&!/^\d{4}-\d{2}-\d{2}$/.test(from))return json({error:"Invalid start date"},400);
+  if(to&&!/^\d{4}-\d{2}-\d{2}$/.test(to))return json({error:"Invalid end date"},400);
   const rows=await env.DB.prepare(`
     SELECT s.id,s.sale_number,s.customer_name,s.customer_phone,s.currency,s.subtotal,
       s.discount_amount,s.total,s.status,s.payment_status,s.created_at,
@@ -344,7 +344,7 @@ async function getSale(env,storeId,saleId){
 }
 export async function handlePos(request,env){
   const url=new URL(request.url);
-  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/pos\/(quote|sales|cash-sessions(?:\/[^/]+)?)$/);
+  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/pos\/(quote|sales(?:\/[^/]+)?|cash-sessions(?:\/[^/]+)?)$/);
   if(!match)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   let storeId;
@@ -369,7 +369,7 @@ export async function handlePos(request,env){
     if(request.method==="POST")return createSale(request,env,storeId,session,access);
     return json({error:"Method not allowed"},405);
   }
-  const saleMatch=resource.match(/^sales\\/([^/]+)$/);
+  const saleMatch=resource.match(/^sales\/([^/]+)$/);
   if(saleMatch){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
     let saleId;try{saleId=decodeURIComponent(saleMatch[1]);}catch{return json({error:"Invalid sale ID"},400);}
