@@ -5,16 +5,18 @@ if(!globalThis.crypto)globalThis.crypto=webcrypto;
 import { handlePublicCustomerPortal } from "../../backend/routes/customer_portal.js";
 
 const TOKEN="a".repeat(64);
-function request(path,method="GET"){
+function request(path,method="GET",body,token=TOKEN){
+  const headers={Origin:"https://example.com","Content-Type":"application/json"};
+  if(token)headers["X-Customer-Token"]=token;
   return new Request("https://example.com"+path,{
-    method,
-    headers:{"X-Customer-Token":TOKEN,Origin:"https://example.com","Content-Type":"application/json"}
+    method,headers,body:body===undefined?undefined:JSON.stringify(body)
   });
 }
 function db(options={}){
   const calls=[];
   return {
     calls,
+    async batch(statements){calls.push(...statements.map(statement=>({sql:statement.sql,values:statement.values})));return statements.map(()=>({meta:{changes:1}}));},
     prepare(sql){
       return {sql,bind(...values){return {
         sql,values,
@@ -22,6 +24,10 @@ function db(options={}){
           calls.push({sql,values});
           if(sql.includes("FROM stores s"))return options.store??{id:"store-1",name:"Bakery",slug:"bakery",whatsapp_phone:"+963900000000"};
           if(sql.includes("FROM store_customer_identities"))return Object.hasOwn(options,"identity")?options.identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer"};
+          if(sql.includes("FROM store_customer_account_sessions"))return options.accountSessionIdentity??null;
+          if(sql.includes("RETURNING attempt_count"))return {attempt_count:1};
+          if(sql.includes("SELECT id FROM store_customer_accounts"))return options.existingAccount??null;
+          if(sql.includes("SELECT id,customer_identity_id,password_salt,password_hash"))return options.account??null;
           if(sql.includes("COUNT(*) AS unread_count"))return {unread_count:options.unreadCount??1};
           if(sql.includes("SELECT n.id"))return options.existingNotification??{id:"notice-1"};
           return null;
@@ -73,4 +79,60 @@ test("Customer notification read operation is bound to the QR identity and store
   const update=database.calls.find(call=>call.sql.includes("UPDATE store_customer_notifications"));
   assert.ok(update.sql.includes("customer_identity_id=?"));
   assert.deepEqual(update.values,["notice-1","store-1","identity-1"]);
+});
+
+
+
+test("Guest can create an optional account linked to the existing QR identity",async()=>{
+  const database=db();
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/account/register","POST",{
+    customer_name:"Customer Name",customer_phone:"+963 900 000 000",password:"strong-password-123",customer_access_token:TOKEN
+  },null),{DB:database});
+  const result=await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.customer_mode,"account");
+  assert.equal(result.customer_access_token.length,64);
+  const accountInsert=database.calls.find(call=>call.sql.includes("INSERT INTO store_customer_accounts"));
+  assert.ok(accountInsert);
+  assert.equal(accountInsert.values[2],"identity-1");
+});
+
+test("Customer account registration creates a private identity when no guest QR exists",async()=>{
+  const database=db({identity:null});
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/account/register","POST",{
+    customer_name:"New Customer",customer_phone:"+963 911 222 333",password:"strong-password-123"
+  },null),{DB:database});
+  const result=await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.customer_mode,"account");
+  assert.ok(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_identities")));
+  assert.ok(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_accounts")));
+});
+
+test("Customer account login rejects incorrect passwords without issuing a session",async()=>{
+  const database=db({account:{id:"account-1",customer_identity_id:"identity-1",password_salt:"a".repeat(32),password_hash:"0".repeat(64)}});
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/account/login","POST",{
+    customer_phone:"+963 900 000 000",password:"wrong-password-123"
+  },null),{DB:database});
+  assert.equal(response.status,401);
+  assert.equal(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_account_sessions")),false);
+});
+
+test("Account sessions can retrieve the same private order history without a QR code",async()=>{
+  const database=db({
+    identity:null,
+    accountSessionIdentity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer",is_account:1}
+  });
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/orders"),{DB:database});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.customer_mode,"account");
+  assert.equal(result.orders.length,1);
+});
+
+test("Customer account logout revokes the current session token",async()=>{
+  const database=db();
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/account/logout","POST",{},TOKEN),{DB:database});
+  assert.equal(response.status,200);
+  assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_customer_account_sessions")&&call.values[0].length===64));
 });
