@@ -437,7 +437,10 @@ export async function handlePos(request,env){
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
   if(!hasPermission(access,"pos.access"))return json({error:"Point-of-sale access permission required"},403);
   const resource=match[2];
-  if(resource==="reports"){\n    if(request.method!=="GET")return json({error:"Method not allowed"},405);\n    return posReport(env,storeId,url);\n  }\n  if(resource==="quote"){
+  if(resource==="reports"){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    return posReport(env,storeId,url);
+  }\n  if(resource==="quote"){
     if(request.method!=="POST")return json({error:"Method not allowed"},405);
     const parsed=await readBody(request);if(parsed.error)return json({error:parsed.error},parsed.status);
     const quote=await quoteItems(env.DB,storeId,access,parsed.body.items);
