@@ -252,14 +252,17 @@ async function loadStoreReport(db,storeId,period){
       GROUP BY currency ORDER BY currency
     `).bind(storeId,modifier).all(),
     db.prepare(`
-      SELECT i.product_id,i.product_name,SUM(i.quantity) AS units_sold,
+      SELECT i.product_id,i.product_name,i.sale_unit,
+        SUM(i.quantity) AS quantity_base_units,
+        CASE WHEN i.sale_unit='kg' THEN ROUND(SUM(i.quantity)*0.05,2)
+          ELSE SUM(i.quantity) END AS display_quantity,
         ROUND(SUM(i.line_total),2) AS paid_sales
       FROM store_order_items i
       JOIN store_orders o ON o.id=i.order_id AND o.store_id=i.store_id
       WHERE i.store_id=? AND o.payment_status='paid' AND o.order_status!='cancelled'
         AND o.created_at>=datetime('now',?)
-      GROUP BY i.product_id,i.product_name
-      ORDER BY units_sold DESC,i.product_name COLLATE NOCASE ASC LIMIT 5
+      GROUP BY i.product_id,i.product_name,i.sale_unit
+      ORDER BY paid_sales DESC,i.product_name COLLATE NOCASE ASC LIMIT 5
     `).bind(storeId,modifier).all()
   ]);
   return {
