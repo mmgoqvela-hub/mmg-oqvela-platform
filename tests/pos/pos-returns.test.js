@@ -89,3 +89,15 @@ test("POS refund cannot exceed the value of the returned quantity",async()=>{
  assert.equal(response.status,409);
  assert.equal(db.batches.length,0);
 });
+
+test("POS kilogram return restores grams and records the gram unit",async()=>{
+ const db=makeDb({items:[{id:"sale-item-1",product_id:"p-1",variant_id:null,quantity:20,line_total:30,currency:"USD",sale_unit:"kg"}]});
+ const body=payload();body.items[0].quantity=1;body.refund_total=1.5;body.refund_payments=[{payment_method:"cash",amount:1.5}];
+ const response=await handlePosReturns(req(body),{DB:db});
+ assert.equal(response.status,201);
+ const movement=db.batches[0].find(x=>x.sql.includes("INSERT INTO inventory_movements"));
+ assert.equal(movement.values[4],50);
+ assert.equal(movement.values[9],"g");
+ const stock=db.batches[0].find(x=>x.sql.includes("UPDATE products SET stock_quantity=stock_quantity+?"));
+ assert.equal(stock.values[0],50);
+});
