@@ -353,7 +353,7 @@ export async function handleOrders(request,env){
     const placeholders=ids.map(()=>"?").join(",");
     const [lines,events]=await Promise.all([
       env.DB.prepare(`
-        SELECT order_id,id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency
+        SELECT order_id,id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency,sale_unit
         FROM store_order_items WHERE store_id=? AND order_id IN (${placeholders})
         ORDER BY created_at ASC
       `).bind(storeId,...ids).all(),
