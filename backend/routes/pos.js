@@ -60,7 +60,7 @@ async function quoteLine(db,storeId,access,pricingSettings,globalTiers,input){
   if(needed===false||(needed&&!hasPermission(access,needed)))
     return {error:"You are not allowed to apply the selected pricing tier",status:403};
   const product=await db.prepare(`
-    SELECT id,name,sku,base_price,currency,track_inventory,stock_quantity,status
+    SELECT id,name,sku,base_price,currency,track_inventory,stock_quantity,status,sale_unit
     FROM products WHERE id=? AND store_id=? LIMIT 1
   `).bind(productId,storeId).first();
   if(!product||product.status!=="active")return {error:"Product is unavailable",status:409};
@@ -75,7 +75,9 @@ async function quoteLine(db,storeId,access,pricingSettings,globalTiers,input){
     const hasVariants=await db.prepare("SELECT id FROM product_variants WHERE product_id=? AND store_id=? AND status='active' LIMIT 1").bind(productId,storeId).first();
     if(hasVariants)return {error:"Choose a product option before pricing",status:400};
   }
-  if(product.track_inventory&&Number(variant?.stock_quantity??product.stock_quantity)<quantity)
+  const saleUnit=product.sale_unit==="kg"?"kg":"piece";
+  const stockUnits=quantity*(saleUnit==="kg"?50:1);
+  if(product.track_inventory&&Number(variant?.stock_quantity??product.stock_quantity)<stockUnits)
     return {error:"Insufficient stock",status:409};
   const currency=product.currency||"USD";
   let unitPrice=Number(variant?.price??product.base_price);
@@ -119,8 +121,8 @@ async function quoteLine(db,storeId,access,pricingSettings,globalTiers,input){
     return {error:"Wholesale tiers require automatic cost-plus pricing to be enabled and configured",status:409};
   }
   if(!Number.isFinite(unitPrice)||unitPrice<0)return {error:"Invalid selling price",status:409};
-  const lineTotal=Math.round(unitPrice*quantity*100)/100;
-  return {line:{product_id:product.id,variant_id:variant?.id||null,product_name:product.name,
+  const lineTotal=Math.round(unitPrice*quantity*(saleUnit==="kg"?0.05:1)*100)/100;
+  return {line:{product_id:product.id,variant_id:variant?.id||null,product_name:product.name,sale_unit:saleUnit,
     variant_name:variant?.name||null,sku:product.sku||null,quantity,currency,
     tier_code:appliedTier||"retail",unit_price:unitPrice,line_total:lineTotal,...pricingSnapshot}};
 }
@@ -140,7 +142,8 @@ async function quoteItems(db,storeId,access,items){
     const key=String(input?.product_id||"")+":"+(input?.variant_id||"");
     if(seen.has(key))return {error:"Duplicate product lines must be combined before quoting",status:400};
     seen.add(key);
-    const result=await quoteLine(db,storeId,access,settings,tiers,input);
+    const result=await quoteLine(db,storeId,access,settings,tiers,{...input,
+      quantity:input?.quantity});
     if(result.error)return result;
     if(currency!==null&&currency!==result.line.currency)return {error:"A POS sale cannot mix currencies; create separate sales for each currency",status:400};
     currency=result.line.currency;
@@ -278,11 +281,11 @@ async function createSale(request,env,storeId,session,access){
     statements.push(env.DB.prepare(`
       INSERT INTO pos_sale_items(id,sale_id,store_id,product_id,variant_id,product_name,variant_name,sku,
         quantity,unit_price,line_total,currency,pricing_mode,pricing_tier_code,cost_version_id,cost_currency,
-        cost_minor_units,profit_margin_bps,rounding_increment_minor_units)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        cost_minor_units,profit_margin_bps,rounding_increment_minor_units,sale_unit)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).bind(crypto.randomUUID(),id,storeId,item.product_id,item.variant_id,item.product_name,item.variant_name,item.sku,
       item.quantity,item.unit_price,item.line_total,item.currency,item.pricing_mode,item.pricing_tier_code,
-      item.cost_version_id,item.cost_currency,item.cost_minor_units,item.profit_margin_bps,item.rounding_increment_minor_units));
+      item.cost_version_id,item.cost_currency,item.cost_minor_units,item.profit_margin_bps,item.rounding_increment_minor_units,item.sale_unit));
   }
   for(const payment of payments){
     statements.push(env.DB.prepare(`
@@ -345,7 +348,7 @@ async function getSale(env,storeId,saleId){
   `).bind(saleId,storeId).first();
   if(!sale)return json({error:"Sale not found"},404);
   const [items,payments,events]=await Promise.all([
-    env.DB.prepare(`SELECT id,product_id,variant_id,product_name,variant_name,sku,quantity,
+    env.DB.prepare(`SELECT id,product_id,variant_id,product_name,variant_name,sku,quantity,sale_unit,
       unit_price,line_total,currency,pricing_mode,pricing_tier_code
       FROM pos_sale_items WHERE sale_id=? AND store_id=? ORDER BY rowid`).bind(saleId,storeId).all(),
     env.DB.prepare(`SELECT payment_method,amount,currency,transaction_reference,sender_name,created_at
