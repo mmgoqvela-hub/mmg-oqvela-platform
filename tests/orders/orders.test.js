@@ -62,7 +62,7 @@ function request(path,method="POST",body,authenticated=false){
 }
 const checkout={
  customer_name:"Customer Name",customer_phone:"+963 900 000 000",
- payment_method:"cash_on_delivery",
+ payment_method:"cash_on_delivery",fulfillment_method:"pickup",
  items:[{product_id:"product-1",quantity:2}]
 };
 
@@ -110,6 +110,31 @@ test("Public checkout creates a COD order using server-side prices and atomic D1
  assert.match(orderCalls[1].sql,/INSERT INTO store_order_items/);
  assert.equal(orderCalls[1].values[8],2);
  assert.equal(orderCalls[1].values[9],12.5);
+});
+
+
+test("Public checkout supports delivery, requires an address and adds the configured delivery fee",async()=>{
+ const missingAddress=await handleOrders(request("/api/public/stores/test-store/orders","POST",{
+   ...checkout,fulfillment_method:"delivery",shipping_address:null
+ }),{DB:db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:0,pickup_enabled:1,delivery_enabled:1,delivery_fee:5}})});
+ assert.equal(missingAddress.status,400);
+ const database=db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:0,pickup_enabled:1,delivery_enabled:1,delivery_fee:5}});
+ const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",{
+   ...checkout,fulfillment_method:"delivery",shipping_address:"Damascus, Syria"
+ }),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,201);
+ assert.equal(result.order.fulfillment_method,"delivery");
+ assert.equal(result.order.delivery_fee,5);
+ assert.equal(result.order.total,30);
+ assert.ok(database.calls.some(call=>call.sql.includes("fulfillment_method")&&call.values.includes("delivery")));
+});
+
+test("Public checkout rejects disabled fulfillment methods",async()=>{
+ const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",checkout),{
+   DB:db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:0,pickup_enabled:0,delivery_enabled:1,delivery_fee:0}})
+ });
+ assert.equal(response.status,400);
 });
 
 test("Public checkout rate-limits each store and hashed client address",async()=>{
@@ -206,6 +231,7 @@ test("Store owner can configure both checkout methods and Sham Cash recipient",a
  const database=db();
  const response=await handleOrders(request("/api/stores/store-1/orders/settings","PUT",{
   cash_on_delivery_enabled:true,shamcash_enabled:true,
+  pickup_enabled:true,delivery_enabled:true,delivery_fee:0,
   shamcash_recipient:"recipient-123",shamcash_instructions:"Transfer the exact order total"
  },true),{DB:database});
  assert.equal(response.status,200);
