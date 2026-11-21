@@ -1102,6 +1102,7 @@ footer{
   let currentLanguage = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
   let authenticated = false;
   let authenticatedUserId = null;
+  let authFlowVersion = 0;
   const englishMessagesToArabic = {
     "Request body is too large":"حجم بيانات الطلب أكبر من المسموح.",
     "Content-Type must be application/json":"نوع محتوى الطلب غير صالح.",
@@ -1494,7 +1495,9 @@ footer{
     }
 
     if (!response.ok) {
-      throw new Error(translateText(data.error || "حدث خطأ، حاول مرة أخرى"));
+      const error = new Error(translateText(data.error || "حدث خطأ، حاول مرة أخرى"));
+      error.status = response.status;
+      throw error;
     }
 
     return data;
@@ -4886,7 +4889,7 @@ footer{
     }
   }
 
-  async function loadAdminPanel() {
+  async function loadAdminPanel(flowVersion) {
     const panel = $("adminPanel");
     panel.classList.add("hidden");
 
@@ -4918,12 +4921,15 @@ footer{
         loadPlatformServiceRequests()
       ]);
 
+      if (flowVersion !== undefined && flowVersion !== authFlowVersion) return false;
       panel.classList.remove("hidden");
       return true;
     } catch (error) {
-      // المستخدم غير المدير لا يرى لوحة الإدارة.
       panel.classList.add("hidden");
-      return false;
+      // Only an explicit permission denial means this user is not a platform admin.
+      // Network/server errors must never redirect an administrator to the merchant portal.
+      if (error.status === 403) return false;
+      throw error;
     }
   }
 
@@ -5035,8 +5041,10 @@ footer{
   });
 
   async function checkSession() {
+    const flowVersion = ++authFlowVersion;
     try {
       const data = await api("/api/auth/me");
+      if (flowVersion !== authFlowVersion) return;
       authenticated = true;
       authenticatedUserId = data.user.id;
       const savedLanguage = data.user?.preferredLanguage === "en" ? "en" : "ar";
@@ -5057,7 +5065,8 @@ footer{
       applyLanguage();
       renderDashboard(data);
       if (!merchantMode) {
-        const isPlatformAdmin = await loadAdminPanel();
+        const isPlatformAdmin = await loadAdminPanel(flowVersion);
+        if (flowVersion !== authFlowVersion) return;
         if (!isPlatformAdmin && data.stores.length) {
           window.location.replace("/merchant");
           return;
@@ -5065,7 +5074,9 @@ footer{
         await loadNotifications();
       }
     } catch {
+      if (flowVersion !== authFlowVersion) return;
       authenticated = false;
+      authenticatedUserId = null;
       $("landing").classList.remove("hidden");
       $("dashboard").classList.add("hidden");
     }
@@ -5108,8 +5119,16 @@ footer{
   });
 
   $("logoutButton").addEventListener("click", async () => {
+    // Invalidate pending session checks before revoking the shared session cookie.
+    // An older /auth/me response must never redirect a logged-out admin to the merchant portal.
+    const logoutFlowVersion = ++authFlowVersion;
+    const button = $("logoutButton");
+    button.disabled = true;
     try {
       await api("/api/auth/logout", {method: "POST"});
+      if (logoutFlowVersion !== authFlowVersion) return;
+      authenticated = false;
+      authenticatedUserId = null;
       $("dashboard").classList.add("hidden");
       $("adminPanel").classList.add("hidden");
       $("notificationList").replaceChildren();
@@ -5118,8 +5137,11 @@ footer{
       $("email").value = "";
       $("password").value = "";
       setMode("login");
+      window.location.replace(merchantMode ? "/merchant/omaya" : "/");
     } catch (error) {
       alert(error.message);
+    } finally {
+      button.disabled = false;
     }
   });
 
