@@ -48,6 +48,14 @@
     .checkout-form button:disabled{opacity:.55;cursor:wait}
     .checkout-result{margin-top:14px;padding:14px;border-radius:10px;background:var(--bg);line-height:1.8;overflow-wrap:anywhere}
     .checkout-result[hidden]{display:none}
+    .customer-orders-panel{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+    .customer-orders-panel .section-head h3{font-size:17px;margin:0}
+    .customer-qr{display:flex;justify-content:center;align-items:center;min-height:20px;margin:12px auto}
+    .customer-qr img,.customer-qr canvas{max-width:100%;height:auto!important}
+    .customer-order{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;background:var(--surface)}
+    .customer-order small{color:var(--muted);line-height:1.8}
+    .customer-notice{border:1px solid var(--line);border-radius:9px;padding:10px;margin:8px 0}
+    .customer-notice.unread{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
     @media(max-width:620px){.cart-row{align-items:flex-start;flex-direction:column}.cart-actions{width:100%;justify-content:flex-end}}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:55px}
     .product{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}
@@ -144,15 +152,21 @@
           <label><span id="addressLabel">العنوان / الموقع (إجباري)</span><textarea id="shippingAddress" name="shipping_address" required minlength="5" maxlength="1000" autocomplete="street-address" placeholder="اكتب عنوانك بالتفصيل أو أرسل موقعك"></textarea></label>
           <label><span id="fulfillmentLabel">طريقة الاستلام</span><select id="fulfillmentMethod" name="fulfillment_method" required></select></label>
           <label><span id="paymentMethodLabel">طريقة الدفع</span><select id="paymentMethod" name="payment_method" required></select></label>
-          <div id="shamcashFields" hidden>
-            <p id="shamcashInstructions" class="cart-note"></p>
-            <label><span id="senderNameLabel">اسم المرسل في شام كاش</span><input id="senderName" name="sender_name" minlength="2" maxlength="120"></label>
-            <label><span id="transactionReferenceLabel">رقم عملية شام كاش</span><input id="transactionReference" name="transaction_reference" minlength="3" maxlength="120"></label>
-          </div>
+          <div id="shamcashFields" hidden><p id="shamcashInstructions" class="cart-note"></p></div>
           <label><span id="customerNotesLabel">ملاحظات للمتجر (اختياري)</span><textarea id="customerNotes" name="customer_notes" maxlength="1000"></textarea></label>
           <button id="placeOrder" type="submit">تأكيد الطلب</button>
         </form>
         <div class="checkout-result" id="checkoutResult" role="status" hidden></div>
+        <section class="customer-orders-panel" id="customerOrdersSection">
+          <div class="section-head"><h3 id="customerOrdersHeading">طلباتي</h3><button class="lang" id="customerOrdersToggle" type="button">عرض طلباتي</button></div>
+          <div id="customerOrdersPanel" hidden>
+            <p class="cart-note" id="customerQrHint">احتفظ برمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.</p>
+            <div id="customerQr" class="customer-qr" aria-label="رمز استعادة سجل الزبون"></div>
+            <button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button>
+            <div id="customerNotifications" aria-live="polite"></div>
+            <div id="customerOrdersList"></div>
+          </div>
+        </section>
       </section>
       <section id="storeProductsGridSection">
         <h2 class="section-title" id="productsHeading">المنتجات</h2>
@@ -163,17 +177,25 @@
   </main>
   <section id="platformAnnouncements" class="announcement-stack" aria-live="polite"></section>
   <footer id="platformFooter">© 2026 MMG OQVELA — جميع الحقوق محفوظة</footer>
+  <script src="/assets/qrcode.min.js"></script>
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",platformSupport:"تواصل مع دعم المنصة",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"العنوان / الموقع (إجباري)",fulfillment:"طريقة الاستلام",pickup:"استلام من المحل",delivery:"توصيل إلى العنوان",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد."},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",platformSupport:"Contact platform support",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Address / location (required)",fulfillment:"Fulfillment method",pickup:"Pickup from store",delivery:"Delivery to address",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order."}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",platformSupport:"تواصل مع دعم المنصة",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"العنوان / الموقع (إجباري)",fulfillment:"طريقة الاستلام",pickup:"استلام من المحل",delivery:"توصيل إلى العنوان",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار قرار المتجر. ستصلك نتيجة القبول أو الرفض هنا.",shamcashPay:"يتم الدفع بعد استلام الطلب عبر شام كاش إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد.",customerOrders:"طلباتي",showOrders:"عرض طلباتي",hideOrders:"إخفاء طلباتي",qrHint:"احتفظ بصورة رمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.",qrMissing:"أرسل أول طلب لتحصل على رمز استعادة خاص بك.",noOrders:"لا توجد طلبات مسجلة.",pendingDecision:"بانتظار قرار المتجر",acceptedDecision:"تم قبول الطلب",rejectedDecision:"تم رفض الطلب",rejectionReason:"سبب الرفض",notifications:"الإشعارات",noNotifications:"لا توجد إشعارات جديدة.",refreshOrders:"تحديث الطلبات"},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",platformSupport:"Contact platform support",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Address / location (required)",fulfillment:"Fulfillment method",pickup:"Pickup from store",delivery:"Delivery to address",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order.",customerOrders:"My orders",showOrders:"Show my orders",hideOrders:"Hide my orders",qrHint:"Save this QR image to recover your order history after changing phones or clearing browser data.",qrMissing:"Place your first order to receive your private recovery QR code.",noOrders:"No orders have been recorded.",pendingDecision:"Awaiting store decision",acceptedDecision:"Order accepted",rejectedDecision:"Order rejected",rejectionReason:"Rejection reason",notifications:"Notifications",noNotifications:"No new notifications.",refreshOrders:"Refresh orders"}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
       let categoryFilter = "";
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
       const cartStorageKey = "mmg_cart_" + slug;
+      const customerTokenStorageKey = "mmg_customer_token_" + slug;
+      const qrFragment = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const restoredQrToken = qrFragment.get("customer");
+      if (restoredQrToken && /^[a-f0-9]{64}$/i.test(restoredQrToken)) {
+        localStorage.setItem(customerTokenStorageKey, restoredQrToken);
+        history.replaceState(null, "", location.pathname + location.search);
+      }
       let cart = [];
       let orderSubmitting = false;
       try {
@@ -389,12 +411,74 @@
       function updateShamcashFields() {
         const isShamcash = $("paymentMethod").value === "shamcash";
         $("shamcashFields").hidden = !isShamcash;
-        $("senderName").required = isShamcash;
-        $("transactionReference").required = isShamcash;
         const settings = storeData?.order_settings || {};
         $("shamcashInstructions").textContent = isShamcash
           ? t("shamcashPay") + " " + (settings.shamcash_recipient || "") + (settings.shamcash_instructions ? " — " + settings.shamcash_instructions : "")
           : "";
+      }
+
+      function customerToken(){return localStorage.getItem(customerTokenStorageKey)||"";}
+      function renderCustomerQr(){
+        const token=customerToken(),container=$("customerQr");
+        container.replaceChildren();
+        if(!token||typeof QRCode==="undefined")return;
+        const recoveryUrl=location.origin+location.pathname+"#customer="+token;
+        new QRCode(container,{text:recoveryUrl,width:190,height:190,colorDark:"#111827",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+      }
+      function decisionLabel(order){
+        if(order.customer_decision==="accepted")return t("acceptedDecision");
+        if(order.customer_decision==="rejected")return t("rejectedDecision");
+        return t("pendingDecision");
+      }
+      async function loadCustomerPortal(){
+        const token=customerToken();
+        if(!token){$("customerOrdersList").textContent=t("qrMissing");$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
+        renderCustomerQr();
+        const headers={"X-Customer-Token":token,"Accept":"application/json"};
+        const base="/api/public/stores/"+encodeURIComponent(slug)+"/customer/";
+        const [ordersResponse,notificationsResponse]=await Promise.all([
+          fetch(base+"orders",{headers,cache:"no-store"}),
+          fetch(base+"notifications",{headers,cache:"no-store"})
+        ]);
+        const ordersData=await ordersResponse.json().catch(()=>({}));
+        const notificationsData=await notificationsResponse.json().catch(()=>({}));
+        if(!ordersResponse.ok){$("customerOrdersList").textContent=ordersData.error||t("orderFailed");return;}
+        const list=$("customerOrdersList");list.replaceChildren();
+        const orders=ordersData.orders||[];
+        if(!orders.length){list.textContent=t("noOrders");}
+        for(const order of orders){
+          const card=document.createElement("article");card.className="customer-order";
+          const title=document.createElement("strong");title.textContent=t("orderNumber")+" "+order.order_number+" — "+decisionLabel(order);
+          const detail=document.createElement("small");
+          detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"));
+          card.append(title,document.createElement("br"),detail);
+          if(order.customer_decision==="rejected"&&order.rejection_reason){
+            const reason=document.createElement("p");reason.textContent=t("rejectionReason")+": "+order.rejection_reason;card.append(reason);
+          }
+          const lines=document.createElement("p");lines.textContent=(order.items||[]).map(item=>item.product_name+" × "+item.quantity+(item.sale_unit==="kg"?" غ":"")).join("، ");
+          card.append(lines);list.append(card);
+        }
+        const notices=$("customerNotifications");notices.replaceChildren();
+        const heading=document.createElement("strong");heading.textContent=t("notifications")+" ("+(notificationsData.unread_count||0)+")";notices.append(heading);
+        const notifications=notificationsData.notifications||[];
+        if(!notifications.length){const empty=document.createElement("p");empty.className="cart-note";empty.textContent=t("noNotifications");notices.append(empty);}
+        for(const item of notifications){
+          const row=document.createElement("div");row.className="customer-notice"+(item.read_at?"":" unread");
+          const title=document.createElement("strong");title.textContent=item.title;
+          const message=document.createElement("p");message.textContent=item.message;
+          row.append(title,message);
+          if(!item.read_at){
+            const read=document.createElement("button");read.type="button";read.className="lang";read.textContent=language==="ar"?"تمت القراءة":"Mark read";
+            read.addEventListener("click",async()=>{await fetch(base+"notifications/"+encodeURIComponent(item.id)+"/read",{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:"{}"});loadCustomerPortal();});
+            row.append(read);
+          }
+          notices.append(row);
+        }
+      }
+      let customerPortalTimer=null;
+      function startCustomerPortalPolling(){
+        if(customerPortalTimer)clearInterval(customerPortalTimer);
+        if(customerToken())customerPortalTimer=setInterval(()=>{loadCustomerPortal().catch(()=>{});},10000);
       }
 
       async function submitOrder(event) {
@@ -416,8 +500,7 @@
           customer_notes:$("customerNotes").value.trim() || null,
           payment_method:$("paymentMethod").value,
           fulfillment_method:$("fulfillmentMethod").value,
-          sender_name:$("senderName").value.trim(),
-          transaction_reference:$("transactionReference").value.trim(),
+          customer_access_token:localStorage.getItem(customerTokenStorageKey) || null,
           items:cart.map(item => ({product_id:item.productId,variant_id:item.variantId,quantity:item.quantity}))
         };
         try {
@@ -437,6 +520,12 @@
           const status = document.createElement("p");
           status.textContent = t("orderPending");
           result.append(heading,status);
+          if (data.order.customer_access_token) {
+            localStorage.setItem(customerTokenStorageKey,data.order.customer_access_token);
+            renderCustomerQr();
+            loadCustomerPortal();
+            startCustomerPortalPolling();
+          }
           if (data.order.shamcash) {
             const pay = document.createElement("p");
             pay.textContent = t("shamcashPay") + " " + data.order.shamcash.recipient +
@@ -758,6 +847,13 @@
         }
       }
 
+      $("customerOrdersToggle").addEventListener("click",()=>{
+        const panel=$("customerOrdersPanel");
+        panel.hidden=!panel.hidden;
+        $("customerOrdersToggle").textContent=panel.hidden?t("showOrders"):t("hideOrders");
+        if(!panel.hidden)loadCustomerPortal().catch(()=>{});
+      });
+      $("customerRefreshOrders").addEventListener("click",()=>loadCustomerPortal().catch(()=>{}));
       $("languageToggle").addEventListener("click",() => setLanguage(language === "ar" ? "en" : "ar"));
       $("search").addEventListener("input",renderProducts);
       $("checkoutStart").addEventListener("click",() => { renderCheckoutMethods(); $("checkoutForm").hidden = false; $("checkoutResult").hidden = true; $("customerName").focus(); });
@@ -765,8 +861,13 @@
       $("fulfillmentMethod").addEventListener("change",()=>{updateFulfillmentOptions();renderCart();});
       $("checkoutForm").addEventListener("submit",submitOrder);
       setLanguage(language);
+      $("customerOrdersHeading").textContent=t("customerOrders");
+      $("customerQrHint").textContent=t("qrHint");
+      $("customerRefreshOrders").textContent=t("refreshOrders");
+      $("customerOrdersToggle").textContent=t("showOrders");
       $("storeName").textContent = t("loading");
       load();
+      startCustomerPortalPolling();
     })();
   </script>
 </body>
