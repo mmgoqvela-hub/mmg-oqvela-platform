@@ -368,3 +368,56 @@ Before implementing accounting postings or fiscal documents, obtain the store's 
 ### 9.13 Current implementation status
 
 The repository currently has catalog, variants, basic stock movements, storefront orders/checkout, order lifecycle guards and basic paid-sales reports as described in earlier sections. It does not yet provide the integrated purchasing, supplier, multi-warehouse, customer debt, expense, cash/bank, delivery dispatch, full invoicing/returns or double-entry accounting suite described above. Existing tables or basic order totals must not be represented as completion of these modules.
+
+
+### 9.14 Syria-first operation, dual-currency pricing, exchange rates, customs and taxes
+
+Syria is the initial target market for store operations. The platform must support the Syrian operating context without hard-coding assumptions that would prevent later expansion to other jurisdictions. These requirements are a product direction; they do not constitute confirmation of current Syrian tax, customs, currency or legal rules.
+
+#### Currency model and display
+
+- Support simultaneous USD and the **new Syrian pound** in store catalogs, price lists, purchases, sales, invoices, receipts, expenses, supplier/customer balances, cash drawers, bank/payment accounts and reports.
+- Use explicit currency identifiers and configured display names/symbols/precision. Do not assume the official ISO code, minor-unit precision, redenomination conversion factor or legal display rules for the new Syrian pound until verified against authoritative current sources and configured by platform administration.
+- A store must be able to set its functional/reporting currency and its permitted transaction currencies. The initial Syria setup should make USD and the new Syrian pound available, while preserving the ability to add currencies later.
+- Never add unlike currency amounts together as if they were the same currency. Keep separate currency balances and show converted totals only with the exchange rate, rate timestamp and target currency clearly identified.
+- Support invoices and payments in either currency, and mixed-currency settlement only through an explicit conversion/settlement record that captures both amounts, both currencies, the applied rate, any fee/difference and the approving actor.
+- Preserve the original transaction currency and amount permanently. A later exchange-rate change must not rewrite posted invoices, receipts, supplier bills, payments, historical reports or debts.
+
+#### Exchange-rate management
+
+- Provide a central platform exchange-rate service and store-level rate policy/settings. Rates must be time-stamped, versioned, auditable and scoped by currency pair and effective time.
+- Authorized administrators can enter or update the USD-to-new-Syrian-pound rate repeatedly as market conditions change. Support manual rate entry first; any external rate feed is a replaceable adapter and must not be assumed reliable, official or enabled without verification and explicit configuration.
+- Keep a rate history; never overwrite the only copy of a previous rate. Record source (manual/provider), entered by, effective-from time, recorded-at time, and optional note/reference.
+- Define which rate is used for each purpose: product price conversion, purchase costing, invoice settlement, accounting translation and reporting. Do not silently reuse one rate for every purpose.
+- A store may use a platform-published rate, a store-specific rate, or an authorized override according to permissions and policy. Record the exact rate/version applied to every price calculation and posted transaction.
+- Support configurable rounding rules and price endings by currency (for example rounding to a configured increment); show the unrounded calculation and final rounded price in audit details.
+- Protect against stale or missing rates: warn or block affected conversions when the rate exceeds a configured age, rather than silently applying an outdated value.
+
+#### Automatic product-price recalculation
+
+- Each product/variant price or price-list entry must declare its source currency and pricing mode. At minimum support: (a) source price maintained in USD with SYP price calculated from the selected USD/SYP rate; (b) source price maintained in new Syrian pounds with USD equivalent calculated from the selected rate; and (c) independently maintained fixed prices in both currencies.
+- For rate-linked prices, a new approved exchange-rate version recalculates the derived-currency price automatically according to the store's configured rounding and pricing rules. The store owner can choose whether recalculation is immediate, scheduled, or requires approval before publishing.
+- Independently fixed prices must not be changed by exchange-rate updates. A manually overridden derived price becomes fixed/locked until the owner explicitly re-enables rate linking.
+- Support price protection rules: minimum/maximum permitted change, change threshold requiring approval, margin floor, price ceilings, excluded products/categories, and a preview of affected products before publishing.
+- Recalculation must be idempotent, batched safely, tenant-scoped and auditable. A rate update must not partially publish a mixture of old/new prices. Keep price history with old/new amounts, currencies, rate version, calculation rule, actor/system job and publication time.
+- Do not change prices on already-created carts or posted orders/invoices. At checkout, clearly define and enforce the current price snapshot and expiry/refresh behavior for a cart when a rate update occurs.
+- Provide a dry-run preview showing how many prices will change and the before/after amounts before an authorized rate update is published. Notify store owners of material changes where notifications are enabled.
+
+#### Taxes, customs duties and landed costs
+
+- Provide configurable tax profiles by jurisdiction, product/service tax category, transaction type and effective date. Support inclusive/exclusive tax pricing, exemptions, zero-rated/out-of-scope treatment where legally applicable, multiple tax components and documented rounding.
+- Tax configuration must support rates, fixed charges, thresholds, exemptions, registration details, tax-inclusive display and invoice fields as configurable data; do not hard-code a single Syrian rate or presume every store/product is taxable in the same way.
+- Provide customs/import-cost records for imported goods: customs duty, import taxes, clearance/broker fees, freight, insurance, port/transport charges and other landed costs. Allow costs to be allocated to received goods by approved allocation methods (quantity, value, weight, volume or manual allocation) and preserve source documents and calculation details.
+- Distinguish recoverable taxes from non-recoverable taxes and distinguish customs/landed costs capitalized into inventory cost from operating expenses, according to a reviewed accounting policy.
+- Keep tax and customs rules effective-dated and versioned. Changing a rate or rule affects future eligible transactions only; historical posted documents retain their original rule snapshot.
+- Provide reports for collected/payable tax, tax by category/period, import/customs costs and landed cost by item/batch. Statutory filings, tax invoices, customs declarations and legal compliance must remain disabled/unclaimed until jurisdiction-specific requirements are verified by a qualified local professional and configured.
+- Support store-specific tax/customs exemptions or special treatments only with required evidence, expiry dates, permissions and audit history.
+
+#### Syria-specific configuration and safeguards
+
+- Platform administration must be able to configure the initial Syria jurisdiction profile and update it without a code deployment, while retaining previous versions and the date each configuration became effective.
+- Keep the legal currency name, public display label, currency code, precision, conversion/redenomination factors and invoice display rules as separately configurable fields. Do not silently convert old SYP records into the new Syrian pound or infer a redenomination ratio.
+- Store owners must see the active exchange rate, its source and last update time, and whether each product price is linked, fixed or manually overridden.
+- All rate changes, automatic price recalculations, manual overrides, tax/customs changes and approvals must create immutable audit events.
+- Before live financial use, validate the current Syrian currency conventions, tax rules, customs treatment, required invoice content, fiscal numbering and record-retention obligations with authoritative local sources and qualified local advice. The platform must not claim compliance merely because configurable fields exist.
+
