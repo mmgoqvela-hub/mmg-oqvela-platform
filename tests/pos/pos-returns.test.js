@@ -80,3 +80,12 @@ test("POS return prevents cumulative refund above original sale total",async()=>
  assert.equal(response.status,409);
  assert.equal(db.batches.length,0);
 });
+
+
+test("POS refund cannot exceed the value of the returned quantity",async()=>{
+ const db=makeDb();
+ const body=payload();body.refund_total=11;body.refund_payments=[{payment_method:"cash",amount:11}];
+ const response=await handlePosReturns(req(body),{DB:db});
+ assert.equal(response.status,409);
+ assert.equal(db.batches.length,0);
+});
