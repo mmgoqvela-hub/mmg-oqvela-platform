@@ -161,3 +161,48 @@ The platform should support a dedicated touch-first POS experience for in-person
 - POS must be designed for future extension (for example barcode scanners, receipt printers and cash drawers) without requiring those peripherals for the initial usable touch workflow.
 - POS screens must support the store's enabled languages and light/dark themes, but POS workflows and permissions remain separate from customer-facing template selection.
 - Do not claim offline sales, card-terminal integration, fiscal compliance or hardware compatibility until each is separately implemented and tested for the target jurisdiction and device.
+
+
+## 13. Complete professional POS input and checkout modes
+
+POS must not be limited to touch interaction. It must provide equivalent, deliberately designed workflows for touch, manual operation and barcode-scanner operation. A store may use one mode or combine them on the same terminal.
+
+### Supported input modes
+
+- **Touch-first:** large product/category tiles, clear cart controls and guided checkout for tablets and touchscreens.
+- **Manual:** staff can search by product name, SKU or barcode, navigate categories, select a product, enter or adjust quantities, and complete the sale using the interface without a scanner.
+- **Barcode scanner:** support common USB/Bluetooth HID scanners that behave like keyboard input as the baseline integration. A scan should resolve a product through its store-scoped barcode/SKU mapping and add it to the current cart according to explicit quantity and repeat-scan rules.
+- **Keyboard and mouse:** provide complete keyboard navigation, sensible shortcuts where safe, focus visibility and mouse operation for desktop cashier stations. Shortcuts must not trigger destructive or payment actions accidentally.
+- **Hybrid operation:** switching between touch, manual search and scanning must not reset the cart or lose the current sale.
+
+### Barcode and product identification
+
+- Support multiple barcodes/identifiers per product or sellable variant where needed, with uniqueness enforced within the appropriate store scope.
+- A barcode must resolve to the correct product/variant, unit and applicable price; variant barcodes (for example size or package) must not silently resolve to the parent product incorrectly.
+- Unknown, duplicate, disabled or ambiguous barcode scans must show a clear recoverable message and must never add an arbitrary product.
+- Provide authorized workflows to assign, edit and remove barcode identifiers, including generating/printing barcode labels only when a suitable implementation is available.
+- Scanner input must be isolated from ordinary text fields and must not accidentally submit forms or trigger checkout. Scanner suffixes (Enter/Tab) and device timing must be configurable or safely handled.
+- Do not assume every scanner model is compatible. Start with standards-based keyboard-emulation scanners and test named devices before claiming broader compatibility.
+
+### Checkout quality and operational controls
+
+- Make cart state resilient to accidental navigation or refresh where safe, with clear recovery and expiry rules; never imply that an uncommitted cart is a completed sale.
+- Show item-level and order-level discounts, taxes, fees, rounding and totals transparently according to store configuration and applicable rules.
+- Support configurable payment workflows (such as cash and enabled digital methods), split payments only when explicitly implemented, and clear paid/part-paid/unpaid states.
+- Provide a review/confirmation step, unique sale reference, timestamp, cashier identity and a printable or digital receipt when supported.
+- Include safe void, return, refund and exchange workflows with permissions, reason capture, inventory effects and audit records. These must be separate, guarded operations—not edits that erase the original sale.
+- Support cash-session opening/closing and cash reconciliation only as a separately specified feature with auditable cash movements; do not silently treat sales totals as drawer balances.
+- Provide clear loading, empty, validation, permission, stock-conflict, payment-failure and connection-error states. Prevent double taps, repeated scanner events and retries from creating duplicate sales or charges.
+- Keep sales history searchable and filterable by date, cashier, payment status and receipt reference, subject to permissions.
+- Ensure accessible contrast, readable density, configurable currency/number/date formatting, localization and RTL/LTR behavior across all POS modes.
+- Keep critical checkout controls visible and unambiguous; confirm high-impact actions such as void/refund, and never rely on color alone to communicate status.
+
+### POS reliability, security and verification
+
+- Enforce tenant/store scoping and role permissions on the server for every product lookup, price, discount, payment, sale, return and report; hiding a button is not authorization.
+- Revalidate price, availability, stock and permission at commit time. The server is authoritative; client-side cart values are previews only.
+- Use idempotency keys and transaction boundaries for sale/payment/inventory operations. A timeout or retry must return the original result where appropriate rather than create a second sale.
+- Record an immutable or append-only audit trail for sales and adjustments, including actor, store, time, reason and linked original transaction.
+- Define explicit behavior for temporary network loss. Do not queue or finalize offline transactions unless a separately designed, conflict-safe offline mode is implemented and tested.
+- Test touch, manual, scanner and keyboard flows independently and in mixed-mode sessions, including unknown barcodes, variant identifiers, rapid repeated scans, stock races, permission denial, payment timeout, refresh and duplicate requests.
+- Treat scanner input as untrusted data: validate length/format, escape output, avoid interpreting scanned strings as commands, and rate-limit abusive lookup patterns.
