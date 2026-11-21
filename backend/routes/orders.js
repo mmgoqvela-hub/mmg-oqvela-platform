@@ -414,18 +414,18 @@ export async function handleOrders(request,env){
   if(customersMatch){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
     if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
-    const normalizePhone=value=>String(value||"").replace(/[\s()-]/g,"");
+    const normalizePhone=value=>String(value||"").replace(/\D/g,"");
     if(!customersMatch[2]){
       const result=await env.DB.prepare(`
         SELECT MIN(customer_name) AS customer_name,
           MIN(customer_phone) AS customer_phone,
-          REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','') AS phone_key,
+          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+',''),'.','') AS phone_key,
           COUNT(*) AS orders_count,
           ROUND(SUM(total),2) AS total_orders_value,
           MAX(created_at) AS last_order_at,
           SUM(CASE WHEN order_status IN ('pending','confirmed','processing','shipped') THEN 1 ELSE 0 END) AS open_orders
         FROM store_orders WHERE store_id=?
-        GROUP BY REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','')
+        GROUP BY REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+',''),'.','')
         ORDER BY last_order_at DESC LIMIT 300
       `).bind(storeId).all();
       return json({status:"ok",customers:(result.results||[]).map(row=>({...row,phone_key:normalizePhone(row.phone_key)}))});
@@ -440,7 +440,7 @@ export async function handleOrders(request,env){
         fulfillment_method,delivery_fee,store_phone_snapshot,created_at,updated_at,accepted_at,rejected_at,
         delivered_at,payment_collected_at
       FROM store_orders WHERE store_id=?
-        AND REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','')=?
+        AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')',''),'+',''),'.','')=?
       ORDER BY created_at DESC LIMIT 300
     `).bind(storeId,phoneKey).all();
     const orders=result.results||[];
