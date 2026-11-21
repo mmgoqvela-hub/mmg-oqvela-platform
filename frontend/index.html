@@ -1670,6 +1670,7 @@ footer{
         }
         renderCatalogPanel(store, card, account.role);
         renderOrdersPanel(store, card, account.role, storePermissions);
+    renderFinancePanel(store, card, account.role, storePermissions);
       }
 
       if (account.role === "owner") {
@@ -3184,6 +3185,102 @@ footer{
         await refresh();
       }
     });
+    card.append(toggle,panel);
+  }
+
+
+  function renderFinancePanel(store, card, accountRole, permissions) {
+    const isAdmin = ["owner","admin"].includes(accountRole);
+    const perms = Array.isArray(permissions) ? permissions : String(permissions || "").split(",").filter(Boolean);
+    const canReadExpenses = isAdmin || perms.includes("finance.expenses.read");
+    const canManageExpenses = isAdmin || perms.includes("finance.expenses.manage");
+    const canReadCashbox = isAdmin || perms.includes("finance.cashbox.read");
+    const canManageCashbox = isAdmin || perms.includes("finance.cashbox.manage");
+    if (!canReadExpenses && !canManageExpenses && !canReadCashbox && !canManageCashbox) return;
+    const toggle = document.createElement("button");
+    toggle.type = "button"; toggle.className = "secondary"; toggle.textContent = "المصروفات والصندوق";
+    const panel = document.createElement("section"); panel.className = "admin-panel"; panel.hidden = true;
+    let loaded = false;
+    async function refresh() {
+      panel.replaceChildren();
+      const heading = document.createElement("h3"); heading.textContent = "المصروفات وحركة الصندوق"; panel.append(heading);
+      let sessions = [];
+      try {
+        if (canReadCashbox || canManageCashbox || canManageExpenses) {
+          const data = await api("/api/stores/"+encodeURIComponent(store.id)+"/finance/cashbox/sessions");
+          sessions = data.sessions || [];
+        }
+        if (canManageExpenses) {
+          const title = document.createElement("h4"); title.textContent = "تسجيل مصروف جديد";
+          const form = document.createElement("form"); form.className = "admin-form";
+          const category = document.createElement("input"); category.required = true; category.maxLength = 80; category.placeholder = "التصنيف (مواد أولية، كهرباء، أجور...)";
+          const description = document.createElement("input"); description.required = true; description.maxLength = 500; description.placeholder = "وصف المصروف";
+          const amount = document.createElement("input"); amount.type = "number"; amount.min = "0.01"; amount.step = "0.01"; amount.required = true; amount.placeholder = "المبلغ";
+          const currency = document.createElement("select");
+          for (const value of ["USD","SYP"]) { const option=document.createElement("option"); option.value=value; option.textContent=value; currency.append(option); }
+          const method = document.createElement("select");
+          for (const [value,label] of [["cash","نقداً"],["shamcash","شام كاش"],["bank_transfer","تحويل مصرفي"],["card","بطاقة"],["digital","دفع إلكتروني"]]) { const option=document.createElement("option"); option.value=value; option.textContent=label; method.append(option); }
+          const reference = document.createElement("input"); reference.maxLength=160; reference.placeholder="مرجع الدفع (إلزامي لشام كاش والتحويل المصرفي)";
+          const cashSession = document.createElement("select");
+          const emptySession=document.createElement("option"); emptySession.value=""; emptySession.textContent="اختر جلسة الصندوق المفتوحة"; cashSession.append(emptySession);
+          for (const item of sessions) { const option=document.createElement("option"); option.value=item.id; option.textContent=item.currency+" — "+item.id.slice(0,8)+" — افتتاحي "+formatNumber(item.opening_cash_amount); cashSession.append(option); }
+          const message=document.createElement("p"); message.className="muted"; message.setAttribute("role","status");
+          const submit=document.createElement("button"); submit.type="submit"; submit.className="primary"; submit.textContent="حفظ المصروف";
+          const fields=[["التصنيف",category],["الوصف",description],["المبلغ",amount],["العملة",currency],["طريقة الدفع",method],["مرجع الدفع",reference],["جلسة الصندوق (للدفع النقدي)",cashSession]];
+          for(const [labelText,input] of fields){const field=document.createElement("div");field.className="field";const label=document.createElement("label");label.textContent=labelText;field.append(label,input);form.append(field);}
+          method.addEventListener("change",()=>{cashSession.disabled=method.value!=="cash";reference.required=["shamcash","bank_transfer"].includes(method.value);});
+          currency.addEventListener("change",()=>{const current=sessions.find(x=>x.id===cashSession.value);if(current&&current.currency!==currency.value)cashSession.value="";});
+          method.dispatchEvent(new Event("change"));
+          form.append(submit,message);
+          form.addEventListener("submit",async event=>{
+            event.preventDefault();submit.disabled=true;
+            try{
+              await api("/api/stores/"+encodeURIComponent(store.id)+"/finance/expenses",{method:"POST",body:JSON.stringify({
+                idempotency_key:crypto.randomUUID(),category:category.value.trim(),description:description.value.trim(),
+                amount:Number(amount.value),currency:currency.value,payment_method:method.value,
+                payment_reference:reference.value.trim()||null,cash_session_id:method.value==="cash"?cashSession.value:null
+              })});
+              message.textContent="تم تسجيل المصروف بنجاح.";form.reset();method.dispatchEvent(new Event("change"));await refresh();
+            }catch(error){message.textContent="تعذر تسجيل المصروف: "+error.message;}
+            finally{submit.disabled=false;}
+          });
+          panel.append(title,form);
+        }
+        if (canManageCashbox) {
+          const title=document.createElement("h4");title.textContent="إيداع أو سحب من الصندوق";
+          const form=document.createElement("form");form.className="admin-form";
+          const sessionSelect=document.createElement("select");sessionSelect.required=true;
+          const blank=document.createElement("option");blank.value="";blank.textContent="اختر جلسة صندوق مفتوحة";sessionSelect.append(blank);
+          for(const item of sessions){const option=document.createElement("option");option.value=item.id;option.textContent=item.currency+" — "+item.id.slice(0,8);sessionSelect.append(option);}
+          const direction=document.createElement("select");
+          for(const [value,label] of [["in","إيداع نقدي"],["out","سحب نقدي"]]){const option=document.createElement("option");option.value=value;option.textContent=label;direction.append(option);}
+          const movementAmount=document.createElement("input");movementAmount.type="number";movementAmount.min="0.01";movementAmount.step="0.01";movementAmount.required=true;movementAmount.placeholder="المبلغ";
+          const movementDescription=document.createElement("input");movementDescription.required=true;movementDescription.maxLength=500;movementDescription.placeholder="سبب الإيداع أو السحب";
+          const message=document.createElement("p");message.className="muted";
+          const submit=document.createElement("button");submit.type="submit";submit.className="secondary";submit.textContent="تسجيل الحركة";
+          form.append(sessionSelect,direction,movementAmount,movementDescription,submit,message);
+          form.addEventListener("submit",async event=>{
+            event.preventDefault();submit.disabled=true;
+            try{await api("/api/stores/"+encodeURIComponent(store.id)+"/finance/cashbox/movements",{method:"POST",body:JSON.stringify({
+              idempotency_key:crypto.randomUUID(),cash_session_id:sessionSelect.value,direction:direction.value,
+              amount:Number(movementAmount.value),description:movementDescription.value.trim()
+            })});message.textContent="تم تسجيل حركة الصندوق.";movementAmount.value="";movementDescription.value="";await refresh();}
+            catch(error){message.textContent="تعذر تسجيل الحركة: "+error.message;}
+            finally{submit.disabled=false;}
+          });
+          panel.append(title,form);
+        }
+        if (canReadExpenses) {
+          const title=document.createElement("h4");title.textContent="سجل المصروفات";panel.append(title);
+          const data=await api("/api/stores/"+encodeURIComponent(store.id)+"/finance/expenses");
+          const expenses=data.expenses||[];
+          if(!expenses.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا توجد مصروفات مسجلة.";panel.append(empty);}
+          for(const expense of expenses){const line=document.createElement("p");line.className="muted";
+            line.textContent=expense.expense_number+" — "+expense.category+" — "+expense.description+" — "+formatNumber(expense.amount)+" "+expense.currency+" — "+expense.payment_method+" — "+formatDateTime(expense.created_at);panel.append(line);}
+        }
+      } catch(error) { const failure=document.createElement("p");failure.className="message error";failure.textContent="تعذر تحميل بيانات المالية: "+error.message;panel.append(failure); }
+    }
+    toggle.addEventListener("click",async()=>{panel.hidden=!panel.hidden;if(!panel.hidden&&!loaded){loaded=true;await refresh();}});
     card.append(toggle,panel);
   }
 
