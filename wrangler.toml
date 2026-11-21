@@ -4,6 +4,9 @@ compatibility_date = "2026-11-20"
 
 workers_dev = true
 
+[cache]
+enabled = true
+
 [triggers]
 crons = ["0 9 * * *"]
 
