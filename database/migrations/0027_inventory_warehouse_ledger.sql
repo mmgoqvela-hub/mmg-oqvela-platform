@@ -194,6 +194,44 @@ BEGIN
       THEN RAISE(ABORT, 'Insufficient warehouse variant stock') END;
 END;
 
+
+-- Backward-compatible inserts without warehouse_id are applied after the
+-- one-time default-warehouse assignment above. Explicit warehouse inserts are
+-- handled by the AFTER INSERT projection triggers.
+CREATE TRIGGER trg_inventory_movement_apply_assigned_product_stock
+AFTER UPDATE OF warehouse_id ON inventory_movements
+WHEN OLD.warehouse_id IS NULL AND NEW.warehouse_id IS NOT NULL
+ AND NEW.variant_id IS NULL
+BEGIN
+    INSERT INTO inventory_warehouse_stock
+      (warehouse_id, store_id, product_id, variant_key, variant_id, quantity)
+    VALUES (NEW.warehouse_id, NEW.store_id, NEW.product_id, '', NULL, NEW.quantity_change)
+    ON CONFLICT(warehouse_id, product_id, variant_key)
+    DO UPDATE SET quantity = quantity + NEW.quantity_change,
+                  updated_at = CURRENT_TIMESTAMP
+    WHERE inventory_warehouse_stock.quantity + NEW.quantity_change >= 0;
+
+    SELECT CASE WHEN changes() = 0
+      THEN RAISE(ABORT, 'Insufficient warehouse stock') END;
+END;
+
+CREATE TRIGGER trg_inventory_movement_apply_assigned_variant_stock
+AFTER UPDATE OF warehouse_id ON inventory_movements
+WHEN OLD.warehouse_id IS NULL AND NEW.warehouse_id IS NOT NULL
+ AND NEW.variant_id IS NOT NULL
+BEGIN
+    INSERT INTO inventory_warehouse_stock
+      (warehouse_id, store_id, product_id, variant_key, variant_id, quantity)
+    VALUES (NEW.warehouse_id, NEW.store_id, NEW.product_id, NEW.variant_id, NEW.variant_id, NEW.quantity_change)
+    ON CONFLICT(warehouse_id, product_id, variant_key)
+    DO UPDATE SET quantity = quantity + NEW.quantity_change,
+                  updated_at = CURRENT_TIMESTAMP
+    WHERE inventory_warehouse_stock.quantity + NEW.quantity_change >= 0;
+
+    SELECT CASE WHEN changes() = 0
+      THEN RAISE(ABORT, 'Insufficient warehouse variant stock') END;
+END;
+
 -- This is the only permitted UPDATE: one-time default-warehouse assignment
 -- for legacy-compatible inserts that omitted warehouse_id.
 CREATE TRIGGER trg_inventory_movement_append_only_update
