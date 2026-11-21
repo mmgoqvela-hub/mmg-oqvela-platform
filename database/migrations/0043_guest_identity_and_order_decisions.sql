@@ -134,40 +134,41 @@ WHEN OLD.customer_decision='accepted' AND NEW.customer_decision='rejected'
 BEGIN
   UPDATE product_variants
   SET stock_quantity = stock_quantity + (
-    SELECT COALESCE(SUM(-im.quantity_change),0)
+    SELECT COALESCE(-SUM(im.quantity_change),0)
     FROM inventory_movements im
     WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type='sale' AND im.product_id=product_variants.product_id
+      AND im.movement_type IN ('sale','return') AND im.product_id=product_variants.product_id
       AND im.variant_id=product_variants.id
   )
   WHERE store_id=NEW.store_id AND EXISTS (
     SELECT 1 FROM inventory_movements im
     WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type='sale' AND im.product_id=product_variants.product_id
+      AND im.movement_type IN ('sale','return') AND im.product_id=product_variants.product_id
       AND im.variant_id=product_variants.id
   );
 
   UPDATE products
   SET stock_quantity = stock_quantity + (
-    SELECT COALESCE(SUM(-im.quantity_change),0)
+    SELECT COALESCE(-SUM(im.quantity_change),0)
     FROM inventory_movements im
     WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type='sale' AND im.product_id=products.id AND im.variant_id IS NULL
+      AND im.movement_type IN ('sale','return') AND im.product_id=products.id AND im.variant_id IS NULL
   )
   WHERE store_id=NEW.store_id AND EXISTS (
     SELECT 1 FROM inventory_movements im
     WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type='sale' AND im.product_id=products.id AND im.variant_id IS NULL
+      AND im.movement_type IN ('sale','return') AND im.product_id=products.id AND im.variant_id IS NULL
   );
 
   INSERT INTO inventory_movements
     (id,store_id,product_id,variant_id,movement_type,quantity_change,reference_id,notes)
   SELECT lower(hex(randomblob(16))),NEW.store_id,im.product_id,im.variant_id,
-    'return',SUM(-im.quantity_change),NEW.id,'Rejected accepted customer order stock restoration'
+    'return',-SUM(im.quantity_change),NEW.id,'Rejected accepted customer order stock restoration'
   FROM inventory_movements im
   WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-    AND im.movement_type='sale' AND im.quantity_change<0
-  GROUP BY im.product_id,im.variant_id;
+    AND im.movement_type IN ('sale','return')
+  GROUP BY im.product_id,im.variant_id
+  HAVING SUM(im.quantity_change)<0;
 END;
 
 -- Preserve the full decision history; never overwrite earlier decisions.
@@ -200,7 +201,7 @@ BEGIN
     ELSE
       'تم رفض طلبك رقم ' || NEW.order_number || '. السبب: ' || COALESCE(NEW.rejection_reason,'لم يحدد المتجر سبباً')
     END,
-    'customer-order-decision:' || NEW.id || ':' || NEW.customer_decision || ':' || NEW.updated_at
+    'customer-order-decision:' || NEW.id || ':' || lower(hex(randomblob(8)))
   );
 END;
 
