@@ -490,3 +490,61 @@ Each store owner/admin needs a polished, comprehensive, responsive dashboard tha
 - These dashboard and Syria procurement/sales rules are requirements, not evidence that the dashboard or ERP modules are implemented.
 - Implement the dashboard after the relevant ledgers and posting workflows exist, so profit/loss, cash and inventory figures reconcile. Early dashboard shells may show only verified existing metrics and must label missing modules as unavailable rather than fabricate totals.
 
+### 9.17 Store opening hours, holidays and service availability
+
+Opening hours are a first-class store capability, not a decorative line of text. They must drive customer-facing availability and operational workflows while remaining configurable for each store, branch and service channel.
+
+- Store and each branch/location must have an explicit IANA time-zone identifier. All schedules are interpreted in that location's time zone; persist event timestamps unambiguously and never rely on the visitor's device time zone.
+- Support a weekly recurring schedule for every weekday, including closed days, multiple opening intervals in one day, break periods, and overnight intervals that close after midnight. Validate invalid or overlapping intervals while allowing legitimate overnight hours.
+- Support date-specific exceptions: public holidays, religious/cultural holidays, annual recurring closures, one-off holidays, staff training, maintenance, emergency closure, special opening, extended hours and shortened hours. Store owners/admins can create, edit, schedule and cancel exceptions.
+- Do not hard-code Syrian or other national holiday dates as immutable rules. Provide editable holiday calendars and optional imported calendar sources only after their reliability and licensing are verified. A store may observe, ignore or override a suggested holiday.
+- Support separate availability schedules by channel/service where needed: walk-in/customer service, public online ordering, pickup, delivery, appointments/bookings, phone support and specific departments. A store may accept online orders while its physical location is closed, or stop delivery while pickup remains available.
+- Public storefronts should show open/closed status, today's hours, next opening time and any special closure notice in the store's local time zone. Avoid exposing internal staff schedules or private closure notes.
+- Define explicit after-hours behavior per channel: block new orders, accept orders for later processing, allow scheduled/pre-orders, or show a contact/request form. Display expected processing/delivery/pickup windows honestly; do not imply immediate fulfillment while closed.
+- Enforce availability server-side at the relevant action (checkout, appointment booking, pickup slot or delivery slot), not only by hiding a button in the browser. Recheck schedule, capacity and cutoff rules when committing the transaction.
+- For fulfillment, support preparation lead time, order cutoff, minimum advance notice, slot capacity, blackout dates, holidays and configurable buffers. Do not promise a delivery or pickup time outside the selected service's actual availability.
+- Appointment-based businesses may derive bookable slots from opening hours, service duration, staff/resource calendars, breaks, buffers, existing bookings and capacity. This is a separate booking capability; opening hours alone must never be treated as proof that a clinician, employee or room is available.
+- Branch schedules and exceptions are independent. A central owner may copy a schedule to selected branches, but subsequent changes must not silently overwrite branch-specific exceptions.
+- Emergency closure and reopening actions require authorized roles, an audit record, an optional public message and clear handling of already accepted orders/bookings. Existing confirmed commitments must not be silently deleted; require cancellation, rescheduling or customer contact workflows.
+- Staff shifts and attendance are separate from customer opening hours. A store can be open without every employee being scheduled, and a staff shift does not automatically make a customer service available.
+- Show schedule configuration history and who changed it. Notify relevant staff of upcoming special hours where in-app notifications are enabled.
+- Test timezone changes, daylight-saving transitions, leap days, year boundaries, overnight periods, overlapping intervals, holiday overrides, branch overrides, after-hours checkout and concurrent slot booking.
+
+### 9.18 Unified financial and inventory posting architecture
+
+The platform must maintain a consistent source of truth across stock, money, documents and operational history. This section defines the target architecture; it does not claim that the existing catalog movement table is already a complete ledger or that double-entry accounting is implemented.
+
+- Keep inventory movements as the immutable source history for stock changes. Product/variant quantity columns may remain transactionally maintained projections for fast reads, but must reconcile to posted movements and must never be manually overwritten without a corresponding controlled adjustment.
+- Introduce a financial posting/journal service for posted business events. Sales, supplier bills, receipts, payments, refunds, returns, expenses, cash transfers, taxes and exchange differences must post through a single controlled mapping layer rather than each route inventing its own balance updates.
+- A posted document/event should have a stable source type and source ID, posting status, idempotency key, actor, effective business date, recorded timestamp, currency and immutable reference to the exact rate/version used where conversion applies.
+- Enforce balanced debit/credit journal entries when double-entry accounting is enabled. Do not infer profit from cash movement or order totals. Payment receipt, revenue recognition, receivable settlement, inventory cost and expense recognition remain distinct concepts.
+- Keep separate currency amounts and account balances. Never add USD and SYP as raw numbers. Conversions must capture source currency, target currency, rate value, rate ID/version, effective time, rounding rule and reporting basis.
+- Use integer minor units or an explicitly documented decimal strategy with currency-specific precision. Do not rely on JavaScript floating-point arithmetic for authoritative money calculations. Currency precision must be configurable and verified for the actual Syrian currency definition before activation.
+- Posting must be idempotent and concurrency-safe. Duplicate webhook/API retries must not duplicate stock, revenue, payment allocation or journal entries. Enforce source uniqueness and database constraints in addition to application checks.
+- Where a business operation changes multiple related records, use a D1-supported atomic batch/transaction boundary and verify rollback behavior. Do not claim atomicity across external payment, storage or notification providers; use durable outbox/retry patterns where external side effects are required.
+- Posted records are immutable. Corrections use linked reversal, credit/debit note, return or adjustment entries; preserve the original record and complete actor/time/reason history.
+- Add period locks and controlled reopen permissions before production financial close. Historical reports must remain reproducible from posted source records and captured exchange-rate snapshots.
+- Define reconciliation checks between inventory projections and movements, payments and allocations, cash/bank accounts and movements, supplier/customer subledgers and control accounts, and journal debits/credits. Surface discrepancies as actionable alerts; never silently auto-correct financial history.
+- Build this foundation incrementally after auditing existing schema, triggers, APIs and migrations. Reuse compatible tables and preserve existing production data; do not create duplicate movement or payment ledgers simply because a new module is being added.
+
+### 9.19 Industry profiles and optional business capabilities
+
+The platform serves more than conventional product shops. Each store selects one or more business profiles; the profile enables relevant capabilities and tailored screens without forcing irrelevant fields or workflows on every business.
+
+- Core capabilities should be composable: catalog, services, customers, suppliers, inventory, orders, POS, appointments, reservations, invoicing, payments, delivery, staff/resources, documents, reporting and accounting. Each capability has explicit dependencies, permissions, settings and activation status.
+- Retail and fashion: size/color variants, barcode labels, fitting/returns, bundles, stock availability and product collections.
+- Grocery and wholesale: units and conversions, pack/carton pricing, weight-based goods where supported, bulk/customer-tier pricing, minimum quantities, supplier purchasing and multiple warehouses.
+- Restaurants, cafes and bakeries: menus, modifiers/add-ons, meal combos, preparation notes, order types (table, takeaway, pickup, delivery), kitchen tickets/queues, preparation time and item availability/86-out controls. Food safety and allergen disclosures require local review.
+- Pharmacies: batch/lot and expiry tracking, supplier traceability, prescription-related workflows and restricted-product controls only after local legal review. Health-related customer data must receive stricter privacy/access controls; do not assume every pharmacy product may be sold without a pharmacist or prescription check.
+- Clinics and healthcare practices: clinician profiles, specialties, service durations, branch/staff calendars, appointment booking, cancellation/no-show rules and patient communications. Medical records, diagnoses, prescriptions and sensitive health data are a separate high-sensitivity module requiring privacy, security and jurisdictional review; they are not ordinary store notes.
+- Salons and personal services: service catalog, staff skills, duration, resource/chair scheduling, booking deposits, cancellation policies, packages and repeat appointments.
+- Repair and maintenance businesses: customer assets/devices, intake inspection, work orders, diagnosis, estimates, customer approval, parts usage, technician assignment, warranty and completion handover.
+- Rental businesses: rentable assets, availability calendars, deposits, rental periods, late fees, damage inspection and return workflows.
+- Digital goods and subscriptions: entitlement delivery, license/serial issuance, recurring billing only with explicit payment authorization, renewal/cancellation lifecycle and access revocation.
+- B2B/service businesses: quotations, projects/jobs, milestones, timesheets where approved, contracts, service completion evidence, retainers and receivables.
+- Industry profiles are starting configurations, not rigid silos. Owners may enable additional compatible capabilities; disabling a capability must preserve its historical documents and data.
+- Use industry-specific storefront components and templates where helpful, but keep shared identity, permissions, customer, payment, document and audit foundations consistent.
+- Every profile must define which data is public, staff-only or sensitive, and which roles can access or export it. Never expose patient, prescription, repair-device or customer-private data through public storefront APIs.
+- Before activating a regulated workflow, verify current local laws, licensing, tax rules and required records with authoritative sources and qualified local professionals. The platform must not claim legal or clinical compliance by default.
+- The first release should prioritize the shared foundations and a limited set of complete business profiles; do not expose unfinished profile features as operational merely because their settings or navigation exist.
+
