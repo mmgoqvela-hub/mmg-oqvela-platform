@@ -1648,6 +1648,14 @@ footer{
         line.className = "muted";
         line.textContent = "المتجر: " + store.name;
         card.append(line);
+        const posButton = document.createElement("button");
+        posButton.type = "button";
+        posButton.className = "secondary";
+        posButton.textContent = currentLanguage === "ar" ? "فتح نقطة البيع" : "Open point of sale";
+        posButton.addEventListener("click", () => {
+          window.location.href = "/pos/" + encodeURIComponent(store.id);
+        });
+        card.append(posButton);
         if (["owner", "admin"].includes(account.role)) {
           renderStoreEditor(store, card);
           renderSubscriptionPanel(store, card);
