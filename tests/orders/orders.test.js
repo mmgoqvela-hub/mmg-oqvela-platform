@@ -8,6 +8,7 @@ const lifecycleMigration=await readFile(new URL("../../database/migrations/0022_
 const orderDecisionsMigration=await readFile(new URL("../../database/migrations/0043_guest_identity_and_order_decisions.sql",import.meta.url),"utf8");
 const customerAccountsMigration=await readFile(new URL("../../database/migrations/0044_optional_customer_accounts.sql",import.meta.url),"utf8");
 const rejectionReasonsMigration=await readFile(new URL("../../database/migrations/0045_store_rejection_reasons.sql",import.meta.url),"utf8");
+const orderNotificationsMigration=await readFile(new URL("../../database/migrations/0046_store_order_notifications.sql",import.meta.url),"utf8");
 
 const TOKEN="a".repeat(43);
 const STORE={id:"store-1",name:"Test Store",slug:"test-store"};
@@ -467,4 +468,17 @@ test("Merchant can add and disable a custom rejection reason",async()=>{
 test("Rejection reasons are stored per store and support enabling or disabling",()=>{
  assert.ok(rejectionReasonsMigration.includes("CREATE TABLE store_order_rejection_reasons"));
  assert.ok(rejectionReasonsMigration.includes("UNIQUE (store_id,reason_text)"));
+});
+
+
+test("Store owner order notifications use the selected post-handover payment method",()=>{
+  assert.match(orderNotificationsMigration,/DROP TRIGGER IF EXISTS trg_notify_store_order_created/);
+  assert.match(orderNotificationsMigration,/CREATE TRIGGER trg_notify_store_order_created/);
+  assert.match(orderNotificationsMigration,/AFTER INSERT ON store_orders/);
+  assert.match(orderNotificationsMigration,/NEW\\.customer_payment_method = 'shamcash'/);
+  assert.match(orderNotificationsMigration,/يتم تحصيل المبلغ بعد تسليم الطلب/);
+  assert.match(orderNotificationsMigration,/يتم تحصيل المبلغ عند التسليم/);
+  assert.match(orderNotificationsMigration,/NEW\\.id/);
+  assert.match(orderNotificationsMigration,/a\\.owner_user_id IS NOT NULL/);
+  assert.doesNotMatch(orderNotificationsMigration,/NEW\\.payment_method/);
 });
