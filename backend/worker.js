@@ -134,6 +134,25 @@ export default {
       return authResponse;
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+
+    // The Worker entrypoint serves static assets through the ASSETS binding.
+    // Set the browser cache policy here because _headers rules do not apply
+    // to responses returned by Worker code.
+    if (
+      request.method === "GET" &&
+      /^\\/cdn-(?:test-photo\\.(?:jpg|webp)|test-[^/]+\\.svg|size-(?:100kb|500kb|1mb)\\.jpg)$/.test(url.pathname) &&
+      assetResponse.status === 200
+    ) {
+      const headers = new Headers(assetResponse.headers);
+      headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers
+      });
+    }
+
+    return assetResponse;
   }
 };
