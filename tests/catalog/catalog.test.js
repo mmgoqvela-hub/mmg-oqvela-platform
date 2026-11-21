@@ -581,3 +581,18 @@ test("Product creation rejects unsupported sale units", async () => {
   assert.equal(response.status,400);
   assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO products")),false);
 });
+
+test("Kilogram products store opening stock in grams and label the ledger unit", async () => {
+  const db = createDb();
+  const response = await handleCatalog(makeRequest("products","POST",{
+    name:"Cheese pastry",base_price:12.5,currency:"USD",
+    product_type:"physical",status:"active",sale_unit:"kg",stock_quantity:2500
+  }),{DB:db});
+  const result = await response.json();
+  assert.equal(response.status,201);
+  assert.equal(result.product.stock_quantity,2500);
+  const movement=db.calls.find(call=>call.sql.includes("INSERT INTO inventory_movements"));
+  assert.ok(movement);
+  assert.equal(movement.values[3],2500);
+  assert.equal(movement.values[5],"g");
+});
