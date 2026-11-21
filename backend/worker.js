@@ -11,6 +11,7 @@ import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
 import { handleOrders } from "./routes/orders.js";
+import { handleFinance } from "./routes/finance.js";
 import { handlePos } from "./routes/pos.js";
 import { handlePosReturns } from "./routes/pos_returns.js";
 import { handlePosVoids } from "./routes/pos_voids.js";
@@ -118,6 +119,9 @@ export default {
 
     const posResponse = await handlePos(request, env);
     if (posResponse) return markNoStore(posResponse);
+
+    const financeResponse = await handleFinance(request, env);
+    if (financeResponse) return markNoStore(financeResponse);
 
     const ordersResponse = await handleOrders(request, env);
     if (ordersResponse) return markNoStore(ordersResponse);
