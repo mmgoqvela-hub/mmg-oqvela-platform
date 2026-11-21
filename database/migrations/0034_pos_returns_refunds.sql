@@ -148,3 +148,33 @@ BEFORE DELETE ON pos_sale_returns
 BEGIN
   SELECT RAISE(ABORT,'POS returns cannot be deleted');
 END;
+
+
+CREATE TRIGGER trg_pos_return_item_immutable_update
+BEFORE UPDATE ON pos_sale_return_items
+WHEN EXISTS(SELECT 1 FROM pos_sale_returns r
+  WHERE r.id=OLD.return_id AND r.store_id=OLD.store_id AND r.status='posted')
+BEGIN
+  SELECT RAISE(ABORT,'Posted POS return items are immutable');
+END;
+CREATE TRIGGER trg_pos_return_item_immutable_delete
+BEFORE DELETE ON pos_sale_return_items
+WHEN EXISTS(SELECT 1 FROM pos_sale_returns r
+  WHERE r.id=OLD.return_id AND r.store_id=OLD.store_id AND r.status='posted')
+BEGIN
+  SELECT RAISE(ABORT,'Posted POS return items cannot be deleted');
+END;
+CREATE TRIGGER trg_pos_refund_payment_immutable_update
+BEFORE UPDATE ON pos_sale_refund_payments
+WHEN EXISTS(SELECT 1 FROM pos_sale_returns r
+  WHERE r.id=OLD.return_id AND r.store_id=OLD.store_id AND r.status='posted')
+BEGIN
+  SELECT RAISE(ABORT,'Posted POS refund payments are immutable');
+END;
+CREATE TRIGGER trg_pos_refund_payment_immutable_delete
+BEFORE DELETE ON pos_sale_refund_payments
+WHEN EXISTS(SELECT 1 FROM pos_sale_returns r
+  WHERE r.id=OLD.return_id AND r.store_id=OLD.store_id AND r.status='posted')
+BEGIN
+  SELECT RAISE(ABORT,'Posted POS refund payments cannot be deleted');
+END;
