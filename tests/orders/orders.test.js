@@ -475,10 +475,10 @@ test("Store owner order notifications use the selected post-handover payment met
   assert.match(orderNotificationsMigration,/DROP TRIGGER IF EXISTS trg_notify_store_order_created/);
   assert.match(orderNotificationsMigration,/CREATE TRIGGER trg_notify_store_order_created/);
   assert.match(orderNotificationsMigration,/AFTER INSERT ON store_orders/);
-  assert.match(orderNotificationsMigration,/NEW\\.customer_payment_method = 'shamcash'/);
+  assert.ok(orderNotificationsMigration.includes("NEW.customer_payment_method = 'shamcash'"));
   assert.match(orderNotificationsMigration,/يتم تحصيل المبلغ بعد تسليم الطلب/);
   assert.match(orderNotificationsMigration,/يتم تحصيل المبلغ عند التسليم/);
-  assert.match(orderNotificationsMigration,/NEW\\.id/);
-  assert.match(orderNotificationsMigration,/a\\.owner_user_id IS NOT NULL/);
-  assert.doesNotMatch(orderNotificationsMigration,/NEW\\.payment_method/);
+  assert.ok(orderNotificationsMigration.includes("NEW.id"));
+  assert.ok(orderNotificationsMigration.includes("a.owner_user_id IS NOT NULL"));
+  assert.ok(!orderNotificationsMigration.includes("NEW.payment_method"));
 });
