@@ -7,7 +7,7 @@ function json(data,status=200){
     "Pragma":"no-cache"
   }});
 }
-function normalizeCustomerPhone(value){return String(value||"").replace(/[\\s()-]/g,"");}
+function normalizeCustomerPhone(value){return String(value||"").replace(/[\s()-]/g,"");}
 function randomHex(bytes=32){return Array.from(crypto.getRandomValues(new Uint8Array(bytes)),b=>b.toString(16).padStart(2,"0")).join("");}
 async function sha256(value){
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
@@ -49,7 +49,7 @@ async function activeStore(db,slug){
 }
 function requestCustomerToken(request){
   return request.headers.get("X-Customer-Token")||
-    (request.headers.get("Authorization")||"").replace(/^Bearer\\s+/i,"");
+    (request.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"");
 }
 async function readIdentity(request,db,storeId){
   const token=requestCustomerToken(request);
@@ -111,7 +111,7 @@ async function handleCustomerAccount(request,env,store,action){
   const phone=typeof b.customer_phone==="string"?b.customer_phone.trim():"";
   const phoneKey=normalizeCustomerPhone(phone);
   const password=typeof b.password==="string"?b.password:"";
-  if(phoneKey.replace(/\\D/g,"").length<6||phoneKey.length>30||password.length<10||password.length>128)
+  if(phoneKey.replace(/\D/g,"").length<6||phoneKey.length>30||password.length<10||password.length>128)
     return json({error:"Enter a valid phone number and a password of at least 10 characters"},400);
   if(!await enforceCustomerAuthLimit(env.DB,store.id,phoneKey))
     return json({error:"Too many attempts. Try again in 10 minutes."},429);
@@ -182,8 +182,8 @@ async function handleCustomerAccount(request,env,store,action){
 
 export async function handlePublicCustomerPortal(request,env){
   const url=new URL(request.url);
-  const accountMatch=url.pathname.match(/^\\/api\\/public\\/stores\\/([a-z0-9-]+)\\/customer\\/account\\/(register|login|logout)$/);
-  const match=url.pathname.match(/^\\/api\\/public\\/stores\\/([a-z0-9-]+)\\/customer\\/(orders|notifications)(?:\\/([^/]+)\\/read)?$/);
+  const accountMatch=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/customer\/account\/(register|login|logout)$/);
+  const match=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/customer\/(orders|notifications)(?:\/([^/]+)\/read)?$/);
   if(!match&&!accountMatch)return null;
   const slug=(match||accountMatch)[1];
   const store=await activeStore(env.DB,slug);
