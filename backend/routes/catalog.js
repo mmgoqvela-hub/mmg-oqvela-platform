@@ -2,6 +2,7 @@ import {
   getAuthenticatedSession,
   validOrigin
 } from "../security/authentication.js";
+import { createStoreMediaStorage } from "../storage/store_media_storage.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
