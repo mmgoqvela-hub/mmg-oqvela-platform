@@ -149,7 +149,7 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     'customerPortalTimer=setInterval',
     'X-Customer-Token',
     'id="customerAccountForm"',
-    'customer/account/register',
+    'customer/account/"+customerAccountAction',
     'customer/account/login',
     'customerModeStorageKey',
     'customerQrDownload'
