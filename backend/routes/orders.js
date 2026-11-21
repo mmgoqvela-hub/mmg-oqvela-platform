@@ -14,7 +14,7 @@ async function readBody(request,max=20000){
   }catch{return {error:"Invalid JSON",status:400};}
 }
 function validText(value,min,max){return typeof value==="string"&&value.trim().length>=min&&value.trim().length<=max;}
-function normalizeCustomerPhone(value){return String(value||"").replace(/[\s()-]/g,"");}
+function normalizeCustomerPhone(value){return String(value||"").replace(/\D/g,"");}
 async function hashCustomerToken(token){
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
   return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
