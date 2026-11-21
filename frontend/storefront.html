@@ -254,7 +254,7 @@
         const variant = product?.variants?.find(option => option.id === item.variantId);
         const tiers = variant?.public_tier_prices?.length ? variant.public_tier_prices : product?.public_tier_prices;
         if (Array.isArray(tiers) && tiers.length) {
-          const selected = tiers.filter(tier => item.quantity >= tier.min_quantity).sort((a,b)=>b.min_quantity-a.min_quantity)[0];
+          const selected = tiers.filter(tier => (product?.sale_unit === "kg" ? item.quantity / 1000 : item.quantity) >= tier.min_quantity).sort((a,b)=>b.min_quantity-a.min_quantity)[0];
           if (selected) return Number(selected.unit_price);
         }
         return Number(variant?.price ?? product?.base_price ?? 0);
