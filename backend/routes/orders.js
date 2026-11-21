@@ -164,9 +164,10 @@ async function createPublicOrder(request,env,slug){
       }
       const cost=await env.DB.prepare(`
         SELECT id,cost_minor_units FROM product_cost_versions
-        WHERE store_id=? AND product_id=? AND ((variant_id=? ) OR (variant_id IS NULL AND ? IS NULL))
-        ORDER BY effective_at DESC,created_at DESC LIMIT 1
-      `).bind(store.id,product.id,variant?.id||null,variant?.id||null).first();
+        WHERE store_id=? AND product_id=? AND
+          ((? IS NOT NULL AND variant_id=?) OR variant_id IS NULL)
+        ORDER BY CASE WHEN variant_id=? THEN 0 ELSE 1 END,effective_at DESC,created_at DESC LIMIT 1
+      `).bind(store.id,product.id,variant?.id||null,variant?.id||null,variant?.id||null).first();
       if(!cost)return json({error:"A USD purchase cost is required before selling "+product.name+" with automatic pricing"},409);
       try{
         const unitMinor=calculateTierPriceMinorUnits(cost.cost_minor_units,selected.profit_margin_bps,pricingSettings.rounding_increment_minor_units||1);
