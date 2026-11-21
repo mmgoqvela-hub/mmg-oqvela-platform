@@ -172,6 +172,7 @@
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
       let categoryFilter = "";
+      const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
       const cartStorageKey = "mmg_cart_" + slug;
       let cart = [];
       let orderSubmitting = false;
@@ -185,7 +186,6 @@
         const customText = customKey ? storeData?.store?.customization?.texts?.[customKey] : null;
         return typeof customText === "string" && customText.trim() ? customText.trim() : (messages[language][key] || key);
       };
-      const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
 
       function renderAnnouncements() {
         const container=$("platformAnnouncements");
