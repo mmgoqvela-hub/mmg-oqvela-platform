@@ -20,7 +20,7 @@ function makeDb(options={}){
    return null;
   },
   async all(){
-   if(sql.includes("SELECT id,product_id,variant_id,quantity,line_total,currency FROM pos_sale_items"))
+   if(sql.includes("FROM pos_sale_items"))
     return {results:options.items??[{id:"sale-item-1",product_id:"p-1",variant_id:null,quantity:3,line_total:30,currency:"USD"}]};
    return {results:[]};
   },
