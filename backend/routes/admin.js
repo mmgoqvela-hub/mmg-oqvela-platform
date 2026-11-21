@@ -424,6 +424,62 @@ async function handleAnnouncements(request, db, admin, url) {
   return json({status:"ok",message:"Announcement updated"});
 }
 
+async function getStoreHandoverPreview(db, storeId) {
+  const store = await db.prepare(`
+    SELECT s.id,s.name,s.slug,s.status,s.account_id,s.created_at,
+           a.name AS account_name,a.status AS account_status,
+           a.owner_user_id,u.full_name AS owner_name,u.email AS owner_email
+    FROM stores s
+    JOIN accounts a ON a.id=s.account_id
+    LEFT JOIN users u ON u.id=a.owner_user_id
+    WHERE s.id=? LIMIT 1
+  `).bind(storeId).first();
+  if (!store) return null;
+
+  const subscriptions = await db.prepare(`
+    SELECT id,status,is_trial,starts_at,expires_at,created_at
+    FROM store_subscriptions
+    WHERE store_id=?
+    ORDER BY created_at DESC
+  `).bind(storeId).all();
+
+  const tables = await db.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type='table' AND name NOT LIKE 'sqlite_%'
+    ORDER BY name
+  `).all();
+
+  const records = [];
+  for (const row of tables.results || []) {
+    const table = String(row.name || "");
+    if (!/^[A-Za-z0-9_]+$/.test(table) || table === "d1_migrations") continue;
+    const columns = await db.prepare(`PRAGMA table_info("${table}")`).all();
+    if (!(columns.results || []).some(column => column.name === "store_id")) continue;
+    const count = await db.prepare(`SELECT COUNT(*) AS total FROM "${table}" WHERE store_id=?`).bind(storeId).first();
+    records.push({table, count: Number(count?.total || 0)});
+  }
+
+  return {
+    store,
+    subscriptions: subscriptions.results || [],
+    records,
+    total_store_scoped_records: records.reduce((sum, item) => sum + item.count, 0),
+    preview_only: true,
+    reset_available: false,
+    notice: "This is a read-only preview. No store data or ownership has been changed."
+  };
+}
+
+async function handleStoreHandoverPreview(request, env, admin, match) {
+  if (request.method !== "GET") return json({error:"Method not allowed"},405);
+  let storeId;
+  try { storeId = decodeURIComponent(match[1]); }
+  catch { return json({error:"Invalid store ID"},400); }
+  const preview = await getStoreHandoverPreview(env.DB,storeId);
+  if (!preview) return json({error:"Store not found"},404);
+  return json({status:"ok",preview});
+}
+
 export async function handleAdmin(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -434,8 +490,9 @@ export async function handleAdmin(request, env) {
   const isOverview = path === "/api/admin/overview";
   const isTransfer = path === "/api/admin/transfer-super-admin";
   const isManagement = /^\/api\/admin\/(users|accounts|stores|platform-admins)(?:\/[^/]+)?$/.test(path);
+  const handoverPreviewMatch = path.match(/^\/api\/admin\/stores\/([^/]+)\/handover-preview$/);
   const isSettings = ["/api/admin/settings", "/api/admin/trial-settings"].includes(path);
-  if (!isSettings && !isAnnouncements && !isServiceRequests && !isActivityLogs && !isOverview && !isTransfer && !isManagement) return null;
+  if (!isSettings && !isAnnouncements && !isServiceRequests && !isActivityLogs && !isOverview && !isTransfer && !isManagement && !handoverPreviewMatch) return null;
 
   if (isActivityLogs && request.method !== "GET") return json({ error: "Method not allowed" }, 405);
   if (isSettings && !["GET", "PUT"].includes(request.method)) return json({ error: "Method not allowed" }, 405);
@@ -453,6 +510,7 @@ export async function handleAdmin(request, env) {
   }
 
   try {
+    if (handoverPreviewMatch) return await handleStoreHandoverPreview(request,env,admin,handoverPreviewMatch);
     if (isOverview || isManagement) {
       const managed = await handleAdminManagement(request,env,admin,path,url);
       if (managed) return managed;
