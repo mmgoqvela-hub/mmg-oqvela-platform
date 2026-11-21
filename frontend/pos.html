@@ -222,7 +222,8 @@
   $("shamcashHelp").classList.toggle("hidden",!paymentLines.some(p=>p.payment_method==="shamcash"));
   $("addPaymentBtn").disabled=paymentLines.length>=5;
  }
- $("addPaymentBtn").addEventListener("click",()=>{\n  if(paymentLines.length>=5)return;pendingKey=null;
+ $("addPaymentBtn").addEventListener("click",()=>{
+  if(paymentLines.length>=5)return;pendingKey=null;
   const total=cart.reduce((sum,line)=>sum+Number(line.line_total||0),0)-Math.max(0,Number($("discountInput").value)||0);
   const allocated=paymentLines.reduce((sum,p)=>sum+Number(p.amount||0),0);
   paymentLines.push({payment_method:"card",amount:Math.max(0,Math.round((total-allocated)*100)/100),transaction_reference:"",sender_name:""});
@@ -282,7 +283,8 @@
   if(!paymentsMatch(total)||total<=0){showError("saleMessage",new Error(t("requiredPayment")));return;}
   const reason=$("discountReason").value.trim();
   if(discount>0&&!reason){showError("saleMessage",new Error(t("discountPermission")));return;}
-  if(discount>=subtotal&&discount>0){showError("saleMessage",new Error(t("requiredPayment")));return;}\n  const button=$("completeSaleBtn");button.disabled=true;showError("saleMessage","");
+  if(discount>=subtotal&&discount>0){showError("saleMessage",new Error(t("requiredPayment")));return;}
+  const button=$("completeSaleBtn");button.disabled=true;showError("saleMessage","");
   pendingKey=pendingKey||crypto.randomUUID();
   try{
    const result=await api(storePath("/pos/sales"),{method:"POST",body:JSON.stringify({
