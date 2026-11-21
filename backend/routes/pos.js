@@ -440,7 +440,8 @@ export async function handlePos(request,env){
   if(resource==="reports"){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
     return posReport(env,storeId,url);
-  }\n  if(resource==="quote"){
+  }
+  if(resource==="quote"){
     if(request.method!=="POST")return json({error:"Method not allowed"},405);
     const parsed=await readBody(request);if(parsed.error)return json({error:parsed.error},parsed.status);
     const quote=await quoteItems(env.DB,storeId,access,parsed.body.items);
