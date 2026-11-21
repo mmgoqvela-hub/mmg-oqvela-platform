@@ -195,21 +195,12 @@ async function closeCashSession(request,env,storeId,session,access,sessionId){
   `).bind(sessionId,storeId).first();
   const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0))*100)/100;
   const difference=Math.round((counted-expected)*100)/100;
-  const closeStatements=[
-    env.DB.prepare(`
-      UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
-        cash_difference=?,closing_notes=?,closed_by=?,closed_at=CURRENT_TIMESTAMP
-      WHERE id=? AND store_id=? AND status='open'
-    `).bind(counted,expected,difference,notes.trim()||null,session.user_id,sessionId,storeId),
-    env.DB.prepare(`INSERT INTO pos_cash_session_events(id,session_id,store_id,actor_user_id,event_type,details_json)
-      SELECT ?,?,?,?,'closed',? WHERE EXISTS(
-        SELECT 1 FROM pos_cash_sessions WHERE id=? AND store_id=? AND status='closed' AND closed_by=?
-      )`).bind(crypto.randomUUID(),sessionId,storeId,session.user_id,
-        JSON.stringify({closing_cash_amount:counted,expected_cash_amount:expected,cash_difference:difference}),
-        sessionId,storeId,session.user_id)
-  ];
-  const closeResults=await env.DB.batch(closeStatements);
-  if(!(closeResults[0]?.meta?.changes>0))return json({error:"Cash session was already closed"},409);
+  const result=await env.DB.prepare(`
+    UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
+      cash_difference=?,closing_notes=?,closed_by=?,closed_at=CURRENT_TIMESTAMP
+    WHERE id=? AND store_id=? AND status='open'
+  `).bind(counted,expected,difference,notes.trim()||null,session.user_id,sessionId,storeId).run();
+  if(!(result.meta?.changes>0))return json({error:"Cash session was already closed"},409);
   return json({status:"ok",session:{id:sessionId,currency:row.currency,closing_cash_amount:counted,
     expected_cash_amount:expected,cash_difference:difference,status:"closed"}});
 }
