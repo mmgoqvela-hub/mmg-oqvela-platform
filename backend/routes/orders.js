@@ -484,43 +484,68 @@ export async function handleOrders(request,env){
   if(request.method!=="PATCH")return json({error:"Method not allowed"},405);
   if(!allowed(access,"orders.manage"))return json({error:"Orders manage permission required"},403);
   const orderId=decodeURIComponent(orderMatch[2]);
-  const existing=await env.DB.prepare("SELECT id,order_status,payment_status,payment_method FROM store_orders WHERE id=? AND store_id=? LIMIT 1").bind(orderId,storeId).first();
+  const existing=await env.DB.prepare("SELECT id,order_status,payment_status,payment_method,customer_payment_method,customer_decision FROM store_orders WHERE id=? AND store_id=? LIMIT 1").bind(orderId,storeId).first();
   if(!existing)return json({error:"Order not found"},404);
   const parsed=await readBody(request);
   if(parsed.error)return json({error:parsed.error},parsed.status);
   const b=parsed.body;
-  const nextStatus=b.order_status??existing.order_status;
-  const nextPayment=b.payment_status??existing.payment_status;
-  const transitions={
-    pending:["confirmed","cancelled"],
-    confirmed:["processing","cancelled"],
-    processing:["shipped","completed","cancelled"],
-    shipped:["completed"],
-    completed:[],
-    cancelled:[]
-  };
-  if(!Object.hasOwn(transitions,nextStatus)||!["unpaid","pending","paid","rejected","refunded"].includes(nextPayment))
-    return json({error:"Invalid order or payment status"},400);
-  if(nextStatus!==existing.order_status&&!transitions[existing.order_status].includes(nextStatus))
-    return json({error:"Invalid order status transition"},409);
-  if(nextPayment!==existing.payment_status){
-    const paymentTransitions={unpaid:["paid"],pending:["paid","rejected"],rejected:[],paid:["refunded"],refunded:[]};
-    if(!paymentTransitions[existing.payment_status]?.includes(nextPayment))
-      return json({error:"Invalid payment status transition"},409);
-    if(nextPayment==="rejected"&&existing.payment_method!=="shamcash")
-      return json({error:"Only Sham Cash payments can be rejected"},400);
+
+  if(b.customer_decision!==undefined){
+    const decision=b.customer_decision;
+    const reason=typeof b.rejection_reason==="string"?b.rejection_reason.trim():"";
+    if(!["accepted","rejected"].includes(decision))return json({error:"Invalid customer decision"},400);
+    if(decision==="rejected"&&!validText(reason,3,1000))
+      return json({error:"Choose or enter a reason for rejecting the order"},400);
+    if(existing.order_status==="completed")return json({error:"A completed order cannot be changed"},409);
+    if(existing.customer_decision===decision&&
+      (decision!=="rejected"||reason===String(b.rejection_reason||"").trim()))
+      return json({status:"ok",order:{id:orderId,customer_decision:decision,order_status:existing.order_status}});
+    const nextOrderStatus=decision==="accepted"&&existing.order_status==="pending"?"confirmed":existing.order_status;
+    try{
+      const result=await env.DB.prepare(`
+        UPDATE store_orders
+        SET customer_decision=?,rejection_reason=?,accepted_at=CASE WHEN ?='accepted' THEN CURRENT_TIMESTAMP ELSE accepted_at END,
+          rejected_at=CASE WHEN ?='rejected' THEN CURRENT_TIMESTAMP ELSE rejected_at END,
+          order_status=?,updated_by=?,updated_at=CURRENT_TIMESTAMP
+        WHERE id=? AND store_id=? AND customer_decision=? AND order_status=?
+      `).bind(decision,decision==="rejected"?reason:null,decision,decision,nextOrderStatus,
+        session.user_id,orderId,storeId,existing.customer_decision,existing.order_status).run();
+      if(!result.meta?.changes)return json({error:"Order changed; refresh and retry"},409);
+      return json({status:"ok",order:{id:orderId,customer_decision:decision,
+        rejection_reason:decision==="rejected"?reason:null,order_status:nextOrderStatus}});
+    }catch(error){
+      const message=String(error?.message||"");
+      if(/stock/i.test(message))return json({error:"The available stock is no longer sufficient to accept this order."},409);
+      return json({error:"Unable to update the order decision"},409);
+    }
   }
-  if(nextStatus==="completed"&&nextPayment!=="paid")
-    return json({error:"An order cannot be completed before payment is marked paid"},409);
-  if(existing.payment_method==="shamcash"&&
-    ["confirmed","processing","shipped","completed"].includes(nextStatus)&&nextPayment!=="paid")
-    return json({error:"Verify the Sham Cash payment before processing this order"},409);
-  if(nextPayment==="refunded"&&nextStatus!=="cancelled")
-    return json({error:"A refunded order must be cancelled"},409);
-  const result=await env.DB.prepare(`
-    UPDATE store_orders SET order_status=?,payment_status=?,updated_by=?,updated_at=CURRENT_TIMESTAMP
-    WHERE id=? AND store_id=? AND order_status=? AND payment_status=?
-  `).bind(nextStatus,nextPayment,session.user_id,orderId,storeId,existing.order_status,existing.payment_status).run();
-  if(!result.meta?.changes)return json({error:"Order changed; refresh and retry"},409);
-  return json({status:"ok",order:{id:orderId,order_status:nextStatus,payment_status:nextPayment}});
+
+  if(b.complete_delivery===true){
+    if(existing.customer_decision!=="accepted"||existing.order_status==="completed")
+      return json({error:"Only an accepted, not-yet-completed order can be handed over"},409);
+    const reference=typeof b.payment_reference==="string"?b.payment_reference.trim():"";
+    const sender=typeof b.payment_sender_name==="string"?b.payment_sender_name.trim():"";
+    if(existing.customer_payment_method==="shamcash"&&
+      (!validText(reference,3,120)||!validText(sender,2,120)))
+      return json({error:"Enter the Sham Cash transaction number and sender name after verifying receipt"},400);
+    if(!["cash_on_delivery","shamcash"].includes(existing.customer_payment_method))
+      return json({error:"Invalid selected payment method"},409);
+    const result=await env.DB.prepare(`
+      UPDATE store_orders
+      SET order_status='completed',payment_status='paid',
+        delivered_at=CURRENT_TIMESTAMP,payment_collected_at=CURRENT_TIMESTAMP,
+        payment_collected_by=?,payment_reference=?,payment_sender_name=?,
+        updated_by=?,updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND store_id=? AND customer_decision='accepted'
+        AND order_status!='completed' AND payment_status IN ('unpaid','pending')
+    `).bind(session.user_id,
+      existing.customer_payment_method==="shamcash"?reference:null,
+      existing.customer_payment_method==="shamcash"?sender:null,
+      session.user_id,orderId,storeId).run();
+    if(!result.meta?.changes)return json({error:"Order changed; refresh and retry"},409);
+    return json({status:"ok",order:{id:orderId,order_status:"completed",
+      payment_status:"paid",payment_method:existing.customer_payment_method}});
+  }
+
+  return json({error:"Use a customer decision or confirm delivery and collection"},400);
 }
