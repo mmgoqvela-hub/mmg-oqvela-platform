@@ -163,6 +163,18 @@
             <p class="cart-note" id="customerQrHint">احتفظ برمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.</p>
             <div id="customerQr" class="customer-qr" aria-label="رمز استعادة سجل الزبون"></div>
             <div class="toolbar"><button class="lang" id="customerQrDownload" type="button">حفظ رمز QR في الهاتف</button><button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button></div>
+            <div id="customerAccountTools" class="customer-notice">
+              <p class="cart-note">يمكنك إنشاء حساب اختياري لتصل إلى طلباتك دون الاحتفاظ برمز QR.</p>
+              <div class="toolbar"><button class="lang" id="customerRegisterOpen" type="button">إنشاء حساب</button><button class="lang" id="customerLoginOpen" type="button">تسجيل الدخول</button><button class="lang" id="customerLogout" type="button" hidden>تسجيل الخروج</button></div>
+              <form id="customerAccountForm" class="checkout-form" hidden>
+                <strong id="customerAccountFormTitle">إنشاء حساب</strong>
+                <label id="customerAccountNameWrap"><span>الاسم الكامل</span><input id="customerAccountName" minlength="2" maxlength="120"></label>
+                <label><span>رقم الهاتف</span><input id="customerAccountPhone" required minlength="6" maxlength="30" autocomplete="tel"></label>
+                <label><span>كلمة المرور (10 أحرف على الأقل)</span><input id="customerAccountPassword" type="password" required minlength="10" maxlength="128" autocomplete="new-password"></label>
+                <button id="customerAccountSubmit" type="submit">إنشاء حساب</button>
+              </form>
+              <p id="customerAccountMessage" class="cart-note" role="status"></p>
+            </div>
             <div id="customerNotifications" aria-live="polite"></div>
             <div id="customerOrdersList"></div>
           </div>
@@ -190,10 +202,12 @@
       const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "");
       const cartStorageKey = "mmg_cart_" + slug;
       const customerTokenStorageKey = "mmg_customer_token_" + slug;
+      const customerModeStorageKey = "mmg_customer_mode_" + slug;
       const qrFragment = new URLSearchParams(location.hash.replace(/^#/, ""));
       const restoredQrToken = qrFragment.get("customer");
       if (restoredQrToken && /^[a-f0-9]{64}$/i.test(restoredQrToken)) {
         localStorage.setItem(customerTokenStorageKey, restoredQrToken);
+        localStorage.setItem(customerModeStorageKey,"guest");
         history.replaceState(null, "", location.pathname + location.search);
       }
       let cart = [];
@@ -417,9 +431,59 @@
           : "";
       }
 
+      let customerAccountAction="register";
+      function openCustomerAccountForm(action){
+        customerAccountAction=action;
+        $("customerAccountForm").hidden=false;
+        $("customerAccountNameWrap").hidden=action!=="register";
+        $("customerAccountFormTitle").textContent=action==="register"?"إنشاء حساب زبون":"تسجيل الدخول إلى حسابك";
+        $("customerAccountSubmit").textContent=action==="register"?"إنشاء حساب":"تسجيل الدخول";
+        $("customerAccountPassword").autocomplete=action==="register"?"new-password":"current-password";
+      }
+      async function submitCustomerAccount(event){
+        event.preventDefault();
+        const button=$("customerAccountSubmit");button.disabled=true;
+        const body={customer_phone:$("customerAccountPhone").value.trim(),password:$("customerAccountPassword").value};
+        if(customerAccountAction==="register"){
+          body.customer_name=$("customerAccountName").value.trim();
+          if(customerMode()==="guest"&&customerToken())body.customer_access_token=customerToken();
+        }
+        try{
+          const response=await fetch("/api/public/stores/"+encodeURIComponent(slug)+"/customer/account/"+customerAccountAction,{
+            method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(body)
+          });
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||t("orderFailed"));
+          localStorage.setItem(customerTokenStorageKey,data.customer_access_token);
+          localStorage.setItem(customerModeStorageKey,"account");
+          $("customerAccountForm").hidden=true;
+          $("customerAccountPassword").value="";
+          $("customerAccountMessage").textContent=customerAccountAction==="register"?"تم إنشاء حسابك بنجاح. لن تحتاج إلى QR بعد الآن.":"تم تسجيل الدخول بنجاح.";
+          await loadCustomerPortal();startCustomerPortalPolling();
+        }catch(error){$("customerAccountMessage").textContent=error.message||t("orderFailed");}
+        finally{button.disabled=false;}
+      }
+      async function logoutCustomerAccount(){
+        const token=customerToken();
+        try{
+          await fetch("/api/public/stores/"+encodeURIComponent(slug)+"/customer/account/logout",{
+            method:"POST",headers:{"X-Customer-Token":token,"Origin":location.origin,"Content-Type":"application/json"},body:"{}"
+          });
+        }catch{}
+        localStorage.removeItem(customerTokenStorageKey);localStorage.removeItem(customerModeStorageKey);
+        if(customerPortalTimer)clearInterval(customerPortalTimer);
+        $("customerOrdersList").textContent=t("qrMissing");$("customerNotifications").replaceChildren();
+        $("customerQr").replaceChildren();delete $("customerQr").dataset.token;
+        $("customerLogout").hidden=true;$("customerRegisterOpen").hidden=false;$("customerLoginOpen").hidden=false;
+        $("customerAccountMessage").textContent="تم تسجيل الخروج.";
+      }
       function customerToken(){return localStorage.getItem(customerTokenStorageKey)||"";}
+      function customerMode(){return localStorage.getItem(customerModeStorageKey)||"guest";}
       function renderCustomerQr(){
         const token=customerToken(),container=$("customerQr");
+        const guestMode=customerMode()!=="account";
+        $("customerQrHint").hidden=!guestMode;$("customerQrDownload").hidden=!guestMode;
+        if(!guestMode){container.replaceChildren();delete container.dataset.token;return;}
         if(!token||typeof QRCode==="undefined")return;
         if(container.dataset.token===token&&container.childElementCount)return;
         container.replaceChildren();container.dataset.token=token;
@@ -433,6 +497,9 @@
       }
       async function loadCustomerPortal(){
         const token=customerToken();
+        $("customerLogout").hidden=customerMode()!=="account";
+        $("customerRegisterOpen").hidden=customerMode()==="account";
+        $("customerLoginOpen").hidden=customerMode()==="account";
         if(!token){$("customerOrdersList").textContent=t("qrMissing");$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
         renderCustomerQr();
         const headers={"X-Customer-Token":token,"Accept":"application/json"};
@@ -523,6 +590,7 @@
           result.append(heading,status);
           if (data.order.customer_access_token) {
             localStorage.setItem(customerTokenStorageKey,data.order.customer_access_token);
+            if(!localStorage.getItem(customerModeStorageKey))localStorage.setItem(customerModeStorageKey,"guest");
             renderCustomerQr();
             loadCustomerPortal();
             startCustomerPortalPolling();
@@ -848,6 +916,10 @@
         }
       }
 
+      $("customerRegisterOpen").addEventListener("click",()=>openCustomerAccountForm("register"));
+      $("customerLoginOpen").addEventListener("click",()=>openCustomerAccountForm("login"));
+      $("customerAccountForm").addEventListener("submit",submitCustomerAccount);
+      $("customerLogout").addEventListener("click",logoutCustomerAccount);
       $("customerOrdersToggle").addEventListener("click",()=>{
         const panel=$("customerOrdersPanel");
         panel.hidden=!panel.hidden;
