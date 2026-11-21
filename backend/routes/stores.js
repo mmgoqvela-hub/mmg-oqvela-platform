@@ -48,7 +48,9 @@ export async function handleStores(request, env) {
       const name = typeof body?.name === "string" ? body.name.trim() : "";
       const businessType = typeof body?.business_type === "string" ? body.business_type.trim() : "";
       const description = typeof body?.description === "string" ? body.description.trim() : "";
-      if (!accountId || name.length < 2 || name.length > 100 || businessType.length > 80 || description.length > 1000) {
+      const templateKey = typeof body?.template_key === "string" ? body.template_key.trim() : "classic";
+      const allowedCreateTemplates = ["modern", "classic", "minimal", "boutique", "tech"];
+      if (!accountId || name.length < 2 || name.length > 100 || businessType.length > 80 || description.length > 1000 || !allowedCreateTemplates.includes(templateKey)) {
         return json({ error: "تحقق من بيانات المتجر." }, 400);
       }
       const account = await env.DB.prepare("SELECT a.id, au.role FROM accounts a JOIN account_users au ON au.account_id = a.id WHERE a.id = ? AND a.status = 'active' AND au.user_id = ? AND au.status = 'active' LIMIT 1").bind(accountId, session.user_id).first();
@@ -56,8 +58,8 @@ export async function handleStores(request, env) {
       if (!["owner", "admin"].includes(account.role)) return json({ error: "يجب أن تكون مالك الحساب أو مديره لإنشاء متجر." }, 403);
       const storeId = crypto.randomUUID();
       const slug = "store-" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-      await env.DB.prepare("INSERT INTO stores (id, account_id, name, slug, business_type, description, status) VALUES (?, ?, ?, ?, ?, ?, 'active')").bind(storeId, accountId, name, slug, businessType || null, description || null).run();
-      return json({ status: "ok", message: "تم إنشاء المتجر. اختر له باقة مدفوعة لتفعيل خدماته.", store: { id: storeId, account_id: accountId, name, slug, status: "active" } }, 201);
+      await env.DB.prepare("INSERT INTO stores (id, account_id, name, slug, business_type, description, template_key, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')").bind(storeId, accountId, name, slug, businessType || null, description || null, templateKey).run();
+      return json({ status: "ok", message: "تم إنشاء المتجر. أضف منتجاتك ثم اختر باقة التفعيل المناسبة.", store: { id: storeId, account_id: accountId, name, slug, business_type: businessType || null, description: description || null, template_key: templateKey, status: "active" } }, 201);
     } catch {
       return json({ error: "تعذر إنشاء المتجر." }, 500);
     }
