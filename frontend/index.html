@@ -3193,15 +3193,24 @@ footer{
           const instructionsField = document.createElement("div"); instructionsField.className = "field wide";
           const instructionsLabel = document.createElement("label"); instructionsLabel.textContent = "تعليمات الدفع";
           instructionsField.append(instructionsLabel,instructions);
+          const pickup = document.createElement("input"); pickup.type="checkbox"; pickup.checked=settings.pickup_enabled!==0;
+          const delivery = document.createElement("input"); delivery.type="checkbox"; delivery.checked=settings.delivery_enabled!==0;
+          const pickupLabel=document.createElement("label");pickupLabel.append(pickup,document.createTextNode(" تفعيل الاستلام من المحل"));
+          const deliveryLabel=document.createElement("label");deliveryLabel.append(delivery,document.createTextNode(" تفعيل التوصيل"));
+          const deliveryFee=document.createElement("input");deliveryFee.type="number";deliveryFee.min="0";deliveryFee.step="0.01";deliveryFee.max="100000000";deliveryFee.value=String(settings.delivery_fee||0);
+          const deliveryFeeField=document.createElement("div");deliveryFeeField.className="field";
+          const deliveryFeeLabel=document.createElement("label");deliveryFeeLabel.textContent="رسوم التوصيل (عملة المتجر)";
+          deliveryFeeField.append(deliveryFeeLabel,deliveryFee);
           const save = document.createElement("button"); save.type = "submit"; save.className = "primary"; save.textContent = "حفظ طرق الدفع";
           const message = document.createElement("p"); message.className = "muted";
-          form.append(codLabel,shamLabel,recipientField,instructionsField,save,message);
+          form.append(codLabel,shamLabel,pickupLabel,deliveryLabel,deliveryFeeField,recipientField,instructionsField,save,message);
           form.addEventListener("submit",async event=>{
             event.preventDefault(); save.disabled=true;
             try {
               await api("/api/stores/"+encodeURIComponent(store.id)+"/orders/settings",{
                 method:"PUT",body:JSON.stringify({
                   cash_on_delivery_enabled:cod.checked,shamcash_enabled:sham.checked,
+                  pickup_enabled:pickup.checked,delivery_enabled:delivery.checked,delivery_fee:Number(deliveryFee.value),
                   shamcash_recipient:recipient.value.trim(),shamcash_instructions:instructions.value.trim()
                 })
               });
@@ -3273,6 +3282,8 @@ footer{
           const title = document.createElement("h4"); title.textContent=order.order_number+" — "+order.customer_name;
           const details = document.createElement("p"); details.className="muted";
           details.textContent="الهاتف: "+order.customer_phone+" | الإجمالي: "+formatNumber(order.total)+" "+order.currency+
+            " | الاستلام: "+(order.fulfillment_method==="delivery"?"توصيل":"استلام من المحل")+
+            (order.delivery_fee>0?" (رسوم "+formatNumber(order.delivery_fee)+")":"")+
             " | الدفع: "+(order.payment_method==="shamcash"?"شام كاش":"عند الاستلام")+
             " | حالة الدفع: "+order.payment_status+" | حالة الطلب: "+order.order_status;
           box.append(title,details);
