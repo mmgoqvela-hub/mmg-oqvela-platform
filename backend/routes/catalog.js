@@ -457,7 +457,7 @@ async function handleVariants(request, env, storeId, userId, access, productId, 
   }
 }
 
-async function handleProductImages(request, env, storeId, access, productId, imageId) {
+async function handleProductImages(request, env, storeId, access, productId, imageId) {\n  const mediaStorage = createStoreMediaStorage(env);
   const product = await env.DB.prepare(
     "SELECT id FROM products WHERE id = ? AND store_id = ? LIMIT 1"
   ).bind(productId, storeId).first();
@@ -537,7 +537,7 @@ async function handleProductImages(request, env, storeId, access, productId, ima
       const remaining = await env.DB.prepare(
         "SELECT COUNT(*) AS total FROM product_images WHERE store_id = ? AND file_key = ?"
       ).bind(storeId, image.file_key).first();
-      if (!remaining?.total) await env.STORE_MEDIA.delete(image.file_key.slice("/media/".length));
+      if (!remaining?.total) await mediaStorage.delete(image.file_key.slice("/media/".length));
     }
     return json({ status: "ok" });
   }
