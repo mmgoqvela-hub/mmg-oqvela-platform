@@ -2915,7 +2915,7 @@ footer{
                   const variantDetails = document.createElement("p");
                   variantDetails.className = "muted";
                   variantDetails.textContent = formatMoney(variant.price,product.currency) + " — " +
-                    "المخزون: " + formatNumber(variant.stock_quantity) + " — " +
+                    "المخزون: " + (product.sale_unit === "kg" ? (Number(variant.stock_quantity)/1000).toLocaleString("ar") + " كغ" : formatNumber(variant.stock_quantity) + " قطعة") + " — " +
                     (variant.sku || "دون رمز SKU") + " — " + localizeCode(variant.status);
                   variantCard.append(variantTitle,variantDetails);
                   if (Object.keys(attributes).length) {
@@ -3048,7 +3048,7 @@ footer{
               for (const variant of (detail.variants || []).filter(item => item.status === "active")) {
                 const option = document.createElement("option");
                 option.value = variant.id;
-                option.textContent = variant.name + " — " + formatNumber(variant.stock_quantity);
+                option.textContent = variant.name + " — " + (products.find(item => item.id === productSelect.value)?.sale_unit === "kg" ? (Number(variant.stock_quantity)/1000).toLocaleString("ar") + " كغ" : formatNumber(variant.stock_quantity) + " قطعة");
                 option.dataset.noTranslate = "true";
                 variantSelect.append(option);
               }
