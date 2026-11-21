@@ -2446,7 +2446,7 @@ footer{
               " — " + localizeCode(product.status) +
               (product.track_inventory ? " — " + "الكمية المتوفرة: " + formatNumber(product.stock_quantity) : " — المخزون غير متاح لهذا المنتج.");
             item.append(title,details);
-            if (canManageInventory) {
+            if (canInventoryManage) {
               const costPanel = document.createElement("section");
               costPanel.className = "admin-panel";
               const costTitle = document.createElement("h5");
