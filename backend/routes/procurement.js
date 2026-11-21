@@ -21,7 +21,7 @@ async function readBody(request, maxLength = 30000) {
 }
 
 async function storeAccess(db, storeId, userId) {
-  return db.prepare(\`
+  return db.prepare(`
     SELECT s.id, s.status AS store_status, au.role AS account_role,
            COALESCE(GROUP_CONCAT(DISTINCT p.code), '') AS permissions
     FROM stores s
@@ -36,7 +36,7 @@ async function storeAccess(db, storeId, userId) {
       AND (au.role IN ('owner','admin') OR sm.id IS NOT NULL)
     GROUP BY s.id, au.role
     LIMIT 1
-  \`).bind(storeId, userId).first();
+  `).bind(storeId, userId).first();
 }
 
 function permitted(access, code) {
@@ -51,10 +51,10 @@ function validOptionalText(value, max) {
 async function suppliers(request, env, storeId, userId, access, supplierId) {
   if (request.method === "GET" && !supplierId) {
     if (!permitted(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
-    const rows = await env.DB.prepare(\`
+    const rows = await env.DB.prepare(`
       SELECT id, name, phone, email, address, tax_reference, notes, status, created_at, updated_at
       FROM suppliers WHERE store_id = ? ORDER BY name COLLATE NOCASE LIMIT 500
-    \`).bind(storeId).all();
+    `).bind(storeId).all();
     return json({ status: "ok", suppliers: rows.results || [] });
   }
 
@@ -75,10 +75,10 @@ async function suppliers(request, env, storeId, userId, access, supplierId) {
       return json({ error: "Invalid supplier data" }, 400);
     }
     const id = crypto.randomUUID();
-    await env.DB.prepare(\`
+    await env.DB.prepare(`
       INSERT INTO suppliers (id, store_id, name, phone, email, address, tax_reference, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    \`).bind(id, storeId, name, phone || null, email || null, address || null, tax || null, notes || null).run();
+    `).bind(id, storeId, name, phone || null, email || null, address || null, tax || null, notes || null).run();
     return json({ status: "ok", supplier: { id, name, phone, email, address, tax_reference: tax, notes, status: "active" } }, 201);
   }
 
@@ -111,10 +111,10 @@ async function suppliers(request, env, storeId, userId, access, supplierId) {
       email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ||
       address.length > 1000 || tax.length > 100 || notes.length > 2000 ||
       !["active", "inactive"].includes(status)) return json({ error: "Invalid supplier data" }, 400);
-  await env.DB.prepare(\`
+  await env.DB.prepare(`
     UPDATE suppliers SET name=?, phone=?, email=?, address=?, tax_reference=?, notes=?, status=?,
       updated_at=CURRENT_TIMESTAMP WHERE id=? AND store_id=?
-  \`).bind(name, phone || null, email || null, address || null, tax || null, notes || null, status, supplierId, storeId).run();
+  `).bind(name, phone || null, email || null, address || null, tax || null, notes || null, status, supplierId, storeId).run();
   return json({ status: "ok" });
 }
 
@@ -161,13 +161,13 @@ async function prepareItems(db, storeId, items) {
 async function purchaseOrders(request, env, storeId, userId, access, orderId) {
   if (request.method === "GET" && !orderId) {
     if (!permitted(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
-    const rows = await env.DB.prepare(\`
+    const rows = await env.DB.prepare(`
       SELECT po.id, po.order_number, po.status, po.currency, po.total_minor_units,
              po.notes, po.expected_at, po.created_at, po.updated_at,
              s.id AS supplier_id, s.name AS supplier_name
       FROM purchase_orders po JOIN suppliers s ON s.id=po.supplier_id AND s.store_id=po.store_id
       WHERE po.store_id=? ORDER BY po.created_at DESC LIMIT 200
-    \`).bind(storeId).all();
+    `).bind(storeId).all();
     return json({ status: "ok", purchase_orders: (rows.results || []).map(x => ({
       ...x, total: formatMinorUnits(x.total_minor_units, 2)
     })) });
@@ -175,17 +175,17 @@ async function purchaseOrders(request, env, storeId, userId, access, orderId) {
 
   if (request.method === "GET" && orderId) {
     if (!permitted(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
-    const order = await env.DB.prepare(\`
+    const order = await env.DB.prepare(`
       SELECT po.*, s.name AS supplier_name FROM purchase_orders po
       JOIN suppliers s ON s.id=po.supplier_id AND s.store_id=po.store_id
       WHERE po.id=? AND po.store_id=?
-    \`).bind(orderId, storeId).first();
+    `).bind(orderId, storeId).first();
     if (!order) return json({ error: "Purchase order not found" }, 404);
-    const rows = await env.DB.prepare(\`
+    const rows = await env.DB.prepare(`
       SELECT id, product_id, variant_id, product_name_snapshot, sku_snapshot,
              quantity, unit_cost_minor_units, line_total_minor_units, currency
       FROM purchase_order_items WHERE purchase_order_id=? AND store_id=? ORDER BY rowid
-    \`).bind(orderId, storeId).all();
+    `).bind(orderId, storeId).all();
     return json({ status: "ok", purchase_order: {
       ...order, total: formatMinorUnits(order.total_minor_units, 2),
       items: (rows.results || []).map(x => ({
@@ -215,15 +215,15 @@ async function purchaseOrders(request, env, storeId, userId, access, orderId) {
     catch (error) { return json({ error: error.message || "Invalid purchase order items" }, 400); }
     const id = crypto.randomUUID();
     const statements = [
-      env.DB.prepare(\`
+      env.DB.prepare(`
         INSERT INTO purchase_orders (id,store_id,supplier_id,order_number,status,currency,total_minor_units,notes,expected_at,created_by)
         VALUES (?,?,?,?,'draft','USD',?,?,?,?)
-      \`).bind(id, storeId, supplierId, orderNumber, prepared.total_minor_units, notes || null, expectedAt || null, userId),
-      ...prepared.items.map(item => env.DB.prepare(\`
+      `).bind(id, storeId, supplierId, orderNumber, prepared.total_minor_units, notes || null, expectedAt || null, userId),
+      ...prepared.items.map(item => env.DB.prepare(`
         INSERT INTO purchase_order_items
           (id,store_id,purchase_order_id,product_id,variant_id,product_name_snapshot,sku_snapshot,quantity,unit_cost_minor_units,line_total_minor_units,currency)
         VALUES (?,?,?,?,?,?,?,?,?,?,'USD')
-      \`).bind(item.id, storeId, id, item.product_id, item.variant_id, item.product_name_snapshot,
+      `).bind(item.id, storeId, id, item.product_id, item.variant_id, item.product_name_snapshot,
         item.sku_snapshot, item.quantity, item.unit_cost_minor_units, item.line_total_minor_units))
     ];
     try {
