@@ -101,7 +101,7 @@ async function quoteLine(db,storeId,access,pricingSettings,globalTiers,input){
     });
     let selected;
     try{
-      selected=selectPricingTier(quantity,resolved.filter(t=>t.tier_code===tierCode));
+      selected=selectPricingTier(saleUnit==="kg"?quantity*0.05:quantity,resolved.filter(t=>t.tier_code===tierCode));
     }catch{return {error:"The selected tier is disabled, below its minimum quantity, or has no configured margin",status:409};}
     const cost=await db.prepare(`
       SELECT id,cost_minor_units FROM product_cost_versions
