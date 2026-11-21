@@ -328,7 +328,8 @@ async function listSales(env,storeId,url){
     SELECT s.id,s.sale_number,s.customer_name,s.customer_phone,s.currency,s.subtotal,
       s.discount_amount,s.total,s.status,s.payment_status,s.created_at,
       COUNT(DISTINCT i.id) AS item_count,
-      COALESCE(SUM(i.quantity),0) AS unit_count
+      COALESCE(SUM(CASE WHEN i.sale_unit='piece' THEN i.quantity ELSE 0 END),0) AS piece_count,
+      ROUND(COALESCE(SUM(CASE WHEN i.sale_unit='kg' THEN i.quantity ELSE 0 END),0)*0.05,2) AS weight_kg
     FROM pos_sales s LEFT JOIN pos_sale_items i ON i.sale_id=s.id AND i.store_id=s.store_id
     WHERE s.store_id=? AND s.status!='draft'
       AND (? IS NULL OR s.status=?) AND (? IS NULL OR s.currency=?)
