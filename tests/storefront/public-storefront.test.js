@@ -12,7 +12,9 @@ function createDb(options={}) {
           sql,values,
           async first() {
             calls.push({sql,values});
-            return options.store ?? null;
+            if(sql.includes("FROM stores")) return options.store ?? null;
+            if(sql.includes("FROM store_pricing_settings")) return options.pricingSettings ?? null;
+            return null;
           },
           async all() {
             calls.push({sql,values});
@@ -20,6 +22,9 @@ function createDb(options={}) {
             if(sql.includes("FROM products")) return {results:options.products || []};
             if(sql.includes("FROM product_variants")) return {results:options.variants || []};
             if(sql.includes("FROM product_images")) return {results:options.productImages || []};
+            if(sql.includes("FROM store_pricing_tiers")) return {results:options.pricingTiers || []};
+            if(sql.includes("FROM product_cost_versions")) return {results:options.costVersions || []};
+            if(sql.includes("FROM product_tier_margin_overrides")) return {results:options.pricingOverrides || []};
             if(sql.includes("FROM platform_settings")) return {results:options.platformSettings || []};
             if(sql.includes("FROM platform_announcements")) return {results:options.announcements || []};
             return {results:[]};
@@ -164,4 +169,32 @@ test("Invalid slugs are rejected before database access",async()=>{
   const response=await handlePublicStorefront(request("invalid!"),{DB:db});
   assert.equal(response.status,404);
   assert.equal(db.calls.length,0);
+});
+
+
+test("Public storefront publishes calculated tier prices without exposing cost or margin",async()=>{
+ const db=createDb({
+  store:{id:"store-1",name:"Test Store",slug:"test-store"},
+  products:[{id:"product-1",name:"Bag",base_price:20,currency:"USD"}],
+  variants:[{id:"variant-1",product_id:"product-1",name:"Large",price:25,stock_quantity:4,attributes_json:"{}"}],
+  pricingSettings:{pricing_mode:"cost_plus_margin",rounding_increment_minor_units:1},
+  pricingTiers:[
+   {tier_code:"retail",min_quantity:1,profit_margin_bps:3000,is_enabled:1},
+   {tier_code:"wholesale",min_quantity:5,profit_margin_bps:2000,is_enabled:1},
+   {tier_code:"bulk_wholesale",min_quantity:10,profit_margin_bps:1000,is_enabled:1}
+  ],
+  costVersions:[{id:"cost-1",product_id:"product-1",variant_id:null,cost_minor_units:1000}],
+  pricingOverrides:[]
+ });
+ const response=await handlePublicStorefront(request(),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.deepEqual(result.products[0].public_tier_prices,[
+  {tier_code:"retail",min_quantity:1,unit_price:13},
+  {tier_code:"wholesale",min_quantity:5,unit_price:12},
+  {tier_code:"bulk_wholesale",min_quantity:10,unit_price:11}
+ ]);
+ assert.deepEqual(result.products[0].variants[0].public_tier_prices,result.products[0].public_tier_prices);
+ assert.equal(JSON.stringify(result).includes("cost_minor_units"),false);
+ assert.equal(JSON.stringify(result).includes("profit_margin_bps"),false);
 });
