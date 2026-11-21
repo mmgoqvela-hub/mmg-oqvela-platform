@@ -2320,6 +2320,13 @@ footer{
             option.textContent = label;
             type.append(option);
           }
+          const saleUnit = document.createElement("select");
+          for (const [value,label] of [["piece","بالقطعة"],["kg","بالكيلو"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            saleUnit.append(option);
+          }
           const price = document.createElement("input");
           price.type = "number";
           price.min = "0";
@@ -2372,7 +2379,8 @@ footer{
             ["اسم المنتج",productName],
             ["وصف المنتج",description],
             ["نوع المنتج",type],
-            ["السعر الأساسي",price],
+            ["وحدة البيع",saleUnit],
+            ["السعر الأساسي (للوحدة المختارة)",price],
             ["العملة (رمز من 3 أحرف)",currency],
             ["الكمية الافتتاحية",stock],
             ["حالة العرض",productStatus],
@@ -2420,6 +2428,7 @@ footer{
                   name:productName.value.trim(),
                   description:description.value.trim(),
                   product_type:type.value,
+                  sale_unit:saleUnit.value,
                   base_price:Number(price.value),
                   currency:currency.value.trim().toUpperCase(),
                   stock_quantity:Number(stock.value),
