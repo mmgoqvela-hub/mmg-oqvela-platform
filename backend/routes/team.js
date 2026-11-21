@@ -23,9 +23,12 @@ const ROLE_PRESETS=[
   {name:"مشاهد",description:"عرض الكتالوج والمخزون دون تعديل",permissions:["catalog.read","inventory.read"]},
   {name:"مدير الكتالوج",description:"إدارة التصنيفات والمنتجات والمتغيرات",permissions:["catalog.read","catalog.manage"]},
   {name:"مدير المخزون",description:"عرض الكتالوج وإدارة حركات المخزون",permissions:["catalog.read","inventory.read","inventory.manage"]},
-  {name:"مدير المتجر",description:"إدارة الكتالوج والمخزون",permissions:["catalog.read","catalog.manage","inventory.read","inventory.manage"]}
+  {name:"مدير المتجر",description:"إدارة الكتالوج والمخزون",permissions:["catalog.read","catalog.manage","inventory.read","inventory.manage"]},
+  {name:"كاشير",description:"استخدام نقطة البيع وتسجيل المبيعات",permissions:["catalog.read","pos.access"]},
+  {name:"مشرف نقطة البيع",description:"إدارة جلسات الصندوق وتطبيق مستويات البيع بالجملة",permissions:["catalog.read","pos.access","pos.wholesale","pos.bulk_wholesale","pos.cash_session.close"]}
 ];
-const ALLOWED_PERMISSIONS=new Set(["catalog.read","catalog.manage","inventory.read","inventory.manage","team.manage"]);
+const ALLOWED_PERMISSIONS=new Set(["catalog.read","catalog.manage","inventory.read","inventory.manage","team.manage",
+  "pos.access","pos.wholesale","pos.bulk_wholesale","pos.price_override","pos.cash_session.close","pos.sale.discount"]);
 
 async function getContext(request,env,storeId) {
   if(!validOrigin(request)) return {response:json({error:"Invalid origin"},403)};
