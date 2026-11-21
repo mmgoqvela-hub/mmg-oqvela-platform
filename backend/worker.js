@@ -34,7 +34,9 @@ export default {
     ctx.waitUntil(Promise.all([
       scheduleSubscriptionNotifications(env),
       env.DB.prepare("DELETE FROM public_checkout_rate_limits WHERE window_started_at < datetime('now','-2 days')").run(),
-      env.DB.prepare("DELETE FROM public_service_request_rate_limits WHERE window_started_at < datetime('now','-2 days')").run()
+      env.DB.prepare("DELETE FROM public_service_request_rate_limits WHERE window_started_at < datetime('now','-2 days')").run(),
+      env.DB.prepare("DELETE FROM store_customer_auth_rate_limits WHERE window_started_at < datetime('now','-2 days')").run(),
+      env.DB.prepare("DELETE FROM store_customer_account_sessions WHERE expires_at < datetime('now','-60 days') OR revoked_at < datetime('now','-60 days')").run()
     ]));
   },
 
