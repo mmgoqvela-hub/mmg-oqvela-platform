@@ -356,6 +356,18 @@ async function handleVariants(request, env, storeId, userId, access, productId, 
   ).bind(productId, storeId).first();
   if (!product) return json({ error: "Product not found" }, 404);
 
+  if (!variantId && request.method === "GET") {
+    if (!canRead(access, "catalog.read")) return json({ error: "Store read permission required" }, 403);
+    const result = await env.DB.prepare(`
+      SELECT id,product_id,name,sku,price,stock_quantity,attributes_json,status,created_at
+      FROM product_variants WHERE product_id=? AND store_id=? AND status='active'
+      ORDER BY name COLLATE NOCASE ASC
+    `).bind(productId,storeId).all();
+    return json({ status:"ok", variants:(result.results||[]).map(row=>({
+      ...row, attributes:(()=>{try{return JSON.parse(row.attributes_json||"{}");}catch{return {};}})()
+    })) });
+  }
+
   if (!variantId) {
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     if (!canWrite(access)) return json({ error: "Store write permission required" }, 403);
