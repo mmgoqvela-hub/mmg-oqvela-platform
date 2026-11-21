@@ -239,6 +239,13 @@ test("Merchant portal is a separate store-only interface", async () => {
   assert.match(html, /data-pay/);
   assert.match(html, /payment_status:"paid"/);
   assert.match(html, /سجّل استلام المبلغ أولاً قبل إكمال الطلب/);
+  assert.match(html, /id="productForm"/);
+  assert.match(html, /data-edit-product/);
+  assert.match(html, /data-archive-product/);
+  assert.match(html, /method:id\?"PUT":"POST"/);
+  assert.match(html, /value="piece">قطعة/);
+  assert.match(html, /value="kg">كيلو/);
+
 
   assert.doesNotMatch(html, /id="adminPanel"|id="accountGrid"|إدارة المنصة المركزية/);
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
