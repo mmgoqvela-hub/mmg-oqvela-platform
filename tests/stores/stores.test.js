@@ -292,7 +292,39 @@ test("Account owner can create an additional store without receiving another tri
   assert.equal(response.status,201);
   assert.equal(result.store.name,"Second Store");
   assert.equal(result.store.status,"active");
+  assert.equal(result.store.template_key,"classic");
   assert.match(result.store.slug,/^store-/);
+  const insert=db.calls.find(call=>call.sql.includes("INSERT INTO stores"));
+  assert.ok(insert);
+  assert.deepEqual(insert.values.slice(1,7),["account-001","Second Store",result.store.slug,null,null,"classic"]);
+});
+
+
+test("Bakery store creation saves business details and a schema-supported template",async()=>{
+ const db=createDb({session:SESSION,account:ACCOUNT});
+ const response=await handleStores(new Request("https://example.com/api/stores",{
+  method:"POST",
+  headers:{Origin:"https://example.com",Cookie:"mmg_session="+TOKEN,"Content-Type":"application/json"},
+  body:JSON.stringify({account_id:"account-001",name:"مخبز الاختبار",business_type:"معجنات ومخبوزات",description:"متجر تجريبي",template_key:"classic"})
+ }),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,201);
+ assert.equal(result.store.business_type,"معجنات ومخبوزات");
+ assert.equal(result.store.description,"متجر تجريبي");
+ assert.equal(result.store.template_key,"classic");
+ const insert=db.calls.find(call=>call.sql.includes("INSERT INTO stores"));
+ assert.deepEqual(insert.values.slice(1,7),["account-001","مخبز الاختبار",result.store.slug,"معجنات ومخبوزات","متجر تجريبي","classic"]);
+});
+
+test("Store creation rejects templates not supported by the current database schema",async()=>{
+ const db=createDb({session:SESSION,account:ACCOUNT});
+ const response=await handleStores(new Request("https://example.com/api/stores",{
+  method:"POST",
+  headers:{Origin:"https://example.com",Cookie:"mmg_session="+TOKEN,"Content-Type":"application/json"},
+  body:JSON.stringify({account_id:"account-001",name:"Unsupported Bakery",template_key:"restaurant"})
+ }),{DB:db});
+ assert.equal(response.status,400);
+ assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO stores")),false);
 });
 
 test("Users cannot create a store by substituting another account ID", async () => {
