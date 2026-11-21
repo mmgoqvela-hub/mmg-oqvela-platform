@@ -91,7 +91,7 @@ export default {
     }
 
     if ((url.pathname === "/merchant" || url.pathname === "/merchant/") && request.method === "GET") {
-      const merchantUrl = new URL("/index.html", request.url);
+      const merchantUrl = new URL("/merchant.html", request.url);
       return env.ASSETS.fetch(new Request(merchantUrl.toString(), {
         method: "GET",
         headers: request.headers
