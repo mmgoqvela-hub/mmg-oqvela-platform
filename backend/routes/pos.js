@@ -193,11 +193,19 @@ async function closeCashSession(request,env,storeId,session,access,sessionId){
   const row=await env.DB.prepare("SELECT id,currency,opening_cash_amount FROM pos_cash_sessions WHERE id=? AND store_id=? AND status='open'").bind(sessionId,storeId).first();
   if(!row)return json({error:"Open cash session not found"},404);
   const totals=await env.DB.prepare(`
-    SELECT COALESCE(SUM(p.amount),0) AS cash_received
-    FROM pos_sale_payments p JOIN pos_sales s ON s.id=p.sale_id AND s.store_id=p.store_id
-    WHERE p.cash_session_id=? AND p.store_id=? AND p.payment_method='cash' AND s.status='posted'
-  `).bind(sessionId,storeId).first();
-  const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0))*100)/100;
+    SELECT
+      COALESCE((SELECT SUM(p.amount)
+        FROM pos_sale_payments p JOIN pos_sales s ON s.id=p.sale_id AND s.store_id=p.store_id
+        WHERE p.cash_session_id=? AND p.store_id=? AND p.payment_method='cash'
+          AND s.status IN ('posted','partially_refunded','refunded')),0) AS cash_received,
+      COALESCE((SELECT SUM(rp.amount)
+        FROM pos_sale_refund_payments rp
+        JOIN pos_sale_returns r ON r.id=rp.return_id AND r.store_id=rp.store_id
+        JOIN pos_sales s ON s.id=r.sale_id AND s.store_id=r.store_id
+        WHERE s.cash_session_id=? AND s.store_id=? AND rp.payment_method='cash'
+          AND r.status='posted'),0) AS cash_refunded
+  `).bind(sessionId,storeId,sessionId,storeId).first();
+  const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0)-Number(totals?.cash_refunded||0))*100)/100;
   const difference=Math.round((counted-expected)*100)/100;
   const result=await env.DB.prepare(`
     UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
