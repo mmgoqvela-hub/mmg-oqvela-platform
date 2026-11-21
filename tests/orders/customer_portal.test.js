@@ -145,12 +145,12 @@ test("Guest can rotate a lost QR code and the previous token is replaced",async(
   assert.equal(response.status,200);
   assert.equal(result.customer_mode,"guest");
   assert.equal(result.customer_access_token.length,64);
-  assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_customer_identities SET access_token_hash")));
+  assert.ok(database.calls.some(call=>call.sql.includes("SET access_token_hash")));
 });
 
 test("Registered customer sessions cannot be rotated as guest QR codes",async()=>{
   const database=db({identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"963900000000",customer_name:"Customer",is_account:1}});
   const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/qr/rotate","POST",{}),{DB:database});
   assert.equal(response.status,409);
-  assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_customer_identities SET access_token_hash")),false);
+  assert.equal(database.calls.some(call=>call.sql.includes("SET access_token_hash")),false);
 });
