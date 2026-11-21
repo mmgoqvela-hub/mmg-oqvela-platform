@@ -162,7 +162,7 @@
           <div id="customerOrdersPanel" hidden>
             <p class="cart-note" id="customerQrHint">احتفظ برمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.</p>
             <div id="customerQr" class="customer-qr" aria-label="رمز استعادة سجل الزبون"></div>
-            <div class="toolbar"><button class="lang" id="customerQrDownload" type="button">حفظ رمز QR في الهاتف</button><button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button></div>
+            <div class="toolbar"><button class="lang" id="customerQrDownload" type="button">حفظ رمز QR في الهاتف</button><button class="lang" id="customerQrRotate" type="button">تجديد رمز QR</button><button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button></div>
             <div id="customerAccountTools" class="customer-notice">
               <p class="cart-note">يمكنك إنشاء حساب اختياري لتصل إلى طلباتك دون الاحتفاظ برمز QR.</p>
               <div class="toolbar"><button class="lang" id="customerRegisterOpen" type="button">إنشاء حساب</button><button class="lang" id="customerLoginOpen" type="button">تسجيل الدخول</button><button class="lang" id="customerLogout" type="button" hidden>تسجيل الخروج</button></div>
@@ -487,7 +487,7 @@
       function renderCustomerQr(){
         const token=customerToken(),container=$("customerQr");
         const guestMode=customerMode()!=="account";
-        $("customerQrHint").hidden=!guestMode;$("customerQrDownload").hidden=!guestMode;
+        $("customerQrHint").hidden=!guestMode;$("customerQrDownload").hidden=!guestMode;$("customerQrRotate").hidden=!guestMode;
         if(!guestMode){container.replaceChildren();delete container.dataset.token;return;}
         if(!token||typeof QRCode==="undefined")return;
         if(container.dataset.token===token&&container.childElementCount)return;
@@ -956,6 +956,20 @@
         if(!panel.hidden)loadCustomerPortal().catch(()=>{});
       });
       $("customerRefreshOrders").addEventListener("click",()=>loadCustomerPortal().catch(()=>{}));
+      $("customerQrRotate").addEventListener("click",async()=>{
+        const button=$("customerQrRotate");button.disabled=true;
+        try{
+          const response=await fetch("/api/public/stores/"+encodeURIComponent(slug)+"/customer/qr/rotate",{
+            method:"POST",headers:{"X-Customer-Token":customerToken(),"Content-Type":"application/json"},body:"{}"
+          });
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||t("orderFailed"));
+          localStorage.setItem(customerTokenStorageKey,data.customer_access_token);
+          $("customerQr").replaceChildren();delete $("customerQr").dataset.token;
+          renderCustomerQr();$("customerAccountMessage").textContent=language==="ar"?"تم إصدار رمز جديد، وأصبح الرمز السابق غير صالح. احفظ الرمز الجديد.":"A new QR code was issued. The previous code is no longer valid. Save the new one.";
+        }catch(error){$("customerAccountMessage").textContent=error.message||t("orderFailed");}
+        finally{button.disabled=false;}
+      });
       $("customerQrDownload").addEventListener("click",()=>{
         const canvas=$("customerQr").querySelector("canvas");
         const image=$("customerQr").querySelector("img");
