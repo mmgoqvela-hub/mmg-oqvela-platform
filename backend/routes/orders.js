@@ -508,7 +508,7 @@ export async function handleOrders(request,env){
     if(!orders.length)return json({status:"ok",orders:[]});
     const ids=orders.map(o=>o.id);
     const placeholders=ids.map(()=>"?").join(",");
-    const [lines,events]=await Promise.all([
+    const [lines,events,decisionEvents]=await Promise.all([
       env.DB.prepare(`
         SELECT order_id,id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency,sale_unit
         FROM store_order_items WHERE store_id=? AND order_id IN (${placeholders})
@@ -518,13 +518,20 @@ export async function handleOrders(request,env){
         SELECT order_id,event_type,from_value,to_value,created_at
         FROM store_order_events WHERE store_id=? AND order_id IN (${placeholders})
         ORDER BY created_at ASC
+      `).bind(storeId,...ids).all(),
+      env.DB.prepare(`
+        SELECT order_id,from_decision,to_decision,rejection_reason,created_at
+        FROM store_order_decision_events WHERE store_id=? AND order_id IN (${placeholders})
+        ORDER BY created_at ASC
       `).bind(storeId,...ids).all()
     ]);
     const grouped=new Map();
     for(const line of lines.results||[]){const group=grouped.get(line.order_id)||[];group.push(line);grouped.set(line.order_id,group);}
-    const eventGroups=new Map();
+    const eventGroups=new Map(),decisionGroups=new Map();
     for(const event of events.results||[]){const group=eventGroups.get(event.order_id)||[];group.push(event);eventGroups.set(event.order_id,group);}
-    return json({status:"ok",orders:orders.map(order=>({...order,items:grouped.get(order.id)||[],events:eventGroups.get(order.id)||[]}))});
+    for(const event of decisionEvents.results||[]){const group=decisionGroups.get(event.order_id)||[];group.push(event);decisionGroups.set(event.order_id,group);}
+    return json({status:"ok",orders:orders.map(order=>({...order,items:grouped.get(order.id)||[],
+      events:eventGroups.get(order.id)||[],decision_history:decisionGroups.get(order.id)||[]}))});
   }
 
   if(request.method!=="PATCH")return json({error:"Method not allowed"},405);
