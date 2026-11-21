@@ -110,6 +110,19 @@ export async function handleFinance(request,env){
       payment_method:method,payment_reference:reference||null,cash_session_id:cashSessionId||null}},201);
   }
 
+  if(resource==="cashbox/sessions"){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    if(!hasPermission(access,"finance.cashbox.read"))return json({error:"Cashbox read permission required"},403);
+    const currency=url.searchParams.get("currency");
+    if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency"},400);
+    const rows=await env.DB.prepare(`
+      SELECT id,currency,opening_cash_amount,opened_at
+      FROM pos_cash_sessions WHERE store_id=? AND status='open'
+        AND (? IS NULL OR currency=?) ORDER BY opened_at DESC
+    `).bind(storeId,currency,currency).all();
+    return json({status:"ok",sessions:rows.results||[]});
+  }
+
   if(resource==="cashbox/movements"){
     if(request.method==="GET"){
       if(!hasPermission(access,"finance.cashbox.read"))return json({error:"Cashbox read permission required"},403);
