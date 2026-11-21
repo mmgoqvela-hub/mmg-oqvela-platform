@@ -1,4 +1,5 @@
 import { getAuthenticatedSession, validOrigin } from "../security/authentication.js";
+import { createStoreMediaStorage } from "../storage/store_media_storage.js";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const TYPES = {
@@ -41,16 +42,17 @@ async function readLimitedBody(request, maxBytes) {
 }
 
 export async function handleStoreMedia(request, env) {
+  const storage = createStoreMediaStorage(env);
   const url = new URL(request.url);
   const mediaMatch = url.pathname.match(/^\/media\/([a-zA-Z0-9_-]+)\/([a-f0-9-]+)\.(jpg|png|webp|gif)$/i);
   const uploadPath = url.pathname === "/api/store-media";
   if (!mediaMatch && !uploadPath) return null;
 
   if (mediaMatch) {
-    if (!env.STORE_MEDIA) return json({ error: "الصورة المخزنة غير متاحة حالياً. استخدم رابط HTTPS مباشراً للصورة." }, 404);
+    if (!storage) return json({ error: "الصورة المخزنة غير متاحة حالياً. استخدم رابط HTTPS مباشراً للصورة." }, 404);
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "Method not allowed" }, 405);
     const key = mediaMatch[1] + "/" + mediaMatch[2] + "." + mediaMatch[3].toLowerCase();
-    const object = await env.STORE_MEDIA.get(key);
+    const object = await storage.get(key);
     if (!object) return json({ error: "Image not found" }, 404);
     const headers = new Headers();
     object.writeHttpMetadata(headers);
@@ -62,7 +64,7 @@ export async function handleStoreMedia(request, env) {
     return new Response(object.body, { headers });
   }
 
-  if (!env.STORE_MEDIA) return json({ error: "رفع الملفات غير متاح في الخطة المجانية الحالية. أضف رابط HTTPS مباشراً للصورة بدلاً من ذلك." }, 503);
+  if (!storage) return json({ error: "رفع الملفات غير متاح حالياً. أضف رابط HTTPS مباشراً للصورة بدلاً من ذلك." }, 503);
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
   const session = await getAuthenticatedSession(request, env.DB);
@@ -102,7 +104,7 @@ export async function handleStoreMedia(request, env) {
   if (bytes.length !== file.size || !type.signature(bytes)) return json({ error: "محتوى الصورة لا يطابق نوع الملف." }, 415);
 
   const key = storeId + "/" + crypto.randomUUID() + "." + type.ext;
-  await env.STORE_MEDIA.put(key, bytes, {
+  await storage.put(key, bytes, {
     httpMetadata: { contentType: file.type, cacheControl: "public, max-age=31536000, immutable" },
     customMetadata: { storeId }
   });
