@@ -49,7 +49,7 @@ export async function handleStoreMedia(request, env) {
   if (!mediaMatch && !uploadPath) return null;
 
   if (mediaMatch) {
-    if (!storage) return json({ error: "الصورة المخزنة غير متاحة حالياً. استخدم رابط HTTPS مباشراً للصورة." }, 404);
+    if (!storage || typeof storage.get !== "function") return json({ error: "الصورة المخزنة غير متاحة حالياً. استخدم رابط HTTPS مباشراً للصورة." }, 404);
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "Method not allowed" }, 405);
     const key = mediaMatch[1] + "/" + mediaMatch[2] + "." + mediaMatch[3].toLowerCase();
     const object = await storage.get(key);
@@ -64,7 +64,7 @@ export async function handleStoreMedia(request, env) {
     return new Response(object.body, { headers });
   }
 
-  if (!storage) return json({ error: "رفع الملفات غير متاح حالياً. أضف رابط HTTPS مباشراً للصورة بدلاً من ذلك." }, 503);
+  if (!storage || typeof storage.put !== "function") return json({ error: "رفع الملفات غير متاح حالياً. أضف رابط HTTPS مباشراً للصورة بدلاً من ذلك." }, 503);
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!validOrigin(request)) return json({ error: "Invalid origin" }, 403);
   const session = await getAuthenticatedSession(request, env.DB);
