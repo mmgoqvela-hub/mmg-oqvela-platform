@@ -236,7 +236,7 @@ async function createPublicOrder(request,env,slug){
 
 async function loadStoreReport(db,storeId,period){
   const modifier=period==="7d"?"-7 days":period==="90d"?"-90 days":"-30 days";
-  const [totals,revenue,dailyRevenue,topProducts]=await Promise.all([
+  const [totals,revenue,dailyRevenue,profit,topProducts]=await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS total_orders,
         SUM(CASE WHEN order_status='completed' THEN 1 ELSE 0 END) AS completed_orders,
@@ -261,6 +261,19 @@ async function loadStoreReport(db,storeId,period){
       ORDER BY report_date DESC,currency
     `).bind(storeId,modifier).all(),
     db.prepare(`
+      SELECT COUNT(*) AS costed_lines,
+        COUNT(DISTINCT order_id) AS costed_orders,
+        SUM(CASE WHEN pricing_mode!='cost_plus_margin' OR cost_minor_units IS NULL THEN 1 ELSE 0 END) AS uncosted_lines,
+        ROUND(SUM(CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL THEN line_total ELSE 0 END),2) AS costed_revenue,
+        ROUND(SUM(CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL
+          THEN line_total-(cost_minor_units/100.0)*(CASE WHEN sale_unit='kg' THEN quantity/1000.0 ELSE quantity END)
+          ELSE 0 END),2) AS estimated_gross_profit
+      FROM store_order_items
+      WHERE store_id=? AND created_at>=datetime('now',?)
+        AND order_id IN (SELECT id FROM store_orders WHERE store_id=? AND payment_status='paid'
+          AND order_status!='cancelled' AND created_at>=datetime('now',?))
+    `).bind(storeId,modifier,storeId,modifier).first(),
+    db.prepare(`
       SELECT i.product_id,i.product_name,i.sale_unit,
         SUM(i.quantity) AS quantity_base_units,
         CASE WHEN i.sale_unit='kg' THEN ROUND(SUM(i.quantity)/1000.0,3)
@@ -284,6 +297,7 @@ async function loadStoreReport(db,storeId,period){
     },
     paid_revenue:revenue.results||[],
     daily_revenue:dailyRevenue.results||[],
+    profit:profit||{costed_lines:0,costed_orders:0,uncosted_lines:0,costed_revenue:0,estimated_gross_profit:0},
     top_products:topProducts.results||[]
   };
 }
