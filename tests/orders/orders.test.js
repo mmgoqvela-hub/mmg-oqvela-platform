@@ -31,6 +31,8 @@ function db(options={}) {
               if(sql.includes("AS estimated_gross_profit")) return options.reportProfit??{costed_lines:0,costed_orders:0,uncosted_lines:0,costed_revenue:0,estimated_gross_profit:0};
               if(sql.includes("INSERT INTO public_checkout_rate_limits")) return options.rateLimit===undefined?{request_count:1}:options.rateLimit;
               if(sql.includes("store_order_settings")) return options.settings??null;
+              if(sql.includes("FROM store_customer_identities")) return options.identity??null;
+              if(sql.includes("FROM store_customer_account_sessions")) return options.accountIdentity??null;
               if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
               if(sql.includes("GROUP_CONCAT")) return options.access===undefined
                 ? {id:"store-1",store_status:"active",account_status:"active",account_role:"owner",permissions:""}
@@ -419,4 +421,19 @@ test("Decision workflow preserves legacy stock reservations and customer account
  assert.match(customerAccountsMigration,/CREATE TABLE store_customer_accounts/);
  assert.match(customerAccountsMigration,/CREATE TABLE store_customer_account_sessions/);
  assert.ok(customerAccountsMigration.includes("UNIQUE (store_id,customer_phone_key)"));
+});
+
+
+test("Registered customer account session can place an order without receiving a guest QR",async()=>{
+ const accountToken="b".repeat(64);
+ const database=db({accountIdentity:{id:"identity-account-1",customer_phone_key:"963900000000"}});
+ const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",{
+  ...checkout,customer_access_token:accountToken
+ }),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,201);
+ assert.equal(result.order.customer_access_token,accountToken);
+ const orderInsert=database.calls.find(call=>call.sql.includes("INSERT INTO store_orders"));
+ assert.equal(orderInsert.values.at(-3),"identity-account-1");
+ assert.equal(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_identities")),false);
 });
