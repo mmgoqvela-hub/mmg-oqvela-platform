@@ -44,6 +44,7 @@ function db(options={}) {
             async all() {
               calls.push({sql,values});
               if(sql.includes("FROM store_order_items i")) return {results:options.reportTopProducts||[]};
+              if(sql.includes("AS report_date")) return {results:options.reportDailyRevenue||[]};
               if(sql.includes("paid_revenue")) return {results:options.reportRevenue||[]};
               return {results:options.rows||[]};
             },
@@ -70,6 +71,7 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
  const database=db({
   reportTotals:{total_orders:12,completed_orders:5,open_orders:4,cancelled_orders:3},
   reportRevenue:[{currency:"USD",paid_orders:4,paid_revenue:250}],
+  reportDailyRevenue:[{report_date:"2026-11-21",currency:"USD",paid_orders:2,paid_revenue:100}],
   reportTopProducts:[{product_id:"p1",product_name:"Product A",sale_unit:"kg",quantity_base_units:10000,display_quantity:10,paid_sales:160}]
  });
  const response=await handleOrders(request("/api/stores/store-1/reports?period=7d","GET",undefined,true),{DB:database});
@@ -78,12 +80,17 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
  assert.equal(result.report.period,"7d");
  assert.equal(result.report.totals.total_orders,12);
  assert.equal(result.report.paid_revenue[0].paid_revenue,250);
+ assert.equal(result.report.daily_revenue[0].report_date,"2026-11-21");
+ assert.equal(result.report.daily_revenue[0].paid_revenue,100);
  assert.equal(result.report.top_products[0].sale_unit,"kg");
  assert.equal(result.report.top_products[0].display_quantity,10);
  const revenueQuery=database.calls.find(call=>call.sql.includes("paid_revenue"));
  assert.ok(revenueQuery.sql.includes("payment_status='paid'"));
  assert.ok(revenueQuery.sql.includes("store_id=?"));
  assert.equal(revenueQuery.values[1],"-7 days");
+ const dailyQuery=database.calls.find(call=>call.sql.includes("AS report_date"));
+ assert.ok(dailyQuery.sql.includes("GROUP BY date(created_at),currency"));
+ assert.ok(dailyQuery.sql.includes("store_id=?"));
  const productQuery=database.calls.find(call=>call.sql.includes("FROM store_order_items i"));
  assert.ok(productQuery.sql.includes("o.payment_status='paid'"));
 });
