@@ -4,6 +4,7 @@ import { handleAdmin } from "./routes/admin.js";
 import { handleTrial } from "./routes/trial.js";
 import { handleStores } from "./routes/stores.js";
 import { handleCatalog } from "./routes/catalog.js";
+import { handleProcurement } from "./routes/procurement.js";
 import { handlePublicStorefront } from "./routes/storefront.js";
 import { handleTeam } from "./routes/team.js";
 import { handleSubscriptions } from "./routes/subscriptions.js";
@@ -113,6 +114,10 @@ export default {
 
     const teamResponse = await handleTeam(request, env);
     if (teamResponse) return markNoStore(teamResponse);
+
+    const procurementResponse = await handleProcurement(request, env);
+
+    if (procurementResponse) return markNoStore(procurementResponse);
 
     const catalogResponse = await handleCatalog(request, env);
 
