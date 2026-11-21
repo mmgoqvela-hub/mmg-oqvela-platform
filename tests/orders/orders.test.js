@@ -414,9 +414,9 @@ test("Decision workflow preserves legacy stock reservations and customer account
  assert.match(orderDecisionsMigration,/trg_order_decision_reserve_stock/);
  assert.match(orderDecisionsMigration,/trg_order_decision_restore_stock/);
  assert.match(orderDecisionsMigration,/trg_notify_customer_order_decision/);
- assert.match(orderDecisionsMigration,/customer_decision IN \\('pending','accepted','rejected'\\)/);
+ assert.match(orderDecisionsMigration,/customer_decision IN \('pending','accepted','rejected'\)/);
  assert.match(orderDecisionsMigration,/payment_reference/);
  assert.match(customerAccountsMigration,/CREATE TABLE store_customer_accounts/);
  assert.match(customerAccountsMigration,/CREATE TABLE store_customer_account_sessions/);
- assert.match(customerAccountsMigration,/UNIQUE \\(store_id,customer_phone_key\\)/);
+ assert.match(customerAccountsMigration,/UNIQUE \(store_id,customer_phone_key\)/);
 });
