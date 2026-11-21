@@ -60,7 +60,9 @@ async function loadOrders(){
    const statusLabel=decision==="accepted"?"مقبول":decision==="rejected"?"مرفوض":"بانتظار القرار";
    const rejectionOptions=["المحل مغلق حالياً","المنتج غير متوفر حالياً","تعذر تأمين جميع المنتجات المطلوبة","عنوان الزبون خارج نطاق التوصيل","تعذر التواصل مع الزبون"];
    const reasonOptions=rejectionOptions.map(reason=>'<option value="'+esc(reason)+'">'+esc(reason)+'</option>').join("")+'<option value="custom">سبب آخر</option>';
-   const decisionControls=o.order_status==="completed"?"":'<div class="row"><button data-decision="accepted" data-order-id="'+esc(o.id)+'">قبول الطلب</button><select data-rejection-reason="'+esc(o.id)+'">'+reasonOptions+'</select><input data-rejection-custom="'+esc(o.id)+'" placeholder="اكتب سبب الرفض" maxlength="1000" style="display:none"><button data-decision="rejected" data-order-id="'+esc(o.id)+'">رفض الطلب</button></div>';
+   const acceptButton='<button data-decision="accepted" data-order-id="'+esc(o.id)+'">قبول الطلب</button>';
+   const rejectButton='<select data-rejection-reason="'+esc(o.id)+'">'+reasonOptions+'</select><input data-rejection-custom="'+esc(o.id)+'" placeholder="اكتب سبب الرفض" maxlength="1000" style="display:none"><button data-decision="rejected" data-order-id="'+esc(o.id)+'">رفض الطلب</button>';
+   const decisionControls=["completed","cancelled"].includes(o.order_status)?"":'<div class="row">'+(decision==="pending"?acceptButton+rejectButton:decision==="accepted"?rejectButton:acceptButton)+'</div>';
    const collectionFields=paymentMethod==="shamcash"?'<div class="row"><input data-payment-reference="'+esc(o.id)+'" placeholder="رقم عملية شام كاش" maxlength="120"><input data-payment-sender="'+esc(o.id)+'" placeholder="اسم المرسل" maxlength="120"></div>':"";
    const deliveryControl=decision==="accepted"&&o.order_status!=="completed"?collectionFields+'<button data-complete-delivery="'+esc(o.id)+'">تم التسليم واستلام المبلغ</button>':"";
    const history=(o.decision_history||[]).map(e=>esc(e.created_at)+" · "+(e.to_decision==="accepted"?"قبول":"رفض")+(e.rejection_reason?" — "+esc(e.rejection_reason):"")).join("<br>");
