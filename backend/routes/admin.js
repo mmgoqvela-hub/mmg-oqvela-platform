@@ -453,7 +453,7 @@ async function getStoreHandoverPreview(db, storeId) {
   for (const row of tables.results || []) {
     const table = String(row.name || "");
     if (!/^[A-Za-z0-9_]+$/.test(table) || table === "d1_migrations") continue;
-    const columns = await db.prepare(`PRAGMA table_info("${table}")`).all();
+    const columns = await db.prepare("SELECT name FROM pragma_table_info(?)").bind(table).all();
     if (!(columns.results || []).some(column => column.name === "store_id")) continue;
     const count = await db.prepare(`SELECT COUNT(*) AS total FROM "${table}" WHERE store_id=?`).bind(storeId).first();
     records.push({table, count: Number(count?.total || 0)});
