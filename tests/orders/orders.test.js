@@ -7,6 +7,7 @@ import {handleOrders} from "../../backend/routes/orders.js";
 const lifecycleMigration=await readFile(new URL("../../database/migrations/0022_order_lifecycle_guards.sql",import.meta.url),"utf8");
 const orderDecisionsMigration=await readFile(new URL("../../database/migrations/0043_guest_identity_and_order_decisions.sql",import.meta.url),"utf8");
 const customerAccountsMigration=await readFile(new URL("../../database/migrations/0044_optional_customer_accounts.sql",import.meta.url),"utf8");
+const rejectionReasonsMigration=await readFile(new URL("../../database/migrations/0045_store_rejection_reasons.sql",import.meta.url),"utf8");
 
 const TOKEN="a".repeat(43);
 const STORE={id:"store-1",name:"Test Store",slug:"test-store"};
@@ -48,6 +49,7 @@ function db(options={}) {
             },
             async all() {
               calls.push({sql,values});
+              if(sql.includes("FROM store_order_rejection_reasons")) return {results:options.rejectionReasons||[]};
               if(sql.includes("FROM store_order_items i")) return {results:options.reportTopProducts||[]};
               if(sql.includes("AS report_date")) return {results:options.reportDailyRevenue||[]};
               if(sql.includes("paid_revenue")) return {results:options.reportRevenue||[]};
@@ -436,4 +438,33 @@ test("Registered customer account session can place an order without receiving a
  const orderInsert=database.calls.find(call=>call.sql.includes("INSERT INTO store_orders"));
  assert.equal(orderInsert.values.at(-3),"identity-account-1");
  assert.equal(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_identities")),false);
+});
+
+
+test("Rejection reason list is store-scoped and seeds default choices",async()=>{
+ const database=db({rejectionReasons:[{id:"reason-1",reason_text:"المحل مغلق حالياً",is_enabled:1}]});
+ const response=await handleOrders(request("/api/stores/store-1/order-rejection-reasons","GET",undefined,true),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.reasons[0].reason_text,"المحل مغلق حالياً");
+ assert.ok(database.calls.some(call=>call.sql.includes("INSERT OR IGNORE INTO store_order_rejection_reasons")));
+ const query=database.calls.find(call=>call.sql.includes("SELECT id,reason_text,is_enabled"));
+ assert.deepEqual(query.values,["store-1"]);
+});
+
+test("Merchant can add and disable a custom rejection reason",async()=>{
+ const database=db();
+ const added=await handleOrders(request("/api/stores/store-1/order-rejection-reasons","POST",{reason_text:"تعذر تأمين الطلب"},true),{DB:database});
+ assert.equal(added.status,201);
+ const insert=database.calls.find(call=>call.sql.includes("INSERT INTO store_order_rejection_reasons"));
+ assert.ok(insert);
+ const disabled=await handleOrders(request("/api/stores/store-1/order-rejection-reasons/reason-1","PATCH",{is_enabled:false},true),{DB:database});
+ assert.equal(disabled.status,200);
+ const update=database.calls.find(call=>call.sql.includes("UPDATE store_order_rejection_reasons"));
+ assert.equal(update.values[0],0);
+});
+
+test("Rejection reasons are stored per store and support enabling or disabling",()=>{
+ assert.ok(rejectionReasonsMigration.includes("CREATE TABLE store_order_rejection_reasons"));
+ assert.ok(rejectionReasonsMigration.includes("UNIQUE (store_id,reason_text)"));
 });
