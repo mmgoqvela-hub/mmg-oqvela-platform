@@ -236,7 +236,7 @@ async function createPublicOrder(request,env,slug){
 
 async function loadStoreReport(db,storeId,period){
   const modifier=period==="7d"?"-7 days":period==="90d"?"-90 days":"-30 days";
-  const [totals,revenue,topProducts]=await Promise.all([
+  const [totals,revenue,dailyRevenue,topProducts]=await Promise.all([
     db.prepare(`
       SELECT COUNT(*) AS total_orders,
         SUM(CASE WHEN order_status='completed' THEN 1 ELSE 0 END) AS completed_orders,
@@ -250,6 +250,15 @@ async function loadStoreReport(db,storeId,period){
       WHERE store_id=? AND payment_status='paid' AND order_status!='cancelled'
         AND created_at>=datetime('now',?)
       GROUP BY currency ORDER BY currency
+    `).bind(storeId,modifier).all(),
+    db.prepare(`
+      SELECT date(created_at) AS report_date,currency,COUNT(*) AS paid_orders,
+        ROUND(SUM(total),2) AS paid_revenue
+      FROM store_orders
+      WHERE store_id=? AND payment_status='paid' AND order_status!='cancelled'
+        AND created_at>=datetime('now',?)
+      GROUP BY date(created_at),currency
+      ORDER BY report_date DESC,currency
     `).bind(storeId,modifier).all(),
     db.prepare(`
       SELECT i.product_id,i.product_name,i.sale_unit,
@@ -274,6 +283,7 @@ async function loadStoreReport(db,storeId,period){
       cancelled_orders:totals?.cancelled_orders||0
     },
     paid_revenue:revenue.results||[],
+    daily_revenue:dailyRevenue.results||[],
     top_products:topProducts.results||[]
   };
 }
