@@ -512,8 +512,8 @@ async function handleProductImages(request, env, storeId, access, productId, ima
     ).bind(productId, storeId).first();
     if ((imageCount?.total || 0) >= 5) return json({ error: "A product can have at most five images" }, 409);
     if (!externalUrl) {
-      if (!env.STORE_MEDIA) return json({ error: "Direct HTTPS image URLs are available while file uploads are disabled." }, 503);
-      const object = await env.STORE_MEDIA.head(fileKey.slice("/media/".length));
+      if (!mediaStorage || typeof mediaStorage.head !== "function") return json({ error: "Direct HTTPS image URLs are available while file uploads are disabled." }, 503);
+      const object = await mediaStorage.head(fileKey.slice("/media/".length));
       if (!object || object.customMetadata?.storeId !== storeId) {
         return json({ error: "Uploaded image not found in this store" }, 404);
       }
@@ -534,7 +534,7 @@ async function handleProductImages(request, env, storeId, access, productId, ima
     await env.DB.prepare(
       "DELETE FROM product_images WHERE id = ? AND product_id = ? AND store_id = ?"
     ).bind(imageId, productId, storeId).run();
-    if (env.STORE_MEDIA && typeof image.file_key === "string" &&
+    if (mediaStorage && typeof mediaStorage.delete === "function" && typeof image.file_key === "string" &&
         image.file_key.startsWith("/media/" + storeId + "/")) {
       const remaining = await env.DB.prepare(
         "SELECT COUNT(*) AS total FROM product_images WHERE store_id = ? AND file_key = ?"
