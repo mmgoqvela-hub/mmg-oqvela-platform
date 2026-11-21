@@ -80,3 +80,14 @@ test("POS void only accepts an untouched posted sale",async()=>{
  assert.equal(response.status,409);
  assert.equal(db.batches.length,0);
 });
+
+test("POS kilogram void restores gram inventory and records gram unit",async()=>{
+ const db=makeDb({items:[{id:"item-1",product_id:"p-1",variant_id:null,quantity:20,currency:"USD",sale_unit:"kg"}]});
+ const response=await handlePosVoids(req(payload()),{DB:db});
+ assert.equal(response.status,201);
+ const movement=db.batches[0].find(x=>x.sql.includes("INSERT INTO inventory_movements"));
+ assert.equal(movement.values[4],1000);
+ assert.equal(movement.values[9],"g");
+ const stock=db.batches[0].find(x=>x.sql.includes("UPDATE products SET stock_quantity=stock_quantity+?"));
+ assert.equal(stock.values[0],1000);
+});
