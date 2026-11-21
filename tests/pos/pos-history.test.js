@@ -35,8 +35,10 @@ test("POS sales history is store-scoped and supports safe filters",async()=>{
  assert.equal(response.status,200);
  assert.equal(result.sales.length,1);
  assert.equal(result.limit,100);
- assert.match(DB.queries[0].sql,/s.store_id=\?/);
- assert.deepEqual(DB.queries[0].values.slice(0,5),["store-1","posted","posted","USD","USD"]);
+ const query=DB.queries.find(q=>q.sql.includes("FROM pos_sales s LEFT JOIN"));
+ assert.ok(query);
+ assert.match(query.sql,/s.store_id=\\?/);
+ assert.deepEqual(query.values.slice(0,5),["store-1","posted","posted","USD","USD"]);
 });
 test("POS sales history rejects invalid filters",async()=>{
  const DB=dbMock();
