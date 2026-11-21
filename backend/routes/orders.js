@@ -1,4 +1,5 @@
 import { getAuthenticatedSession, validOrigin } from "../security/authentication.js";
+import { calculateTierPriceMinorUnits, selectPricingTier } from "../finance/tier_pricing.js";
 
 function json(data,status=200){
   return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});
@@ -106,6 +107,11 @@ async function createPublicOrder(request,env,slug){
   if(method==="shamcash"&&(!validText(reference,3,120)||!validText(sender,2,120)))
     return json({error:"Sham Cash transaction number and sender name are required"},400);
 
+  const pricingSettings=await env.DB.prepare("SELECT pricing_mode,rounding_increment_minor_units FROM store_pricing_settings WHERE store_id=?").bind(store.id).first();
+  const pricingMode=pricingSettings?.pricing_mode||"manual";
+  const globalTiers=pricingMode==="cost_plus_margin"
+    ? (await env.DB.prepare("SELECT tier_code,min_quantity,profit_margin_bps,is_enabled FROM store_pricing_tiers WHERE store_id=?").bind(store.id).all()).results||[]
+    : [];
   const items=[];
   const seen=new Set();
   let currency=null,subtotal=0;
@@ -134,8 +140,42 @@ async function createPublicOrder(request,env,slug){
       const hasVariants=await env.DB.prepare("SELECT id FROM product_variants WHERE product_id=? AND store_id=? AND status='active' LIMIT 1").bind(productId,store.id).first();
       if(hasVariants)return json({error:"Choose an option for each product"},400);
     }
-    const price=Number(variant?.price??product.base_price);
+    let price=Number(variant?.price??product.base_price);
     const lineCurrency=product.currency||"USD";
+    let pricingSnapshot={pricing_mode:"manual",pricing_tier_code:null,cost_version_id:null,cost_currency:null,cost_minor_units:null,profit_margin_bps:null,rounding_increment_minor_units:null};
+    if(pricingMode==="cost_plus_margin"){
+      if(lineCurrency!=="USD")return json({error:"Automatic cost-plus pricing is currently available only for USD products"},409);
+      const overrideRows=await env.DB.prepare(`
+        SELECT tier_code,profit_margin_bps,min_quantity,is_enabled
+        FROM product_tier_margin_overrides
+        WHERE store_id=? AND product_id=? AND (variant_id=? OR variant_id IS NULL)
+        ORDER BY CASE WHEN variant_id IS NULL THEN 1 ELSE 0 END
+      `).bind(store.id,product.id,variant?.id||null).all();
+      const overrideByTier=new Map();
+      for(const row of overrideRows.results||[])if(!overrideByTier.has(row.tier_code))overrideByTier.set(row.tier_code,row);
+      const resolvedTiers=globalTiers.map(tier=>{
+        const override=overrideByTier.get(tier.tier_code);
+        return override?{...tier,min_quantity:override.min_quantity??tier.min_quantity,
+          profit_margin_bps:override.profit_margin_bps,is_enabled:override.is_enabled}:tier;
+      });
+      let selected;
+      try{selected=selectPricingTier(quantity,resolvedTiers);}catch{
+        return json({error:"No valid automatic price is configured for "+product.name},409);
+      }
+      const cost=await env.DB.prepare(`
+        SELECT id,cost_minor_units FROM product_cost_versions
+        WHERE store_id=? AND product_id=? AND ((variant_id=? ) OR (variant_id IS NULL AND ? IS NULL))
+        ORDER BY effective_at DESC,created_at DESC LIMIT 1
+      `).bind(store.id,product.id,variant?.id||null,variant?.id||null).first();
+      if(!cost)return json({error:"A USD purchase cost is required before selling "+product.name+" with automatic pricing"},409);
+      try{
+        const unitMinor=calculateTierPriceMinorUnits(cost.cost_minor_units,selected.profit_margin_bps,pricingSettings.rounding_increment_minor_units||1);
+        price=unitMinor/100;
+        pricingSnapshot={pricing_mode:"cost_plus_margin",pricing_tier_code:selected.tier_code,
+          cost_version_id:cost.id,cost_currency:"USD",cost_minor_units:cost.cost_minor_units,
+          profit_margin_bps:selected.profit_margin_bps,rounding_increment_minor_units:pricingSettings.rounding_increment_minor_units||1};
+      }catch{return json({error:"Unable to calculate the configured selling price"},409);}
+    }
     if(currency!==null&&currency!==lineCurrency)return json({error:"All items in an order must use the same currency"},400);
     currency=lineCurrency;
     if(product.track_inventory&&Number(variant?.stock_quantity??product.stock_quantity)<quantity)
@@ -144,7 +184,7 @@ async function createPublicOrder(request,env,slug){
     subtotal=Math.round((subtotal+lineTotal)*100)/100;
     items.push({id:crypto.randomUUID(),product_id:product.id,variant_id:variant?.id||null,
       product_name:product.name,variant_name:variant?.name||null,sku:product.sku||null,
-      quantity,unit_price:price,line_total:lineTotal,currency:lineCurrency});
+      quantity,unit_price:price,line_total:lineTotal,currency:lineCurrency,...pricingSnapshot});
   }
   const orderId=crypto.randomUUID();
   const orderNumber="MMG-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,5).toUpperCase();
@@ -158,9 +198,11 @@ async function createPublicOrder(request,env,slug){
   for(const item of items){
     statements.push(env.DB.prepare(`
       INSERT INTO store_order_items
-        (id,order_id,store_id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(item.id,orderId,store.id,item.product_id,item.variant_id,item.product_name,item.variant_name,item.sku,item.quantity,item.unit_price,item.line_total,item.currency));
+        (id,order_id,store_id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,line_total,currency,
+         pricing_mode,pricing_tier_code,cost_version_id,cost_currency,cost_minor_units,profit_margin_bps,rounding_increment_minor_units)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(item.id,orderId,store.id,item.product_id,item.variant_id,item.product_name,item.variant_name,item.sku,item.quantity,item.unit_price,item.line_total,item.currency,
+      item.pricing_mode,item.pricing_tier_code,item.cost_version_id,item.cost_currency,item.cost_minor_units,item.profit_margin_bps,item.rounding_increment_minor_units));
   }
   try{
     await env.DB.batch(statements);
