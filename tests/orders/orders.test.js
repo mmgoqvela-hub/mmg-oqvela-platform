@@ -335,3 +335,24 @@ test("Kilogram checkout stores grams and charges the proportional kilogram price
  assert.equal(line.values[9],12.5);
  assert.equal(line.values.at(-1),"kg");
 });
+
+
+test("Customer directory is store-scoped and groups order history by phone",async()=>{
+ const database=db({rows:[{customer_name:"Customer Name",customer_phone:"+963 900 000 000",phone_key:"+963900000000",orders_count:3,total_orders_value:75,last_order_at:"2026-11-21 10:00:00",open_orders:1}]});
+ const response=await handleOrders(request("/api/stores/store-1/customers","GET",undefined,true),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.customers.length,1);
+ assert.equal(result.customers[0].orders_count,3);
+ const query=database.calls.find(call=>call.sql.includes("GROUP BY REPLACE"));
+ assert.ok(query.sql.includes("WHERE store_id=?"));
+ assert.equal(query.values[0],"store-1");
+});
+
+test("Customer directory and individual history require order read permission",async()=>{
+ const database=db({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"catalog.read"}});
+ const response=await handleOrders(request("/api/stores/store-1/customers","GET",undefined,true),{DB:database});
+ assert.equal(response.status,403);
+ const history=await handleOrders(request("/api/stores/store-1/customers/%2B963900000000","GET",undefined,true),{DB:database});
+ assert.equal(history.status,403);
+});
