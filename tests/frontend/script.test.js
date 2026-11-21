@@ -242,7 +242,8 @@ test("Merchant portal is a separate store-only interface", async () => {
   assert.match(html, /id="productForm"/);
   assert.match(html, /data-edit-product/);
   assert.match(html, /data-archive-product/);
-  assert.match(html, /method:id\?"PUT":"POST"/);
+  assert.match(html, /method:"PUT"/);
+  assert.match(html, /method:"POST"/);
   assert.match(html, /value="piece">قطعة/);
   assert.match(html, /value="kg">كيلو/);
   assert.match(html, /id="productImageUrl"/);
