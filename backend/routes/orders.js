@@ -324,7 +324,7 @@ export async function handleOrders(request,env){
   if(customersMatch){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
     if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
-    const normalizePhone=value=>String(value||"").replace(/[\\s()\\-]/g,"");
+    const normalizePhone=value=>String(value||"").replace(/[\s()-]/g,"");
     if(!customersMatch[2]){
       const result=await env.DB.prepare(`
         SELECT MIN(customer_name) AS customer_name,
