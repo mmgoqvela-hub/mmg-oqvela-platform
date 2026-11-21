@@ -345,6 +345,23 @@ def main():
     ).fetchone()
     if stock_after_reversal != (2,):
         raise SystemExit(f"Warehouse stock projection did not apply reversal: {stock_after_reversal}")
+    # Legacy-compatible inserts without warehouse_id are assigned to MAIN once.
+    connection.execute(
+        "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,idempotency_key) VALUES (?,?,?,?,?,?)",
+        ("warehouse-default-assignment","tenant-store-a","tenant-product-a","purchase",2,"legacy-default-1")
+    )
+    assigned_warehouse = connection.execute(
+        "SELECT warehouse_id FROM inventory_movements WHERE id='warehouse-default-assignment'"
+    ).fetchone()
+    stock_after_default_assignment = connection.execute(
+        "SELECT quantity FROM inventory_warehouse_stock WHERE warehouse_id=? AND product_id=? AND variant_key=''",
+        (warehouse_a,"tenant-product-a")
+    ).fetchone()
+    if assigned_warehouse != (warehouse_a,) or stock_after_default_assignment != (4,):
+        raise SystemExit(
+            f"Legacy warehouse assignment failed: warehouse={assigned_warehouse}, stock={stock_after_default_assignment}"
+        )
+
     expect_integrity_error(
         lambda: connection.execute(
             "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,reversal_of_id) VALUES (?,?,?,?,?,?,?)",
