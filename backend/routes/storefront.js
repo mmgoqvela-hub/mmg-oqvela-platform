@@ -38,7 +38,13 @@ export async function handlePublicStorefront(request, env) {
         AND EXISTS (
           SELECT 1
           FROM store_subscriptions ss
-          WHERE ss.store_id = s.id
+          WHERE (
+              ss.store_id = s.id
+              OR (
+                ss.is_trial = 1
+                AND ss.trial_account_id = s.account_id
+              )
+            )
             AND ss.status = 'active'
             AND (ss.expires_at IS NULL OR ss.expires_at > CURRENT_TIMESTAMP)
         )
