@@ -3352,7 +3352,10 @@ footer{
     }
     toggle.addEventListener("click",async()=>{
       panel.hidden=!panel.hidden;
-      if(!panel.hidden&&!loaded){loaded=true;await refresh();}
+      if(!panel.hidden){
+        loaded=true;
+        await refresh();
+      }
     });
     card.append(toggle,panel);
   }
