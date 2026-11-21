@@ -1976,6 +1976,121 @@ footer{
         const categories = categoryData.categories || [];
         const products = productData.products || [];
         const movements = inventoryData.movements || [];
+        if (canManage) {
+          const pricingPanel = document.createElement("section");
+          pricingPanel.className = "admin-panel";
+          const pricingTitle = document.createElement("h4");
+          pricingTitle.textContent = "إعدادات تسعير المفرق والجملة";
+          const pricingIntro = document.createElement("p");
+          pricingIntro.className = "muted";
+          pricingIntro.textContent = "نسبة الربح هنا زيادة على تكلفة الشراء، وليست نسبة من سعر البيع النهائي. تبقى الأسعار الحالية يدوية حتى تفعيل التسعير الآلي وربطه بنقطة البيع.";
+          const pricingForm = document.createElement("form");
+          pricingForm.className = "admin-form";
+          const pricingMode = document.createElement("select");
+          for (const [value,label] of [["manual","أسعار يدوية"],["cost_plus_margin","حساب السعر من التكلفة ونسبة الربح"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            pricingMode.append(option);
+          }
+          const rounding = document.createElement("input");
+          rounding.type = "number";
+          rounding.min = "1";
+          rounding.max = "1000000";
+          rounding.step = "1";
+          const pricingFields = [];
+          const tierDefinitions = [
+            ["retail","المفرق",1],
+            ["wholesale","الجملة",2],
+            ["bulk_wholesale","جملة الجملة",10]
+          ];
+          try {
+            const savedPricing = await api("/api/stores/" + encodeURIComponent(store.id) + "/pricing");
+            pricingMode.value = savedPricing.settings.pricing_mode;
+            rounding.value = String(savedPricing.settings.rounding_increment_minor_units);
+            const savedByCode = new Map((savedPricing.tiers || []).map(tier => [tier.tier_code,tier]));
+            for (const [code,label,defaultQuantity] of tierDefinitions) {
+              const saved = savedByCode.get(code) || {};
+              const enabled = document.createElement("input");
+              enabled.type = "checkbox";
+              enabled.checked = saved.is_enabled === 1;
+              const minimum = document.createElement("input");
+              minimum.type = "number";
+              minimum.min = code === "retail" ? "1" : "2";
+              minimum.step = "1";
+              minimum.value = String(saved.min_quantity ?? defaultQuantity);
+              minimum.disabled = code === "retail";
+              const margin = document.createElement("input");
+              margin.type = "number";
+              margin.min = "0";
+              margin.max = "10000";
+              margin.step = "0.01";
+              margin.placeholder = "مثال: 25";
+              margin.value = saved.profit_margin_percent ?? "";
+              const field = document.createElement("div");
+              field.className = "field";
+              const labelElement = document.createElement("label");
+              labelElement.className = "toggle-row";
+              labelElement.append(enabled,document.createTextNode("تفعيل " + label));
+              field.append(labelElement);
+              pricingFields.push({code,enabled,minimum,margin});
+              pricingForm.append(field);
+              for (const [caption,control] of [["أقل كمية - " + label,minimum],["نسبة الربح % - " + label,margin]]) {
+                const inputField = document.createElement("div");
+                inputField.className = "field";
+                const inputLabel = document.createElement("label");
+                inputLabel.textContent = caption;
+                inputField.append(inputLabel,control);
+                pricingForm.append(inputField);
+              }
+            }
+            for (const [caption,control] of [["طريقة التسعير",pricingMode],["وحدة التقريب بالسنت",rounding]]) {
+              const field = document.createElement("div");
+              field.className = "field";
+              const label = document.createElement("label");
+              label.textContent = caption;
+              field.append(label,control);
+              pricingForm.prepend(field);
+            }
+            const savePricing = document.createElement("button");
+            savePricing.type = "submit";
+            savePricing.className = "primary wide";
+            savePricing.textContent = "حفظ إعدادات التسعير";
+            const pricingMessage = document.createElement("p");
+            pricingMessage.className = "muted wide";
+            pricingForm.append(savePricing,pricingMessage);
+            pricingForm.addEventListener("submit",async event => {
+              event.preventDefault();
+              savePricing.disabled = true;
+              try {
+                await api("/api/stores/" + encodeURIComponent(store.id) + "/pricing",{
+                  method:"PUT",
+                  body:JSON.stringify({
+                    pricing_mode:pricingMode.value,
+                    rounding_increment_minor_units:Number(rounding.value),
+                    tiers:pricingFields.map(field => ({
+                      tier_code:field.code,
+                      min_quantity:Number(field.minimum.value),
+                      profit_margin_percent:field.margin.value.trim() || null,
+                      is_enabled:field.enabled.checked
+                    }))
+                  })
+                });
+                pricingMessage.textContent = "تم حفظ إعدادات التسعير. لم تتغير فواتير البيع السابقة.";
+              } catch(error) {
+                pricingMessage.textContent = "تعذر حفظ الإعدادات: " + error.message;
+              } finally {
+                savePricing.disabled = false;
+              }
+            });
+            pricingPanel.append(pricingTitle,pricingIntro,pricingForm);
+          } catch(error) {
+            pricingIntro.textContent = "تعذر تحميل إعدادات التسعير: " + error.message;
+            pricingPanel.append(pricingTitle,pricingIntro);
+          }
+          panel.append(pricingPanel);
+        }
+
 
         if (canManage) {
           const categoryHeading = document.createElement("h4");
@@ -2311,6 +2426,49 @@ footer{
               " — " + localizeCode(product.status) +
               (product.track_inventory ? " — " + "الكمية المتوفرة: " + formatNumber(product.stock_quantity) : " — المخزون غير متاح لهذا المنتج.");
             item.append(title,details);
+            if (canManageInventory) {
+              const costPanel = document.createElement("section");
+              costPanel.className = "admin-panel";
+              const costTitle = document.createElement("h5");
+              costTitle.textContent = "تكلفة الشراء بالدولار";
+              const costInput = document.createElement("input");
+              costInput.type = "number";
+              costInput.min = "0";
+              costInput.step = "0.01";
+              costInput.placeholder = "مثال: 42.00";
+              const costSave = document.createElement("button");
+              costSave.type = "button";
+              costSave.className = "secondary";
+              costSave.textContent = "حفظ تكلفة جديدة";
+              const costMessage = document.createElement("p");
+              costMessage.className = "muted";
+              costSave.addEventListener("click",async () => {
+                if (!costInput.value || !Number.isFinite(Number(costInput.value)) || Number(costInput.value) < 0) {
+                  costMessage.textContent = "أدخل تكلفة صحيحة بالدولار.";
+                  return;
+                }
+                costSave.disabled = true;
+                try {
+                  await api("/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(product.id) + "/costs",{
+                    method:"POST",
+                    body:JSON.stringify({
+                      cost:costInput.value,
+                      cost_source:"manual",
+                      idempotency_key:crypto.randomUUID()
+                    })
+                  });
+                  costMessage.textContent = "تم حفظ إصدار جديد للتكلفة. لم يتم تعديل التكاليف أو الفواتير السابقة.";
+                  costInput.value = "";
+                } catch(error) {
+                  costMessage.textContent = "تعذر حفظ التكلفة: " + error.message;
+                } finally {
+                  costSave.disabled = false;
+                }
+              });
+              costPanel.append(costTitle,costInput,costSave,costMessage);
+              item.append(costPanel);
+            }
+
             if (canManage) {
               const editToggle = document.createElement("button");
               editToggle.type = "button";
