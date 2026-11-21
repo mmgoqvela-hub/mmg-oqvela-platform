@@ -205,3 +205,56 @@ Migration \`0028_suppliers_purchase_orders.sql\` adds a tenant-scoped supplier d
 - \`POST /api/stores/:storeId/purchase-orders/:purchaseOrderId\` with \`action: submit | approve | cancel\`
 
 All endpoints require an authenticated session, valid origin, active store membership and the existing \`inventory.read\` or \`inventory.manage\` permission.
+
+
+## 14. Customer receivables and supplier payables — target ledger design
+
+The user-facing workspace is one **Debts** area with two strictly separate subledgers: receivables (customers owe the store) and payables (the store owes suppliers). A combined navigation item does not mean balances can be offset or added together.
+
+### 14.1 Source documents and recognition points
+- Customer receivable originates from a posted customer sales invoice or another explicitly approved receivable source. A cart, quotation, draft order or draft invoice is not a debt.
+- Supplier payable initially originates from a posted supplier bill/invoice. A purchase order is a commitment only. A posted goods receipt updates inventory; it does not silently create an invoice payable. If a later accrual-at-receipt policy is introduced, it must use a separate accrual account and reverse/match against the supplier bill without double-counting.
+- Supplier bills should support three-way matching to approved PO lines and posted goods receipt quantities. Exceptions require authorized resolution with a reason and audit event.
+- Customer returns/credit notes and supplier returns/credit notes are linked compensating documents. Never edit the original posted invoice or bill.
+
+### 14.2 Party subledgers
+- Customer and supplier balances are projections derived from posted documents, payments and allocations, not editable source fields.
+- Every ledger row carries store ID, party ID, source document type/ID, currency, exact amount, effective date, recorded timestamp, actor, idempotency key and reversal/correction linkage where relevant.
+- Keep customer and supplier party namespaces and allocations distinct. Cross-party, cross-store and cross-currency allocation is rejected unless an explicit, rate-snapshotted conversion workflow is later approved.
+- Controlled opening balances require dated opening-balance documents and an auditable migration/import; never seed arbitrary editable totals.
+
+### 14.3 Payments, advances and allocations
+- Create a store-level payment transaction model separate from platform subscription payments. It records payer/payee, direction, amount, currency, method, cash/bank account, external reference, transaction date, actor and status.
+- A payment and its invoice allocation are separate records. One payment can settle multiple invoices; one invoice can receive multiple partial payments.
+- Unapplied receipts and advances remain explicit party credits until allocated or refunded. They must not be silently treated as settled invoices.
+- Enforce amount limits, currency/party/store consistency, idempotency and concurrency-safe allocation. Duplicate provider references are checked within the correct store/payment-method scope.
+- Refunds and payment reversals are separate linked records; posted payment history is never deleted.
+
+### 14.4 Balances, aging and reporting
+- Calculate outstanding per document and per party as posted debit/credit documents less valid allocations and linked credit notes, independently for each currency.
+- Due/overdue status is derived from due date, settlement state and the report's effective date; preserve timezone and business-date rules.
+- Aging buckets: not yet due/current, 1–30, 31–60, 61–90 and over 90 days. A report must state its as-of date and must not mix currencies.
+- Provide party statement, invoice/payment drill-down, collection queue, supplier payment queue, due-date alerts, customer credit exposure, supplier exposure and aging summaries.
+- Dashboard receivables and payables are separate KPIs. Cash movement, sales revenue, profit and debt settlement are different measures and must not be conflated.
+- Exports and print views require permissions, filters, currency labels, report date and audit events.
+
+### 14.5 Posting and accounting controls
+- Use one posting service to create source-ledger entries and, when enabled, balanced double-entry journals. Reconcile customer subledger to accounts receivable control and supplier subledger to accounts payable control.
+- Do not treat payment receipt as revenue recognition, supplier payment as expense recognition, or inventory receipt as supplier bill payment.
+- Posted records are append-only. Corrections require linked reversal/credit/debit documents, mandatory reason, actor and timestamp.
+- Apply period close, authorized reopen, role-based approval thresholds and immutable activity logs.
+- Preserve USD and SYP balances separately. Use exact integer minor units only where precision is verified; otherwise use an explicitly tested exact-decimal representation. Every conversion stores its rate snapshot and rounding policy.
+
+### 14.6 Required test matrix
+- Receivable from posted invoice; no receivable from draft/quotation.
+- Payable from posted supplier bill; no payable from PO approval or goods receipt alone.
+- Partial, full, multiple-invoice and unapplied payment allocations.
+- Reject over-allocation, duplicate payment reference and cross-party/cross-store/cross-currency allocation.
+- Customer and supplier credit notes, returns, refunds, advances and reversals preserve original history.
+- Aging at boundary dates and timezone transitions; reports reproducible for historical as-of dates.
+- Concurrent settlement attempts cannot overpay or duplicate postings.
+- Subledger-to-control-account reconciliation and balanced journal batches.
+- Role permissions, branch scope, export audit, period locks and privacy restrictions.
+
+### 14.7 Implementation status and dependency order
+This section is a target design, not an implemented ledger or UI. Current supplier and purchase-order records in migration 0028 do not create supplier payables. Implement the currency/amount compatibility foundation, posted goods receipts, supplier bills, store payment transactions/allocations, customer invoices and receivables, supplier payables, reconciliation, then the unified Debts UI. Do not expose calculated balances as authoritative until the complete source chain and tests are in place.
