@@ -376,6 +376,56 @@ def main():
         "cumulative reversals cannot exceed the original movement"
     )
 
+    # Supplier and purchase-order data is tenant-scoped and approval never receives stock.
+    connection.execute(
+        "INSERT INTO suppliers (id,store_id,name) VALUES ('supplier-a','tenant-store-a','Supplier A')"
+    )
+    connection.execute(
+        "INSERT INTO suppliers (id,store_id,name) VALUES ('supplier-b','tenant-store-b','Supplier B')"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO purchase_orders (id,store_id,supplier_id,order_number) VALUES (?,?,?,?)",
+            ("po-cross-store","tenant-store-a","supplier-b","PO-CROSS")
+        ),
+        "a purchase order cannot use another store's supplier"
+    )
+    connection.execute(
+        "INSERT INTO purchase_orders (id,store_id,supplier_id,order_number,total_minor_units) VALUES (?,?,?,?,?)",
+        ("po-a","tenant-store-a","supplier-a","PO-0001",2500)
+    )
+    connection.execute(
+        "INSERT INTO purchase_order_items (id,store_id,purchase_order_id,product_id,product_name_snapshot,quantity,unit_cost_minor_units,line_total_minor_units) VALUES (?,?,?,?,?,?,?,?)",
+        ("po-a-item-1","tenant-store-a","po-a","tenant-product-a","Product A",2,1250,2500)
+    )
+    connection.execute(
+        "UPDATE purchase_orders SET status='submitted' WHERE id='po-a' AND store_id='tenant-store-a'"
+    )
+    connection.execute(
+        "UPDATE purchase_orders SET status='approved',approved_at=CURRENT_TIMESTAMP WHERE id='po-a' AND store_id='tenant-store-a'"
+    )
+    if connection.execute(
+        "SELECT status,total_minor_units FROM purchase_orders WHERE id='po-a'"
+    ).fetchone() != ("approved",2500):
+        raise SystemExit("Purchase order approval did not persist")
+    if connection.execute(
+        "SELECT stock_quantity FROM products WHERE id='tenant-product-a'"
+    ).fetchone() != (0,):
+        raise SystemExit("Approving a purchase order must not increase stock")
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO purchase_order_items (id,store_id,purchase_order_id,product_id,product_name_snapshot,quantity,unit_cost_minor_units,line_total_minor_units) VALUES (?,?,?,?,?,?,?,?)",
+            ("po-a-item-2","tenant-store-a","po-a","tenant-product-a","Product A",1,100,100)
+        ),
+        "approved purchase order items must be immutable"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE purchase_orders SET status='draft' WHERE id='po-a'"
+        ),
+        "approved purchase orders cannot be reopened"
+    )
+
     print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
