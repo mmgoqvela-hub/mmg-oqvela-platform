@@ -298,8 +298,8 @@ def main():
         "SELECT id FROM inventory_warehouses WHERE store_id='tenant-store-b' AND is_default=1"
     ).fetchone()[0]
     connection.execute(
-        "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,source_type,source_id,idempotency_key) VALUES (?,?,?,?,?,?,?,?,?)",
-        ("warehouse-movement-1","tenant-store-a","tenant-product-a","purchase",5,warehouse_a,"test_receipt","receipt-1","receipt-1-line-1")
+        "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,movement_reason,quantity_change,warehouse_id,source_type,source_id,idempotency_key) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("warehouse-movement-1","tenant-store-a","tenant-product-a","purchase","supplier_receipt",5,warehouse_a,"test_receipt","receipt-1","receipt-1-line-1")
     )
     stock_after_receipt = connection.execute(
         "SELECT quantity FROM inventory_warehouse_stock WHERE warehouse_id=? AND product_id=? AND variant_key=''",
@@ -307,6 +307,12 @@ def main():
     ).fetchone()
     if stock_after_receipt != (5,):
         raise SystemExit(f"Warehouse stock projection did not increase: {stock_after_receipt}")
+
+    movement_reason = connection.execute(
+        "SELECT movement_reason FROM inventory_movements WHERE id='warehouse-movement-1'"
+    ).fetchone()
+    if movement_reason != ("supplier_receipt",):
+        raise SystemExit(f"Detailed movement reason was not preserved: {movement_reason}")
 
     expect_integrity_error(
         lambda: connection.execute(
