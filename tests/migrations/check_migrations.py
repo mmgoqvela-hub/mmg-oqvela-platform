@@ -290,6 +290,69 @@ def main():
     if rejection_state != ("cancelled",):
         raise SystemExit(f"Rejection trigger flow failed: {rejection_state}")
 
+    # Verify warehouse-aware stock projections and immutable movement history.
+    warehouse_a = connection.execute(
+        "SELECT id FROM inventory_warehouses WHERE store_id='tenant-store-a' AND is_default=1"
+    ).fetchone()[0]
+    warehouse_b = connection.execute(
+        "SELECT id FROM inventory_warehouses WHERE store_id='tenant-store-b' AND is_default=1"
+    ).fetchone()[0]
+    connection.execute(
+        "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,source_type,source_id,idempotency_key) VALUES (?,?,?,?,?,?,?,?,?)",
+        ("warehouse-movement-1","tenant-store-a","tenant-product-a","purchase",5,warehouse_a,"test_receipt","receipt-1","receipt-1-line-1")
+    )
+    stock_after_receipt = connection.execute(
+        "SELECT quantity FROM inventory_warehouse_stock WHERE warehouse_id=? AND product_id=? AND variant_key=''",
+        (warehouse_a,"tenant-product-a")
+    ).fetchone()
+    if stock_after_receipt != (5,):
+        raise SystemExit(f"Warehouse stock projection did not increase: {stock_after_receipt}")
+
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,idempotency_key) VALUES (?,?,?,?,?,?,?)",
+            ("warehouse-movement-duplicate","tenant-store-a","tenant-product-a","purchase",1,warehouse_a,"receipt-1-line-1")
+        ),
+        "a store-scoped inventory idempotency key cannot be reused"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE inventory_movements SET quantity_change=99 WHERE id='warehouse-movement-1'"
+        ),
+        "a posted inventory movement cannot be edited"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "DELETE FROM inventory_movements WHERE id='warehouse-movement-1'"
+        ),
+        "a posted inventory movement cannot be deleted"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id) VALUES (?,?,?,?,?,?)",
+            ("warehouse-cross-store","tenant-store-a","tenant-product-a","purchase",1,warehouse_b)
+        ),
+        "a movement cannot be posted to another store's warehouse"
+    )
+
+    connection.execute(
+        "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,source_type,source_id,idempotency_key,reversal_of_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        ("warehouse-reversal-1","tenant-store-a","tenant-product-a","adjustment",-3,warehouse_a,"reversal","receipt-1","receipt-1-reversal-1","warehouse-movement-1")
+    )
+    stock_after_reversal = connection.execute(
+        "SELECT quantity FROM inventory_warehouse_stock WHERE warehouse_id=? AND product_id=? AND variant_key=''",
+        (warehouse_a,"tenant-product-a")
+    ).fetchone()
+    if stock_after_reversal != (2,):
+        raise SystemExit(f"Warehouse stock projection did not apply reversal: {stock_after_reversal}")
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO inventory_movements (id,store_id,product_id,movement_type,quantity_change,warehouse_id,reversal_of_id) VALUES (?,?,?,?,?,?,?)",
+            ("warehouse-reversal-over","tenant-store-a","tenant-product-a","adjustment",-3,warehouse_a,"warehouse-movement-1")
+        ),
+        "cumulative reversals cannot exceed the original movement"
+    )
+
     print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
