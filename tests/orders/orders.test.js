@@ -5,6 +5,8 @@ import { readFile } from "node:fs/promises";
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 import {handleOrders} from "../../backend/routes/orders.js";
 const lifecycleMigration=await readFile(new URL("../../database/migrations/0022_order_lifecycle_guards.sql",import.meta.url),"utf8");
+const orderDecisionsMigration=await readFile(new URL("../../database/migrations/0043_guest_identity_and_order_decisions.sql",import.meta.url),"utf8");
+const customerAccountsMigration=await readFile(new URL("../../database/migrations/0044_optional_customer_accounts.sql",import.meta.url),"utf8");
 
 const TOKEN="a".repeat(43);
 const STORE={id:"store-1",name:"Test Store",slug:"test-store"};
@@ -383,4 +385,38 @@ test("Customer directory and individual history require order read permission",a
  assert.equal(response.status,403);
  const history=await handleOrders(request("/api/stores/store-1/customers/%2B963900000000","GET",undefined,true),{DB:database});
  assert.equal(history.status,403);
+});
+
+
+test("Merchant notification inbox is restricted to the active store and its own orders",async()=>{
+ const database=db({rows:[{id:"notice-1",entity_id:"order-1",title:"طلب جديد"}]});
+ const response=await handleOrders(request("/api/stores/store-1/notifications","GET",undefined,true),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.notifications.length,1);
+ const query=database.calls.find(call=>call.sql.includes("FROM user_notifications n"));
+ assert.ok(query.sql.includes("JOIN store_orders o"));
+ assert.ok(query.sql.includes("o.store_id=?"));
+ assert.deepEqual(query.values.slice(0,2),["store-1","user-1"]);
+});
+
+test("Merchant can mark only a notification belonging to this store as read",async()=>{
+ const database=db();
+ const response=await handleOrders(request("/api/stores/store-1/notifications/notice-1/read","POST",{},true),{DB:database});
+ assert.equal(response.status,200);
+ const update=database.calls.find(call=>call.sql.includes("UPDATE user_notifications"));
+ assert.ok(update.sql.includes("EXISTS (SELECT 1 FROM store_orders"));
+ assert.deepEqual(update.values,["notice-1","user-1","store-1"]);
+});
+
+test("Decision workflow preserves legacy stock reservations and customer account privacy",()=>{
+ assert.match(orderDecisionsMigration,/CREATE TABLE store_order_stock_reservations/);
+ assert.match(orderDecisionsMigration,/trg_order_decision_reserve_stock/);
+ assert.match(orderDecisionsMigration,/trg_order_decision_restore_stock/);
+ assert.match(orderDecisionsMigration,/trg_notify_customer_order_decision/);
+ assert.match(orderDecisionsMigration,/customer_decision IN \\('pending','accepted','rejected'\\)/);
+ assert.match(orderDecisionsMigration,/payment_reference/);
+ assert.match(customerAccountsMigration,/CREATE TABLE store_customer_accounts/);
+ assert.match(customerAccountsMigration,/CREATE TABLE store_customer_account_sessions/);
+ assert.match(customerAccountsMigration,/UNIQUE \\(store_id,customer_phone_key\\)/);
 });
