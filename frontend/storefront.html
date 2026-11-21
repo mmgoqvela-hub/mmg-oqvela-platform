@@ -260,10 +260,15 @@
         $("addressLabel").textContent = t("address");
         $("fulfillmentLabel").textContent = t("fulfillment");
         $("paymentMethodLabel").textContent = t("paymentMethod");
-        $("senderNameLabel").textContent = t("senderName");
-        $("transactionReferenceLabel").textContent = t("transactionReference");
         $("customerNotesLabel").textContent = t("customerNotes");
         $("placeOrder").textContent = t("placeOrder");
+        $("customerOrdersHeading").textContent=t("customerOrders");
+        $("customerOrdersToggle").textContent=$("customerOrdersPanel").hidden?t("showOrders"):t("hideOrders");
+        $("customerQrHint").textContent=t("qrHint");
+        $("customerRefreshOrders").textContent=t("refreshOrders");
+        $("customerRegisterOpen").textContent=language==="ar"?"إنشاء حساب":"Create account";
+        $("customerLoginOpen").textContent=language==="ar"?"تسجيل الدخول":"Sign in";
+        $("customerLogout").textContent=language==="ar"?"تسجيل الخروج":"Sign out";
         if (storeData) { renderProducts(); renderCart(); }
       }
 
@@ -500,7 +505,7 @@
         $("customerLogout").hidden=customerMode()!=="account";
         $("customerRegisterOpen").hidden=customerMode()==="account";
         $("customerLoginOpen").hidden=customerMode()==="account";
-        if(!token){$("customerOrdersList").textContent=t("qrMissing");$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
+        if(!token){$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
         renderCustomerQr();
         const headers={"X-Customer-Token":token,"Accept":"application/json"};
         const base="/api/public/stores/"+encodeURIComponent(slug)+"/customer/";
