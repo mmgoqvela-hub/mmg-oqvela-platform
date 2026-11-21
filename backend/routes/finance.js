@@ -112,7 +112,7 @@ export async function handleFinance(request,env){
 
   if(resource==="cashbox/sessions"){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
-    if(!hasPermission(access,"finance.cashbox.read"))return json({error:"Cashbox read permission required"},403);
+    if(!hasPermission(access,"finance.cashbox.read")&&!hasPermission(access,"finance.cashbox.manage"))return json({error:"Cashbox read permission required"},403);
     const currency=url.searchParams.get("currency");
     if(currency&&!["USD","SYP"].includes(currency))return json({error:"Invalid currency"},400);
     const rows=await env.DB.prepare(`
