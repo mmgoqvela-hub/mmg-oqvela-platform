@@ -50,8 +50,9 @@ async function publicStore(db,slug){
   return db.prepare(`
     SELECT s.id,s.name,s.slug FROM stores s JOIN accounts a ON a.id=s.account_id
     WHERE s.slug=? AND s.status='active' AND a.status='active'
-      AND EXISTS (SELECT 1 FROM store_subscriptions ss WHERE ss.store_id=s.id
-        AND ss.status='active' AND (ss.expires_at IS NULL OR ss.expires_at>CURRENT_TIMESTAMP))
+      AND EXISTS (SELECT 1 FROM store_subscriptions ss
+        WHERE (ss.store_id=s.id OR (ss.is_trial=1 AND ss.trial_account_id=s.account_id))
+          AND ss.status='active' AND (ss.expires_at IS NULL OR ss.expires_at>CURRENT_TIMESTAMP))
     LIMIT 1
   `).bind(slug).first();
 }
@@ -105,7 +106,7 @@ async function createPublicOrder(request,env,slug){
   const settings=await loadSettings(env.DB,store.id);
   if(fulfillment==="pickup"&&!settings.pickup_enabled)return json({error:"Store pickup is unavailable"},400);
   if(fulfillment==="delivery"&&!settings.delivery_enabled)return json({error:"Delivery is unavailable"},400);
-  if(fulfillment==="delivery"&&!validText(address||"",5,1000))return json({error:"A delivery address is required"},400);
+  if(!validText(address||"",5,1000))return json({error:"A customer address or location is required"},400);
   if(method==="cash_on_delivery"&&!settings.cash_on_delivery_enabled)return json({error:"Cash on delivery is unavailable"},400);
   if(method==="shamcash"&&(!settings.shamcash_enabled||!validText(settings.shamcash_recipient||"",2,160)))
     return json({error:"Sham Cash is not configured for this store"},400);
