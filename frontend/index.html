@@ -38,6 +38,9 @@ html[dir="ltr"] input:not([dir]),html[dir="ltr"] textarea:not([dir]){direction:l
 html[dir="rtl"] input:not([dir]),html[dir="rtl"] textarea:not([dir]){direction:rtl;text-align:right}
 html[dir="ltr"] .admin-form,html[dir="ltr"] .account-card{text-align:left}
 @media(max-width:600px){header{padding:0 4%}.header-actions{gap:8px}.header-label{font-size:11px}}
+body.merchant-mode main{margin:35px auto}
+body.merchant-mode .hero{display:block;max-width:560px}
+body.merchant-mode .auth-card{width:100%}
 header{
   height:76px;
   padding:0 7%;
@@ -1408,6 +1411,15 @@ footer{
   applyLanguage();
 
   const $ = id => document.getElementById(id);
+  const merchantMode = location.pathname === "/merchant" || location.pathname === "/merchant/";
+  if (merchantMode) {
+    document.body.classList.add("merchant-mode");
+    document.querySelector(".header-label").textContent = "بوابة إدارة المتجر";
+    document.querySelector(".hero-copy").classList.add("hidden");
+    $("registerTab").classList.add("hidden");
+    $("formTitle").textContent = "دخول صاحب المتجر";
+    $("formSubtitle").textContent = "سجّل الدخول لإدارة متجرك وطلبات زبائنك";
+  }
 
   let mode = "login";
   const form = $("authForm");
@@ -1424,6 +1436,7 @@ footer{
   }
 
   function setMode(nextMode) {
+    if (merchantMode && nextMode === "register") return;
     mode = nextMode;
     clearMessage();
 
@@ -1607,45 +1620,57 @@ footer{
     $("landing").classList.add("hidden");
     $("dashboard").classList.remove("hidden");
 
-    $("welcomeTitle").textContent =
-      "مرحباً، " + data.user.fullName;
+    $("welcomeTitle").textContent = merchantMode
+      ? "لوحة إدارة المتجر"
+      : "مرحباً، " + data.user.fullName;
 
-    $("userEmail").textContent = data.user.email;
+    $("userEmail").textContent = merchantMode ? data.user.fullName + " · " + data.user.email : data.user.email;
+    if (merchantMode) {
+      $("notificationPanel").classList.add("hidden");
+      $("adminPanel").classList.add("hidden");
+      const eyebrow = document.querySelector("#dashboard .dashboard-top .eyebrow");
+      if (eyebrow) eyebrow.textContent = "إدارة متجرك وطلبات زبائنك";
+    }
 
     const grid = $("accountGrid");
     grid.replaceChildren();
+    const visibleAccounts = merchantMode
+      ? data.accounts.filter(account => data.stores.some(store => store.account_id === account.id))
+      : data.accounts;
 
-    if (!data.accounts.length) {
+    if (!visibleAccounts.length) {
       const card = document.createElement("div");
       card.className = "account-card";
       const title = document.createElement("h3");
-      title.textContent = "لا توجد حسابات متاحة";
+      title.textContent = merchantMode ? "لا توجد متاجر مرتبطة بهذا الحساب" : "لا توجد حسابات متاحة";
       card.append(title);
       grid.append(card);
     }
 
-    for (const account of data.accounts) {
+    for (const account of visibleAccounts) {
       const card = document.createElement("div");
       card.className = "account-card";
-
-      const title = document.createElement("h3");
-      title.textContent = account.name;
-      title.dataset.noTranslate = "true";
-
-      const role = document.createElement("p");
-      role.className = "muted";
-      role.textContent = "الصلاحية: " + localizeCode(account.role);
 
       const stores = data.stores.filter(
         store => store.account_id === account.id
       );
 
-      const count = document.createElement("p");
-      count.className = "muted";
-      count.textContent = "عدد المتاجر: " + formatNumber(stores.length);
+      if (!merchantMode) {
+        const title = document.createElement("h3");
+        title.textContent = account.name;
+        title.dataset.noTranslate = "true";
 
-      card.append(title, role, count);
-      if (["owner", "admin"].includes(account.role)) renderStoreCreator(account, card);
+        const role = document.createElement("p");
+        role.className = "muted";
+        role.textContent = "الصلاحية: " + localizeCode(account.role);
+
+        const count = document.createElement("p");
+        count.className = "muted";
+        count.textContent = "عدد المتاجر: " + formatNumber(stores.length);
+
+        card.append(title, role, count);
+        if (["owner", "admin"].includes(account.role)) renderStoreCreator(account, card);
+      }
 
       for (const store of stores) {
         const line = document.createElement("p");
@@ -1673,7 +1698,7 @@ footer{
     renderFinancePanel(store, card, account.role, storePermissions);
       }
 
-      if (account.role === "owner") {
+      if (!merchantMode && account.role === "owner") {
         const status = document.createElement("p");
         status.className = "muted";
         status.textContent = "جارٍ التحقق من الفترة التجريبية...";
@@ -4998,7 +5023,9 @@ footer{
       }
       applyLanguage();
       renderDashboard(data);
-      await Promise.all([loadNotifications(), loadAdminPanel()]);
+      if (!merchantMode) {
+        await Promise.all([loadNotifications(), loadAdminPanel()]);
+      }
     } catch {
       authenticated = false;
       $("landing").classList.remove("hidden");
