@@ -222,6 +222,7 @@
         $("customerPhoneLabel").textContent = t("customerPhone");
         $("customerEmailLabel").textContent = t("customerEmail");
         $("addressLabel").textContent = t("address");
+        $("fulfillmentLabel").textContent = t("fulfillment");
         $("paymentMethodLabel").textContent = t("paymentMethod");
         $("senderNameLabel").textContent = t("senderName");
         $("transactionReferenceLabel").textContent = t("transactionReference");
@@ -664,6 +665,7 @@
           $("productsHeading").textContent = t("products");
           renderAnnouncements();
           renderCheckoutMethods();
+          updateFulfillmentOptions();
           document.title = data.store.name + " | MMG OQVELA";
           document.body.dataset.template = ["modern","classic","minimal","boutique","tech","market","restaurant","fashion","electronics","beauty","luxury"].includes(data.store.template_key) ? data.store.template_key : "modern";
           const customization = data.store.customization && typeof data.store.customization === "object" ? data.store.customization : {};
