@@ -87,7 +87,7 @@ CREATE TABLE inventory_warehouse_stock (
     product_id TEXT NOT NULL,
     variant_key TEXT NOT NULL DEFAULT '',
     variant_id TEXT,
-    quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    quantity INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (warehouse_id, product_id, variant_key),
     FOREIGN KEY (warehouse_id, store_id)
@@ -150,6 +150,18 @@ BEGIN
       WHERE v.id = NEW.variant_id AND v.product_id = NEW.product_id
         AND v.store_id = NEW.store_id
     ) THEN RAISE(ABORT, 'Inventory variant does not belong to this product and store') END;
+
+
+    SELECT CASE WHEN COALESCE((
+      SELECT quantity FROM inventory_warehouse_stock
+      WHERE warehouse_id = COALESCE(NEW.warehouse_id, (
+        SELECT id FROM inventory_warehouses
+        WHERE store_id = NEW.store_id AND is_default = 1 LIMIT 1
+      ))
+        AND product_id = NEW.product_id
+        AND variant_key = COALESCE(NEW.variant_id, '')
+    ), 0) + NEW.quantity_change < 0
+    THEN RAISE(ABORT, 'Insufficient warehouse stock') END;
 
     SELECT CASE WHEN NEW.reversal_of_id IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM inventory_movements original
