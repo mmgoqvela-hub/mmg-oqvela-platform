@@ -57,7 +57,7 @@ export async function handlePublicStorefront(request, env) {
       env.DB.prepare(`
         SELECT
           p.id, p.category_id, p.name, p.slug, p.description,
-          p.product_type, p.base_price, p.compare_at_price,
+          p.product_type, p.sale_unit, p.base_price, p.compare_at_price,
           p.currency, p.sku, p.is_featured, p.stock_quantity,
           p.track_inventory
         FROM products p
