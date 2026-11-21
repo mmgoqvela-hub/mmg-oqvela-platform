@@ -1,6 +1,8 @@
 import { getAuthenticatedSession, validOrigin } from "../security/authentication.js";
 import { calculateTierPriceMinorUnits, selectPricingTier } from "../finance/tier_pricing.js";
 
+const DEFAULT_REJECTION_REASONS=["المحل مغلق حالياً","المنتج غير متوفر حالياً","تعذر تأمين جميع المنتجات المطلوبة","عنوان الزبون خارج نطاق التوصيل","تعذر التواصل مع الزبون"];
+
 function json(data,status=200){
   return new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"}});
 }
