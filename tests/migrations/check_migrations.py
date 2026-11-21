@@ -450,6 +450,46 @@ def main():
         "a cancelled purchase order cannot be reopened"
     )
 
+    # Currency precision is versioned; unverified SYP cannot be activated.
+    currency_rows = connection.execute(
+        "SELECT currency_code, version, precision_exponent, verification_status FROM currency_precision_versions ORDER BY currency_code"
+    ).fetchall()
+    if currency_rows != [
+        ("SYP", 1, None, "pending"),
+        ("USD", 1, 2, "verified")
+    ]:
+        raise SystemExit(f"Unexpected currency precision registry: {currency_rows}")
+
+    connection.execute(
+        "INSERT INTO store_currency_settings (id,store_id,currency_code,precision_version,is_enabled,is_default_sale_currency) VALUES (?,?,?,?,1,1)",
+        ("currency-usd-default","template-default-store","USD",1)
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO store_currency_settings (id,store_id,currency_code,precision_version) VALUES (?,?,?,?)",
+            ("currency-syp-pending","template-default-store","SYP",1)
+        ),
+        "a store cannot activate a currency with unverified precision"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE currency_precision_versions SET precision_exponent=2, verification_status='verified' WHERE currency_code='SYP' AND version=1"
+        ),
+        "currency precision history cannot be edited in place"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "DELETE FROM currency_precision_versions WHERE currency_code='USD' AND version=1"
+        ),
+        "currency precision history cannot be deleted"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO currency_precision_versions (currency_code,version,precision_exponent,verification_status,valid_from,source_reference) VALUES ('USD',3,2,'verified','2026-11-22','test')"
+        ),
+        "currency precision versions must not skip a version"
+    )
+
     print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
