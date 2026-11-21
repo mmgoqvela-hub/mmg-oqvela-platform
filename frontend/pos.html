@@ -113,7 +113,7 @@
    if(!data.sales?.length){rows.innerHTML='<div class="empty">'+t("noSales")+'</div>';return;}
    for(const sale of data.sales){
     const row=document.createElement("div");row.className="history-row";const info=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("div");
-    title.textContent=sale.sale_number||sale.id;meta.className="history-meta";meta.textContent=[sale.created_at,sale.customer_name||"",statusLabel(sale.status),String(sale.unit_count||0)+" "+t("items")].filter(Boolean).join(" · ");info.append(title,meta);
+    title.textContent=sale.sale_number||sale.id;meta.className="history-meta";meta.textContent=[sale.created_at,sale.customer_name||"",statusLabel(sale.status),String(sale.item_count||0)+" "+t("items")+(Number(sale.piece_count||0)?" · "+sale.piece_count+" "+(lang==="ar"?"قطعة":"pcs"):"")+(Number(sale.weight_kg||0)?" · "+Number(sale.weight_kg).toFixed(2)+" kg":"")].filter(Boolean).join(" · ");info.append(title,meta);
     const right=document.createElement("div");right.style.display="grid";right.style.gap="5px";const amount=document.createElement("strong");amount.textContent=money(sale.total,sale.currency);
     const button=document.createElement("button");button.textContent=t("view");button.addEventListener("click",()=>openHistoricalSale(sale.id));right.append(amount,button);row.append(info,right);rows.append(row);
    }
