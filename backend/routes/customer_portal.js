@@ -71,8 +71,9 @@ async function readIdentity(request,db,storeId){
     LIMIT 1
   `).bind(storeId,hash).first();
 }
-async function enforceCustomerAuthLimit(db,storeId,phoneKey){
-  const phoneHash=await sha256(phoneKey);
+async function enforceCustomerAuthLimit(db,storeId,phoneKey,request){
+  const clientIp=request.headers.get("CF-Connecting-IP")||"unknown";
+  const phoneHash=await sha256(phoneKey+"|"+clientIp);
   const row=await db.prepare(`
     INSERT INTO store_customer_auth_rate_limits(store_id,phone_hash,window_started_at,attempt_count)
     VALUES(?,?,CURRENT_TIMESTAMP,1)
@@ -113,7 +114,7 @@ async function handleCustomerAccount(request,env,store,action){
   const password=typeof b.password==="string"?b.password:"";
   if(phoneKey.replace(/\D/g,"").length<6||phoneKey.length>30||password.length<10||password.length>128)
     return json({error:"Enter a valid phone number and a password of at least 10 characters"},400);
-  if(!await enforceCustomerAuthLimit(env.DB,store.id,phoneKey))
+  if(!await enforceCustomerAuthLimit(env.DB,store.id,phoneKey,request))
     return json({error:"Too many attempts. Try again in 10 minutes."},429);
 
   if(action==="login"){
@@ -183,12 +184,28 @@ async function handleCustomerAccount(request,env,store,action){
 export async function handlePublicCustomerPortal(request,env){
   const url=new URL(request.url);
   const accountMatch=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/customer\/account\/(register|login|logout)$/);
+  const qrRotateMatch=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/customer\/qr\/rotate$/);
   const match=url.pathname.match(/^\/api\/public\/stores\/([a-z0-9-]+)\/customer\/(orders|notifications)(?:\/([^/]+)\/read)?$/);
-  if(!match&&!accountMatch)return null;
-  const slug=(match||accountMatch)[1];
+  if(!match&&!accountMatch&&!qrRotateMatch)return null;
+  const slug=(match||accountMatch||qrRotateMatch)[1];
   const store=await activeStore(env.DB,slug);
   if(!store)return json({error:"Store is unavailable"},404);
   if(accountMatch)return handleCustomerAccount(request,env,store,accountMatch[2]);
+  if(qrRotateMatch){
+    if(request.method!=="POST")return json({error:"Method not allowed"},405);
+    if(!validOrigin(request))return json({error:"Invalid origin"},403);
+    const identity=await readIdentity(request,env.DB,store.id);
+    if(!identity)return json({error:"Customer access token is invalid or has been revoked"},401);
+    if(identity.is_account)return json({error:"Registered customers do not need a QR code"},409);
+    const token=randomHex(32),hash=await sha256(token);
+    const result=await env.DB.prepare(`
+      UPDATE store_customer_identities
+      SET access_token_hash=?,last_seen_at=CURRENT_TIMESTAMP
+      WHERE id=? AND store_id=? AND revoked_at IS NULL
+    `).bind(hash,identity.id,store.id).run();
+    if(!result.meta?.changes)return json({error:"Unable to rotate QR code"},409);
+    return json({status:"ok",customer_access_token:token,customer_mode:"guest"});
+  }
   const [, ,resource,notificationId]=match;
   if(!["GET","POST"].includes(request.method))return json({error:"Method not allowed"},405);
   if(request.method==="POST"&&!validOrigin(request))return json({error:"Invalid origin"},403);
