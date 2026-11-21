@@ -12,7 +12,7 @@ function makeDb(options={}){
    if(sql.includes("FROM auth_sessions"))return {session_id:"s-1",user_id:"cashier-1",user_status:"active"};
    if(sql.includes("GROUP_CONCAT"))return options.access??{store_status:"active",account_status:"active",account_role:"owner",permissions:""};
    if(sql.includes("SELECT id,return_number,refund_total,currency,status FROM pos_sale_returns"))return options.replay??null;
-   if(sql.includes("SELECT id,sale_number,currency,total,status,warehouse_id FROM pos_sales"))return options.sale??{id:"sale-1",sale_number:"POS-1",currency:"USD",subtotal:30,total:30,status:"posted",warehouse_id:"wh-1"};
+   if(sql.includes("SELECT id,sale_number,currency,subtotal,total,status,warehouse_id FROM pos_sales"))return options.sale??{id:"sale-1",sale_number:"POS-1",currency:"USD",subtotal:30,total:30,status:"posted",warehouse_id:"wh-1"};
    if(sql.includes("SELECT COALESCE(SUM(refund_total)"))return options.refunded??{amount:0};
    if(sql.includes("SELECT COALESCE(SUM(ri.quantity)"))return options.previously??{quantity:0};
    if(sql.includes("FROM inventory_movements WHERE store_id"))return Object.prototype.hasOwnProperty.call(options,"original")?options.original:{id:"movement-1",warehouse_id:"wh-1"};
@@ -20,7 +20,7 @@ function makeDb(options={}){
    return null;
   },
   async all(){
-   if(sql.includes("SELECT id,product_id,variant_id,quantity,currency FROM pos_sale_items"))
+   if(sql.includes("SELECT id,product_id,variant_id,quantity,line_total,currency FROM pos_sale_items"))
     return {results:options.items??[{id:"sale-item-1",product_id:"p-1",variant_id:null,quantity:3,line_total:30,currency:"USD"}]};
    return {results:[]};
   },
