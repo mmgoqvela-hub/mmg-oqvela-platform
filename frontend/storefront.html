@@ -162,7 +162,7 @@
           <div id="customerOrdersPanel" hidden>
             <p class="cart-note" id="customerQrHint">احتفظ برمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.</p>
             <div id="customerQr" class="customer-qr" aria-label="رمز استعادة سجل الزبون"></div>
-            <button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button>
+            <div class="toolbar"><button class="lang" id="customerQrDownload" type="button">حفظ رمز QR في الهاتف</button><button class="lang" id="customerRefreshOrders" type="button">تحديث الطلبات</button></div>
             <div id="customerNotifications" aria-live="polite"></div>
             <div id="customerOrdersList"></div>
           </div>
@@ -420,8 +420,9 @@
       function customerToken(){return localStorage.getItem(customerTokenStorageKey)||"";}
       function renderCustomerQr(){
         const token=customerToken(),container=$("customerQr");
-        container.replaceChildren();
         if(!token||typeof QRCode==="undefined")return;
+        if(container.dataset.token===token&&container.childElementCount)return;
+        container.replaceChildren();container.dataset.token=token;
         const recoveryUrl=location.origin+location.pathname+"#customer="+token;
         new QRCode(container,{text:recoveryUrl,width:190,height:190,colorDark:"#111827",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
       }
@@ -854,6 +855,13 @@
         if(!panel.hidden)loadCustomerPortal().catch(()=>{});
       });
       $("customerRefreshOrders").addEventListener("click",()=>loadCustomerPortal().catch(()=>{}));
+      $("customerQrDownload").addEventListener("click",()=>{
+        const canvas=$("customerQr").querySelector("canvas");
+        const image=$("customerQr").querySelector("img");
+        const url=canvas?canvas.toDataURL("image/png"):image?.src;
+        if(!url)return;
+        const link=document.createElement("a");link.href=url;link.download="mmg-customer-recovery-qr.png";link.click();
+      });
       $("languageToggle").addEventListener("click",() => setLanguage(language === "ar" ? "en" : "ar"));
       $("search").addEventListener("input",renderProducts);
       $("checkoutStart").addEventListener("click",() => { renderCheckoutMethods(); $("checkoutForm").hidden = false; $("checkoutResult").hidden = true; $("customerName").focus(); });
