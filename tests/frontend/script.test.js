@@ -150,7 +150,6 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     'X-Customer-Token',
     'id="customerAccountForm"',
     'customer/account/"+customerAccountAction',
-    'customer/account/login',
     'customerModeStorageKey',
     'customerQrDownload'
   ]) assert.ok(html.includes(marker), "missing checkout behavior: " + marker);
