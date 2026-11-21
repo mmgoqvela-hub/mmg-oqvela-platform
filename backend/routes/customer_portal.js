@@ -7,7 +7,7 @@ function json(data,status=200){
     "Pragma":"no-cache"
   }});
 }
-function normalizeCustomerPhone(value){return String(value||"").replace(/[\s()-]/g,"");}
+function normalizeCustomerPhone(value){return String(value||"").replace(/\D/g,"");}
 function randomHex(bytes=32){return Array.from(crypto.getRandomValues(new Uint8Array(bytes)),b=>b.toString(16).padStart(2,"0")).join("");}
 async function sha256(value){
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
