@@ -261,8 +261,8 @@ async function loadStoreReport(db,storeId,period){
       ORDER BY report_date DESC,currency
     `).bind(storeId,modifier).all(),
     db.prepare(`
-      SELECT COUNT(*) AS costed_lines,
-        COUNT(DISTINCT order_id) AS costed_orders,
+      SELECT SUM(CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL THEN 1 ELSE 0 END) AS costed_lines,
+        COUNT(DISTINCT CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL THEN order_id END) AS costed_orders,
         SUM(CASE WHEN pricing_mode!='cost_plus_margin' OR cost_minor_units IS NULL THEN 1 ELSE 0 END) AS uncosted_lines,
         ROUND(SUM(CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL THEN line_total ELSE 0 END),2) AS costed_revenue,
         ROUND(SUM(CASE WHEN pricing_mode='cost_plus_margin' AND cost_minor_units IS NOT NULL
