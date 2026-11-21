@@ -66,12 +66,12 @@ export async function handlePosReturns(request,env){
   const replay=await env.DB.prepare("SELECT id,return_number,refund_total,currency,status FROM pos_sale_returns WHERE store_id=? AND idempotency_key=?")
     .bind(storeId,key).first();
   if(replay)return json({status:"ok",return:replay,replayed:true});
-  const sale=await env.DB.prepare("SELECT id,sale_number,currency,total,status,warehouse_id FROM pos_sales WHERE id=? AND store_id=? AND status IN ('posted','partially_refunded')")
+  const sale=await env.DB.prepare("SELECT id,sale_number,currency,subtotal,total,status,warehouse_id FROM pos_sales WHERE id=? AND store_id=? AND status IN ('posted','partially_refunded')")
     .bind(saleId,storeId).first();
   if(!sale)return json({error:"Sale not found or already fully refunded"},404);
   if(!Array.isArray(b.items)||b.items.length<1||b.items.length>50)return json({error:"Provide at least one returned sale item"},400);
   const refundTotal=Number(b.refund_total);
-  if(!validMoney(refundTotal))return json({error:"Invalid refund total"},400);
+  if(!validMoney(refundTotal)||refundTotal<=0)return json({error:"Refund total must be greater than zero"},400);
   if(!Array.isArray(b.refund_payments)||(refundTotal>0&&b.refund_payments.length<1)||b.refund_payments.length>5)
     return json({error:"Refund payment lines must reconcile with the refund total"},400);
   let paid=0;
@@ -86,11 +86,13 @@ export async function handlePosReturns(request,env){
   if(Math.round((Number(refunded?.amount||0)+refundTotal)*100)>Math.round(Number(sale.total)*100))
     return json({error:"Cumulative refunds cannot exceed the original sale total"},409);
   const saleItems=await env.DB.prepare(`
-    SELECT id,product_id,variant_id,quantity,currency FROM pos_sale_items
+    SELECT id,product_id,variant_id,quantity,line_total,currency FROM pos_sale_items
     WHERE sale_id=? AND store_id=?
   `).bind(saleId,storeId).all();
   const itemMap=new Map((saleItems.results||[]).map(item=>[item.id,item]));
-  const unique=new Set(),statements=[];
+  const unique=new Set(),statements=[];let returnValueLimit=0;
+  if(refundTotal>Math.round(returnValueLimit*100)/100+0.000001)
+    return json({error:"Refund exceeds the value of the returned sale items"},409);
   const returnId=crypto.randomUUID();
   const returnNumber="RET-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,6).toUpperCase();
   statements.push(env.DB.prepare(`
@@ -106,6 +108,7 @@ export async function handlePosReturns(request,env){
     if(!item||unique.has(saleItemId)||!Number.isInteger(quantity)||quantity<1||quantity>999)
       return json({error:"Invalid or duplicate returned sale item"},400);
     unique.add(saleItemId);
+    returnValueLimit+=Number(item.line_total)*quantity/Number(item.quantity)*(Number(sale.subtotal)>0?Number(sale.total)/Number(sale.subtotal):0);
     const previously=await env.DB.prepare(`
       SELECT COALESCE(SUM(ri.quantity),0) AS quantity
       FROM pos_sale_return_items ri JOIN pos_sale_returns r
