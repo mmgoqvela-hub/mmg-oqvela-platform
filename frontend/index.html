@@ -3289,6 +3289,15 @@ footer{
               line.textContent=item.currency+": "+formatNumber(item.paid_revenue)+" — "+formatNumber(item.paid_orders)+" طلب مدفوع";
               reportContent.append(line);
             }
+            const profitTitle=document.createElement("h5");profitTitle.textContent="هامش الربح الإجمالي التقديري (للبنود ذات التكلفة المسجلة)";reportContent.append(profitTitle);
+            const profitNote=document.createElement("p");profitNote.className="muted";
+            profitNote.textContent="لا يشمل البنود ذات التسعير اليدوي أو التي لا تملك لقطة تكلفة محفوظة؛ لذلك لا يمثل صافي ربح المتجر.";reportContent.append(profitNote);
+            const profitMetric=document.createElement("article");profitMetric.className="account-card";
+            const profitLabel=document.createElement("p");profitLabel.className="muted";profitLabel.textContent="الربح الإجمالي التقديري — USD";
+            const profitValue=document.createElement("strong");profitValue.textContent=formatNumber(report.profit?.estimated_gross_profit||0);
+            const profitCoverage=document.createElement("p");profitCoverage.className="muted";
+            profitCoverage.textContent="إيراد مغطى بالتكلفة: "+formatNumber(report.profit?.costed_revenue||0)+" USD — بنود دون تكلفة مسجلة: "+formatNumber(report.profit?.uncosted_lines||0);
+            profitMetric.append(profitLabel,profitValue,profitCoverage);reportContent.append(profitMetric);
             const dailyTitle=document.createElement("h5");dailyTitle.textContent="الإيراد اليومي حسب العملة";reportContent.append(dailyTitle);
             if(!report.daily_revenue.length){const empty=document.createElement("p");empty.className="muted";empty.textContent="لا توجد حركة إيرادات يومية.";reportContent.append(empty);}
             for(const day of report.daily_revenue){
