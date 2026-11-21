@@ -106,6 +106,17 @@ CREATE TABLE product_tier_margin_overrides (
       REFERENCES store_pricing_tiers(store_id, tier_code) ON DELETE RESTRICT
 );
 
+
+-- SQLite treats NULL values as distinct in ordinary UNIQUE constraints;
+-- these partial indexes enforce one product-level and one variant-level override.
+CREATE UNIQUE INDEX idx_product_tier_override_product
+  ON product_tier_margin_overrides(store_id, product_id, tier_code)
+  WHERE variant_id IS NULL;
+
+CREATE UNIQUE INDEX idx_product_tier_override_variant
+  ON product_tier_margin_overrides(store_id, product_id, variant_id, tier_code)
+  WHERE variant_id IS NOT NULL;
+
 CREATE TRIGGER trg_product_tier_override_variant_matches_product
 BEFORE INSERT ON product_tier_margin_overrides
 WHEN NEW.variant_id IS NOT NULL AND NOT EXISTS (
