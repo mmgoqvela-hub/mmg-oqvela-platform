@@ -75,7 +75,7 @@ async function loadNotifications(){
   const d=await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/notifications");
   const rows=d.notifications||[];
   $("notificationCount").textContent=d.unread_count?("("+d.unread_count+")"):"";
-  $("notificationsList").innerHTML=rows.length?rows.map(n=>'<article class="item"><strong>'+esc(n.title)+'</strong><small>'+esc(n.created_at)+'</small><p>'+esc(n.message)+'</p>'+(n.read_at?"":'<button data-read-notification="'+esc(n.id)+'">تحديد كمقروء</button>')+'</article>').join(""):"لا توجد إشعارات.";
+  $("notificationsList").innerHTML=rows.length?rows.map(n=>'<article class="item"><strong>'+esc(n.title)+'</strong><small>'+esc(n.created_at)+'</small><p>'+esc(n.message)+'</p>'+(n.entity_id?'<button data-open-order="'+esc(n.entity_id)+'">عرض الطلب</button>':"")+(n.read_at?"":'<button data-read-notification="'+esc(n.id)+'">تحديد كمقروء</button>')+'</article>').join(""):"لا توجد إشعارات.";
  }catch(e){$("notificationsList").textContent=e.message}
 }
 let merchantPollingTimer=null;
@@ -101,6 +101,8 @@ document.addEventListener("change",e=>{
 document.addEventListener("click",async e=>{
  const refresh=e.target.closest("[data-refresh]");
  if(refresh){({orders:loadOrders,notifications:loadNotifications,products:loadProducts,inventory:async()=>{await loadProducts();await loadInventory()},customers:loadCustomers})[refresh.dataset.refresh]();return;}
+ const openOrder=e.target.closest("[data-open-order]");
+ if(openOrder){document.querySelector('[data-tab="orders"]')?.click();const card=document.querySelector('[data-order-card="'+CSS.escape(openOrder.dataset.openOrder)+'"]');card?.scrollIntoView({behavior:"smooth",block:"center"});return;}
  const read=e.target.closest("[data-read-notification]");
  if(read){read.disabled=true;try{await api("/api/stores/"+encodeURIComponent(activeStore.id)+"/notifications/"+encodeURIComponent(read.dataset.readNotification)+"/read",{method:"POST",body:"{}"});await loadNotifications()}catch(err){message($("appMessage"),err.message,true);read.disabled=false}return;}
  const decision=e.target.closest("[data-decision]");
