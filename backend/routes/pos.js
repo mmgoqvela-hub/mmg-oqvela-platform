@@ -15,6 +15,7 @@ async function readBody(request){
 }
 function validText(value,min,max){return typeof value==="string"&&value.trim().length>=min&&value.trim().length<=max;}
 function moneyMinor(value){return Math.round(Number(value)*100);}
+function validMoney(value){const amount=Number(value);return Number.isFinite(amount)&&amount>=0&&Math.abs(amount*100-Math.round(amount*100))<1e-7;}
 async function getAccess(db,storeId,userId){
   return db.prepare(`
     SELECT s.id,s.status AS store_status,a.status AS account_status,au.role AS account_role,
@@ -160,7 +161,7 @@ async function openCashSession(request,env,storeId,session,access){
   const opening=Number(b.opening_cash_amount);
   const notes=b.opening_notes==null?"":String(b.opening_notes);
   if(!["USD","SYP"].includes(currency)||!Number.isFinite(opening)||opening<0||opening>1e12||
-    !Number.isInteger(moneyMinor(opening))||notes.length>500)
+    !validMoney(opening)||notes.length>500)
     return json({error:"Invalid cash session details"},400);
   const warehouseId=typeof b.warehouse_id==="string"&&b.warehouse_id?b.warehouse_id:null;
   const warehouse=warehouseId
@@ -183,7 +184,7 @@ async function closeCashSession(request,env,storeId,session,access,sessionId){
   const parsed=await readBody(request);if(parsed.error)return json({error:parsed.error},parsed.status);
   const counted=Number(parsed.body.closing_cash_amount);
   const notes=parsed.body.closing_notes==null?"":String(parsed.body.closing_notes);
-  if(!Number.isFinite(counted)||counted<0||counted>1e12||!Number.isInteger(moneyMinor(counted))||notes.length>500)
+  if(!Number.isFinite(counted)||counted<0||counted>1e12||!validMoney(counted)||notes.length>500)
     return json({error:"Invalid closing cash amount"},400);
   const row=await env.DB.prepare("SELECT id,currency,opening_cash_amount FROM pos_cash_sessions WHERE id=? AND store_id=? AND status='open'").bind(sessionId,storeId).first();
   if(!row)return json({error:"Open cash session not found"},404);
@@ -194,15 +195,21 @@ async function closeCashSession(request,env,storeId,session,access,sessionId){
   `).bind(sessionId,storeId).first();
   const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0))*100)/100;
   const difference=Math.round((counted-expected)*100)/100;
-  const result=await env.DB.prepare(`
-    UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
-      cash_difference=?,closing_notes=?,closed_by=?,closed_at=CURRENT_TIMESTAMP
-    WHERE id=? AND store_id=? AND status='open'
-  `).bind(counted,expected,difference,notes.trim()||null,session.user_id,sessionId,storeId).run();
-  if(!(result.meta?.changes>0))return json({error:"Cash session was already closed"},409);
-  await env.DB.prepare(`INSERT INTO pos_cash_session_events(id,session_id,store_id,actor_user_id,event_type,details_json)
-    VALUES(?,?,?,?,'closed',?)`).bind(crypto.randomUUID(),sessionId,storeId,session.user_id,
-      JSON.stringify({closing_cash_amount:counted,expected_cash_amount:expected,cash_difference:difference})).run();
+  const closeStatements=[
+    env.DB.prepare(`
+      UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
+        cash_difference=?,closing_notes=?,closed_by=?,closed_at=CURRENT_TIMESTAMP
+      WHERE id=? AND store_id=? AND status='open'
+    `).bind(counted,expected,difference,notes.trim()||null,session.user_id,sessionId,storeId),
+    env.DB.prepare(`INSERT INTO pos_cash_session_events(id,session_id,store_id,actor_user_id,event_type,details_json)
+      SELECT ?,?,?,?,'closed',? WHERE EXISTS(
+        SELECT 1 FROM pos_cash_sessions WHERE id=? AND store_id=? AND status='closed' AND closed_by=?
+      )`).bind(crypto.randomUUID(),sessionId,storeId,session.user_id,
+        JSON.stringify({closing_cash_amount:counted,expected_cash_amount:expected,cash_difference:difference}),
+        sessionId,storeId,session.user_id)
+  ];
+  const closeResults=await env.DB.batch(closeStatements);
+  if(!(closeResults[0]?.meta?.changes>0))return json({error:"Cash session was already closed"},409);
   return json({status:"ok",session:{id:sessionId,currency:row.currency,closing_cash_amount:counted,
     expected_cash_amount:expected,cash_difference:difference,status:"closed"}});
 }
@@ -225,7 +232,7 @@ async function createSale(request,env,storeId,session,access){
   const discountReason=typeof b.discount_reason==="string"?b.discount_reason.trim():"";
   if(!Number.isFinite(discount)||discount<0||discount>quote.total||!Number.isInteger(moneyMinor(discount)))
     return json({error:"Invalid discount amount"},400);
-  if(discount>0&&(!hasPermission(access,"pos.price_override")||!validText(discountReason,3,300)))
+  if(discount>0&&(!hasPermission(access,"pos.sale.discount")||!validText(discountReason,3,300)))
     return json({error:"Discount permission and a reason of at least 3 characters are required"},403);
   if(discount===0&&discountReason)return json({error:"A discount reason is only accepted with a discount"},400);
   const total=Math.round((quote.total-discount)*100)/100;
@@ -236,7 +243,7 @@ async function createSale(request,env,storeId,session,access){
   for(const payment of payments){
     const amount=Number(payment?.amount);
     if(!["cash","card","digital","shamcash"].includes(payment?.payment_method)||
-      !Number.isFinite(amount)||amount<=0||!Number.isInteger(moneyMinor(amount)))
+      !Number.isFinite(amount)||amount<=0||!validMoney(amount))
       return json({error:"Invalid payment line"},400);
     if(payment.payment_method==="shamcash"){
       if(!validText(payment.transaction_reference,3,120)||!validText(payment.sender_name,2,120))
@@ -255,7 +262,7 @@ async function createSale(request,env,storeId,session,access){
   const statements=[env.DB.prepare(`
     INSERT INTO pos_sales(id,store_id,cash_session_id,warehouse_id,sale_number,idempotency_key,
       customer_name,customer_phone,currency,subtotal,discount_amount,discount_reason,total,status,payment_status,created_by)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'posted','paid',?)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'draft','paid',?)
   `).bind(id,storeId,cashSession.id,cashSession.warehouse_id,saleNumber,key,
     customerName||null,customerPhone||null,quote.currency,quote.total,discount,discount?discountReason:null,total,session.user_id)];
   for(const item of quote.lines){
@@ -277,6 +284,9 @@ async function createSale(request,env,storeId,session,access){
       quote.currency,payment.payment_method==="shamcash"?payment.transaction_reference.trim():null,
       payment.payment_method==="shamcash"?payment.sender_name.trim():null,session.user_id));
   }
+  statements.push(env.DB.prepare(
+    "UPDATE pos_sales SET status='posted' WHERE id=? AND store_id=? AND status='draft'"
+  ).bind(id,storeId));
   try{await env.DB.batch(statements);}
   catch(error){
     const replay=await env.DB.prepare("SELECT id,sale_number,total,currency,status FROM pos_sales WHERE store_id=? AND idempotency_key=?")
