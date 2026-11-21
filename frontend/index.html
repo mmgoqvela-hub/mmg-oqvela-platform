@@ -4888,9 +4888,11 @@ footer{
       ]);
 
       panel.classList.remove("hidden");
+      return true;
     } catch (error) {
       // المستخدم غير المدير لا يرى لوحة الإدارة.
       panel.classList.add("hidden");
+      return false;
     }
   }
 
@@ -5024,7 +5026,12 @@ footer{
       applyLanguage();
       renderDashboard(data);
       if (!merchantMode) {
-        await Promise.all([loadNotifications(), loadAdminPanel()]);
+        const isPlatformAdmin = await loadAdminPanel();
+        if (!isPlatformAdmin && data.stores.length) {
+          window.location.replace("/merchant");
+          return;
+        }
+        await loadNotifications();
       }
     } catch {
       authenticated = false;
