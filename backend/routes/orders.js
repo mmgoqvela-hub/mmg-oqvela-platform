@@ -14,7 +14,7 @@ async function readBody(request,max=20000){
   }catch{return {error:"Invalid JSON",status:400};}
 }
 function validText(value,min,max){return typeof value==="string"&&value.trim().length>=min&&value.trim().length<=max;}
-function normalizeCustomerPhone(value){return String(value||"").replace(/[\\s()-]/g,"");}
+function normalizeCustomerPhone(value){return String(value||"").replace(/[\s()-]/g,"");}
 async function hashCustomerToken(token){
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
   return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
@@ -129,12 +129,22 @@ async function createPublicOrder(request,env,slug){
   if(suppliedCustomerToken){
     if(!/^[a-f0-9]{64}$/i.test(suppliedCustomerToken))return json({error:"Invalid customer QR code"},401);
     const tokenHash=await hashCustomerToken(suppliedCustomerToken);
-    const identity=await env.DB.prepare(`
+    let identity=await env.DB.prepare(`
       SELECT id,customer_phone_key FROM store_customer_identities
       WHERE store_id=? AND access_token_hash=? AND revoked_at IS NULL LIMIT 1
     `).bind(store.id,tokenHash).first();
+    if(!identity){
+      identity=await env.DB.prepare(`
+        SELECT i.id,i.customer_phone_key
+        FROM store_customer_account_sessions cs
+        JOIN store_customer_accounts a ON a.id=cs.account_id AND a.store_id=?
+        JOIN store_customer_identities i ON i.id=a.customer_identity_id AND i.store_id=a.store_id
+        WHERE cs.token_hash=? AND cs.revoked_at IS NULL AND cs.expires_at>CURRENT_TIMESTAMP
+        LIMIT 1
+      `).bind(store.id,tokenHash).first();
+    }
     if(!identity||identity.customer_phone_key!==phoneKey)
-      return json({error:"The saved customer QR does not match this phone number. Use the correct QR or start a new guest identity."},401);
+      return json({error:"The saved customer identity does not match this phone number. Use the correct account or guest QR."},401);
     customerIdentityId=identity.id;
   }else{
     customerAccessToken=createCustomerToken();
