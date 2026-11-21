@@ -91,6 +91,11 @@ export default {
     }
 
     if ((url.pathname === "/merchant" || url.pathname === "/merchant/") && request.method === "GET") {
+      return Response.redirect(new URL("/merchant/omaya", request.url).toString(), 302);
+    }
+
+    const merchantPath = url.pathname.match(/^\/merchant\/([a-z0-9-]+)\/?$/i);
+    if (merchantPath && request.method === "GET") {
       const merchantUrl = new URL("/merchant.html", request.url);
       return env.ASSETS.fetch(new Request(merchantUrl.toString(), {
         method: "GET",
