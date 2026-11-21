@@ -136,3 +136,21 @@ test("Customer account logout revokes the current session token",async()=>{
   assert.equal(response.status,200);
   assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_customer_account_sessions")&&call.values[0].length===64));
 });
+
+
+test("Guest can rotate a lost QR code and the previous token is replaced",async()=>{
+  const database=db();
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/qr/rotate","POST",{}),{DB:database});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.customer_mode,"guest");
+  assert.equal(result.customer_access_token.length,64);
+  assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_customer_identities SET access_token_hash")));
+});
+
+test("Registered customer sessions cannot be rotated as guest QR codes",async()=>{
+  const database=db({identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer",is_account:1}});
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/qr/rotate","POST",{}),{DB:database});
+  assert.equal(response.status,409);
+  assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_customer_identities SET access_token_hash")),false);
+});
