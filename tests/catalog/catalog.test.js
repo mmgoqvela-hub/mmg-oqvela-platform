@@ -608,3 +608,19 @@ test("Kilogram inventory movements keep gram base units in the append-only ledge
   assert.equal(movement.values[5],500);
   assert.equal(movement.values[9],"g");
 });
+
+test("Kilogram inventory rejects quantities outside 50 gram increments", async () => {
+  const openingDb=createDb();
+  const opening=await handleCatalog(makeRequest("products","POST",{
+    name:"Fine pastry",base_price:10,currency:"USD",sale_unit:"kg",stock_quantity:25
+  }),{DB:openingDb});
+  assert.equal(opening.status,400);
+  assert.equal(openingDb.calls.length,0);
+
+  const movementDb=createDb({product:{id:"product-1",track_inventory:1,stock_quantity:1000,sale_unit:"kg"}});
+  const movement=await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"purchase",quantity_change:25
+  }),{DB:movementDb});
+  assert.equal(movement.status,400);
+  assert.equal(movementDb.calls.length,0);
+});
