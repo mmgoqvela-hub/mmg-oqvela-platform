@@ -347,16 +347,59 @@ export async function handleOrders(request,env){
   const settingsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/settings$/);
   const reportsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/reports$/);
   const customersMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/customers(?:\/([^/]+))?$/);
+  const notificationsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/notifications(?:\/([^/]+)\/read)?$/);
   const orderMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([^/]+))?$/);
-  if(!settingsMatch&&!orderMatch&&!reportsMatch&&!customersMatch)return null;
+  if(!settingsMatch&&!orderMatch&&!reportsMatch&&!customersMatch&&!notificationsMatch)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   const session=await getAuthenticatedSession(request,env.DB);
   if(!session)return json({error:"Authentication required"},401);
   let storeId;
-  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch||customersMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
+  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch||customersMatch||notificationsMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
   const access=await getAccess(env.DB,storeId,session.user_id);
   if(!access)return json({error:"Store not found"},404);
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
+
+  if(notificationsMatch){
+    if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
+    if(notificationsMatch[2]){
+      if(request.method!=="POST")return json({error:"Method not allowed"},405);
+      let notificationId;
+      try{notificationId=decodeURIComponent(notificationsMatch[2]);}catch{return json({error:"Invalid notification ID"},400);}
+      const result=await env.DB.prepare(`
+        UPDATE user_notifications SET read_at=CURRENT_TIMESTAMP
+        WHERE id=? AND user_id=? AND notification_type='store_order'
+          AND EXISTS (SELECT 1 FROM store_orders o
+            WHERE o.id=user_notifications.entity_id AND o.store_id=?)
+          AND read_at IS NULL
+      `).bind(notificationId,session.user_id,storeId).run();
+      if(!result.meta?.changes){
+        const exists=await env.DB.prepare(`
+          SELECT n.id FROM user_notifications n
+          JOIN store_orders o ON o.id=n.entity_id AND o.store_id=?
+          WHERE n.id=? AND n.user_id=? AND n.notification_type='store_order'
+        `).bind(storeId,notificationId,session.user_id).first();
+        if(!exists)return json({error:"Notification not found"},404);
+      }
+      return json({status:"ok"});
+    }
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    const [items,count]=await Promise.all([
+      env.DB.prepare(`
+        SELECT n.id,n.notification_type,n.title,n.message,n.entity_type,n.entity_id,n.read_at,n.created_at
+        FROM user_notifications n
+        JOIN store_orders o ON o.id=n.entity_id AND o.store_id=?
+        WHERE n.user_id=? AND n.entity_type='store_order'
+        ORDER BY n.created_at DESC,n.id DESC LIMIT 50
+      `).bind(storeId,session.user_id).all(),
+      env.DB.prepare(`
+        SELECT COUNT(*) AS unread_count
+        FROM user_notifications n
+        JOIN store_orders o ON o.id=n.entity_id AND o.store_id=?
+        WHERE n.user_id=? AND n.entity_type='store_order' AND n.read_at IS NULL
+      `).bind(storeId,session.user_id).first()
+    ]);
+    return json({status:"ok",notifications:items.results||[],unread_count:count?.unread_count||0});
+  }
 
   if(customersMatch){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
