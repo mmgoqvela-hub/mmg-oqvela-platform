@@ -484,3 +484,35 @@ test("Service request status rejects unsupported values",async()=>{
  assert.equal(response.status,400);
  assert.equal(db.calls.some(call=>call.sql.includes("UPDATE platform_service_requests")),false);
 });
+
+
+test("Store handover preview is restricted to super administrators",async()=>{
+ const db=createDb({session:SESSION,admin:NORMAL_ADMIN});
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/stores/store-1/handover-preview"),{DB:db});
+ assert.equal(response.status,403);
+});
+
+test("Store handover preview reports store-scoped data without changing records",async()=>{
+ const db=createDb({session:SESSION,admin:SUPER_ADMIN});
+ const originalPrepare=db.prepare.bind(db);
+ db.prepare=(sql)=>{
+   if(sql.includes("FROM stores s")) return {bind:()=>({first:async()=>({
+     id:"store-1",name:"Demo Store",slug:"demo",status:"active",account_id:"account-1",
+     account_name:"Demo Account",account_status:"active",owner_user_id:"owner-1",
+     owner_name:"Store Owner",owner_email:"owner@example.test"
+   })})};
+   if(sql.includes("FROM store_subscriptions")) return {bind:()=>({all:async()=>({results:[{id:"sub-1",status:"active",is_trial:1}]})})};
+   if(sql.includes("sqlite_master")) return {all:async()=>({results:[{name:"products"},{name:"store_orders"}]})};
+   if(sql.includes("pragma_table_info")) return {bind:()=>({all:async()=>({results:[{name:"id"},{name:"store_id"}]})})};
+   if(sql.includes("COUNT(*) AS total FROM")) return {bind:()=>({first:async()=>({total:2})})};
+   return originalPrepare(sql);
+ };
+ const response=await handleAdmin(makeAdminPathRequest("/api/admin/stores/store-1/handover-preview"),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.preview.store.owner_email,"owner@example.test");
+ assert.equal(result.preview.total_store_scoped_records,4);
+ assert.equal(result.preview.preview_only,true);
+ assert.equal(result.preview.reset_available,false);
+ assert.equal(db.calls.some(call=>call.sql?.startsWith("DELETE")||call.sql?.startsWith("UPDATE")),false);
+});
