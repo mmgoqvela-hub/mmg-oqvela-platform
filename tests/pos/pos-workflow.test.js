@@ -126,3 +126,12 @@ test("POS cash session reconciliation subtracts cash refunds from posted returns
  assert.equal(result.session.expected_cash_amount,115);
  assert.equal(result.session.cash_difference,-5);
 });
+
+test("POS cash reconciliation subtracts full void refunds from expected drawer cash",async()=>{
+ const db=workflowDb({cashTotals:{cash_received:120,cash_refunded:25,cash_void_refunded:10}});
+ const response=await handlePos(req("cash-sessions/cs-1",{closing_cash_amount:100}),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.session.expected_cash_amount,105);
+ assert.equal(result.session.cash_difference,-5);
+});
