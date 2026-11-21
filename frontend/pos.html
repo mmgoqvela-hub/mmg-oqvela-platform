@@ -268,13 +268,13 @@
   if(!cart.length){root.innerHTML='<div class="empty">'+t("empty")+'</div>';$("subtotalValue").textContent="—";$("totalValue").textContent="—";$("completeSaleBtn").disabled=true;return;}
   let subtotal=0;
   for(const line of cart){
-   subtotal+=Number(line.line_total||line.unit_price*line.quantity);
+   subtotal+=Number(line.line_total||line.unit_price*line.quantity*(line.sale_unit==="kg"?0.05:1));
    const card=document.createElement("div");card.className="cart-line";
    const title=document.createElement("div");title.className="line-title";
    const name=document.createElement("span");name.textContent=line.name+" · "+(line.sale_unit==="kg"?(line.quantity*0.05).toFixed(2)+" kg":line.quantity+" قطعة");
-   const lineSum=document.createElement("span");lineSum.className="line-total";lineSum.textContent=money(line.line_total||line.unit_price*line.quantity,line.currency);
+   const lineSum=document.createElement("span");lineSum.className="line-total";lineSum.textContent=money(line.line_total||line.unit_price*line.quantity*(line.sale_unit==="kg"?0.05:1),line.currency);
    title.append(name,lineSum);
-   const sub=document.createElement("div");sub.className="line-sub";sub.textContent=(line.sku||"")+" · "+t("unitPrice")+": "+money(line.unit_price,line.currency);
+   const sub=document.createElement("div");sub.className="line-sub";sub.textContent=(line.sku||"")+" · "+t("unitPrice")+": "+money(line.unit_price,line.currency)+(line.sale_unit==="kg"?" / kg":" / قطعة");
    const controls=document.createElement("div");controls.className="line-controls";
    const qty=document.createElement("input");qty.type="number";qty.min="0.05";qty.max="49.95";qty.step="0.05";qty.value=line.sale_unit==="kg"?(line.quantity*0.05).toFixed(2):line.quantity;qty.setAttribute("aria-label",t("quantity"));
    qty.addEventListener("change",()=>{const raw=Number(qty.value)|| (line.sale_unit==="kg"?0.05:1);const n=line.sale_unit==="kg"?Math.max(1,Math.min(999,Math.round(raw/0.05))):Math.max(1,Math.min(999,Math.floor(raw)));line.quantity=n;pendingKey=null;refreshQuote();});
