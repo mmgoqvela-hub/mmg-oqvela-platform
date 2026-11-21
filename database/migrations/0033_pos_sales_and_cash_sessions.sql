@@ -165,13 +165,13 @@ CREATE TRIGGER trg_pos_sale_post_reconcile
 BEFORE UPDATE OF status ON pos_sales
 WHEN OLD.status='draft' AND NEW.status='posted'
 BEGIN
-  SELECT CASE WHEN NEW.total != NEW.subtotal-NEW.discount_amount
+  SELECT CASE WHEN ROUND(NEW.total,2) != ROUND(NEW.subtotal-NEW.discount_amount,2)
     THEN RAISE(ABORT,'POS sale total does not reconcile with subtotal and discount') END;
   SELECT CASE WHEN COALESCE((SELECT SUM(line_total) FROM pos_sale_items
-      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0) != NEW.subtotal
+      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0),2) != ROUND(NEW.subtotal,2)
     THEN RAISE(ABORT,'POS sale items do not reconcile with subtotal') END;
   SELECT CASE WHEN COALESCE((SELECT SUM(amount) FROM pos_sale_payments
-      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0) != NEW.total
+      WHERE sale_id=NEW.id AND store_id=NEW.store_id),0),2) != ROUND(NEW.total,2)
     THEN RAISE(ABORT,'POS payments do not reconcile with sale total') END;
   SELECT CASE WHEN NOT EXISTS(
     SELECT 1 FROM pos_cash_sessions cs WHERE cs.id=NEW.cash_session_id
@@ -191,6 +191,10 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS(
     SELECT 1 FROM products p WHERE p.id=NEW.product_id AND p.store_id=NEW.store_id AND p.status='active'
   ) THEN RAISE(ABORT,'POS product is unavailable') END;
+  SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM products p WHERE p.id=NEW.product_id AND p.store_id=NEW.store_id AND p.currency=NEW.currency)
+    THEN RAISE(ABORT,'POS line currency does not match product currency') END;
+  SELECT CASE WHEN ROUND(NEW.line_total,2) != ROUND(NEW.unit_price*NEW.quantity,2)
+    THEN RAISE(ABORT,'POS line total does not match quantity and unit price') END;
   SELECT CASE WHEN NEW.variant_id IS NOT NULL AND NOT EXISTS(
     SELECT 1 FROM product_variants v WHERE v.id=NEW.variant_id AND v.product_id=NEW.product_id
       AND v.store_id=NEW.store_id AND v.status='active'
@@ -260,4 +264,14 @@ BEGIN
       AND s.cash_session_id=NEW.cash_session_id AND s.currency=NEW.currency
       AND s.status='draft' AND cs.currency=NEW.currency AND cs.status='open'
   ) THEN RAISE(ABORT,'POS payment session is closed or currency does not match') END;
+END;
+
+CREATE TRIGGER trg_pos_cash_session_closed_event
+AFTER UPDATE OF status ON pos_cash_sessions
+WHEN OLD.status='open' AND NEW.status='closed'
+BEGIN
+  INSERT INTO pos_cash_session_events(id,session_id,store_id,actor_user_id,event_type,details_json)
+  VALUES(lower(hex(randomblob(16))),NEW.id,NEW.store_id,NEW.closed_by,'closed',
+    json_object('closing_cash_amount',NEW.closing_cash_amount,
+      'expected_cash_amount',NEW.expected_cash_amount,'cash_difference',NEW.cash_difference));
 END;
