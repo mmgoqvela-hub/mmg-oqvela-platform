@@ -1,9 +1,8 @@
 /**
- * Provider-neutral adapter for private store media storage.
+ * Provider-neutral adapter for store media object storage.
  *
- * Providers are injected through env.STORE_MEDIA and must implement the
- * Cloudflare R2-compatible get/put object-storage contract. The route layer
- * depends only on this adapter, so a future provider can be swapped here.
+ * The configured provider is injected through env.STORE_MEDIA. Routes use
+ * this narrow interface instead of depending directly on a vendor binding.
  */
 export function createStoreMediaStorage(env) {
   const binding = env?.STORE_MEDIA;
@@ -11,12 +10,23 @@ export function createStoreMediaStorage(env) {
     return null;
   }
 
-  return Object.freeze({
+  const storage = {
     get(key) {
       return binding.get(key);
     },
     put(key, value, options) {
       return binding.put(key, value, options);
     }
-  });
+  };
+
+  // Optional capabilities keep simple read/write providers usable while
+  // allowing product galleries to verify ownership and clean up unused files.
+  if (typeof binding.head === "function") {
+    storage.head = key => binding.head(key);
+  }
+  if (typeof binding.delete === "function") {
+    storage.delete = key => binding.delete(key);
+  }
+
+  return Object.freeze(storage);
 }
