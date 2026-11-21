@@ -239,6 +239,10 @@ test("Merchant portal is a separate store-only interface", async () => {
   assert.match(html, /data-pay/);
   assert.match(html, /payment_status:"paid"/);
   assert.match(html, /سجّل استلام المبلغ أولاً قبل إكمال الطلب/);
+  assert.match(html, /requestedStoreSlug/);
+  assert.match(html, /stores\.find\(s => s\.slug===requestedStoreSlug/);
+  assert.match(html, /requestedStoreSlug==="omaya"&&s\.slug==="omaya-pastries"/);
+  assert.doesNotMatch(html, /storePickerWrap|storePicker/);
   assert.match(html, /id="productForm"/);
   assert.match(html, /data-edit-product/);
   assert.match(html, /data-archive-product/);
