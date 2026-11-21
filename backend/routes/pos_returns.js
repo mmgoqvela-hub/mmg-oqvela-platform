@@ -54,7 +54,23 @@ export async function handlePosReturns(request,env){
       FROM pos_sale_returns r WHERE r.sale_id=? AND r.store_id=? AND r.status='posted'
       ORDER BY r.created_at DESC,r.rowid DESC
     `).bind(saleId,storeId).all();
-    return json({status:"ok",returns:rows.results||[]});
+    const returns=[];
+    for(const row of rows.results||[]){
+      const [items,payments]=await Promise.all([
+        env.DB.prepare(`
+          SELECT ri.sale_item_id,ri.quantity,ri.restock,si.product_name,si.variant_name
+          FROM pos_sale_return_items ri JOIN pos_sale_items si
+            ON si.id=ri.sale_item_id AND si.sale_id=ri.sale_id AND si.store_id=ri.store_id
+          WHERE ri.return_id=? AND ri.store_id=? ORDER BY ri.rowid
+        `).bind(row.id,storeId).all(),
+        env.DB.prepare(`
+          SELECT payment_method,amount,currency,reference
+          FROM pos_sale_refund_payments WHERE return_id=? AND store_id=? ORDER BY rowid
+        `).bind(row.id,storeId).all()
+      ]);
+      returns.push({...row,items:items.results||[],payments:payments.results||[]});
+    }
+    return json({status:"ok",returns});
   }
   if(request.method!=="POST")return json({error:"Method not allowed"},405);
   if(!hasPermission(access,"pos.sale.return"))return json({error:"POS return permission required"},403);
