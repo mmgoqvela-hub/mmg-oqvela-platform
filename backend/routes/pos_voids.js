@@ -95,7 +95,7 @@ export async function handlePosVoids(request,env){
     statements.push(env.DB.prepare(`
       INSERT INTO pos_sale_void_items(id,void_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,currency,sale_unit)
       VALUES(?,?,?,?,?,?,?,?,?,?)
-    `).bind(voidItemId,voidId,saleId,storeId,item.id,item.product_id,item.variant_id,item.quantity,item.currency,item.sale_unit||\"piece\"));
+    `).bind(voidItemId,voidId,saleId,storeId,item.id,item.product_id,item.variant_id,item.quantity,item.currency,item.sale_unit||"piece"));
     const product=await env.DB.prepare("SELECT track_inventory FROM products WHERE id=? AND store_id=?")
       .bind(item.product_id,storeId).first();
     if(product?.track_inventory){
