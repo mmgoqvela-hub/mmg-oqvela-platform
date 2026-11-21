@@ -91,8 +91,6 @@ export async function handlePosReturns(request,env){
   `).bind(saleId,storeId).all();
   const itemMap=new Map((saleItems.results||[]).map(item=>[item.id,item]));
   const unique=new Set(),statements=[];let returnValueLimit=0;
-  if(refundTotal>Math.round(returnValueLimit*100)/100+0.000001)
-    return json({error:"Refund exceeds the value of the returned sale items"},409);
   const returnId=crypto.randomUUID();
   const returnNumber="RET-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,6).toUpperCase();
   statements.push(env.DB.prepare(`
@@ -149,6 +147,8 @@ export async function handlePosReturns(request,env){
     }
     normalized.push({sale_item_id:saleItemId,quantity,restock});
   }
+  if(refundTotal>Math.round(returnValueLimit*100)/100+0.000001)
+    return json({error:"Refund exceeds the value of the returned sale items"},409);
   for(const p of b.refund_payments||[]){
     statements.push(env.DB.prepare(`
       INSERT INTO pos_sale_refund_payments(id,return_id,sale_id,store_id,payment_method,amount,currency,reference,created_by)
