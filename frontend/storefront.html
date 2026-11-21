@@ -480,7 +480,7 @@
         localStorage.removeItem(customerTokenStorageKey);localStorage.removeItem(customerModeStorageKey);
         if(customerPortalTimer)clearInterval(customerPortalTimer);
         $("customerOrdersList").textContent=t("qrMissing");$("customerNotifications").replaceChildren();
-        $("customerQr").replaceChildren();delete $("customerQr").dataset.token;
+        $("customerQr").replaceChildren();delete $("customerQr").dataset.token;renderCustomerQr();
         $("customerLogout").hidden=true;$("customerRegisterOpen").hidden=false;$("customerLoginOpen").hidden=false;
         $("customerAccountMessage").textContent="تم تسجيل الخروج.";
       }
@@ -489,7 +489,7 @@
       function renderCustomerQr(){
         const token=customerToken(),container=$("customerQr");
         const guestMode=customerMode()!=="account";
-        $("customerQrHint").hidden=!guestMode;$("customerQrDownload").hidden=!guestMode;$("customerQrRotate").hidden=!guestMode;
+        $("customerQrHint").hidden=!guestMode||!token;$("customerQrDownload").hidden=!guestMode||!token;$("customerQrRotate").hidden=!guestMode||!token;
         if(!guestMode){container.replaceChildren();delete container.dataset.token;return;}
         if(!token||typeof QRCode==="undefined")return;
         if(container.dataset.token===token&&container.childElementCount)return;
@@ -507,7 +507,7 @@
         $("customerLogout").hidden=customerMode()!=="account";
         $("customerRegisterOpen").hidden=customerMode()==="account";
         $("customerLoginOpen").hidden=customerMode()==="account";
-        if(!token){$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
+        if(!token){renderCustomerQr();$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
         const headers={"X-Customer-Token":token,"Accept":"application/json"};
         const base="/api/public/stores/"+encodeURIComponent(slug)+"/customer/";
         const [ordersResponse,notificationsResponse]=await Promise.all([
@@ -520,7 +520,7 @@
           if(ordersResponse.status===401&&customerMode()==="account"){
             localStorage.removeItem(customerTokenStorageKey);localStorage.removeItem(customerModeStorageKey);
             if(customerPortalTimer)clearInterval(customerPortalTimer);
-            $("customerLogout").hidden=true;$("customerRegisterOpen").hidden=false;$("customerLoginOpen").hidden=false;
+            $("customerLogout").hidden=true;$("customerRegisterOpen").hidden=false;$("customerLoginOpen").hidden=false;renderCustomerQr();
             $("customerAccountMessage").textContent=language==="ar"?"انتهت جلسة الحساب. سجّل الدخول مجدداً لمتابعة طلباتك.":"Your account session expired. Sign in again to view your orders.";
           }
           $("customerOrdersList").textContent=ordersData.error||t("orderFailed");return;
