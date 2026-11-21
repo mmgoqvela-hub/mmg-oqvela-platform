@@ -338,12 +338,20 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
       } catch {
         return json({ error: "تعذر حذف المنتج. قد يكون مرتبطاً بسجلات أخرى؛ استخدم الأرشفة للحفاظ على البيانات." }, 409);
       }
-      return json({
-        status: "ok",
-        message: "Product permanently deleted",
-        removed_image_keys: (images.results || []).map(image => image.file_key).filter(key =>
-          typeof key === "string" && key.startsWith("/media/" + storeId + "/"))
-      });
+      const mediaStorage = createStoreMediaStorage(env);
+      if (mediaStorage && typeof mediaStorage.delete === "function") {
+        for (const image of images.results || []) {
+          const key = image.file_key;
+          if (typeof key !== "string" || !key.startsWith("/media/" + storeId + "/")) continue;
+          const remaining = await env.DB.prepare(
+            "SELECT COUNT(*) AS total FROM product_images WHERE store_id = ? AND file_key = ?"
+          ).bind(storeId, key).first();
+          if (!remaining?.total) {
+            try { await mediaStorage.delete(key.slice("/media/".length)); } catch {}
+          }
+        }
+      }
+      return json({ status: "ok", message: "Product permanently deleted" });
     }
     await env.DB.prepare(
       "UPDATE products SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND store_id = ?"
