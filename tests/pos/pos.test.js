@@ -55,14 +55,25 @@ test("POS enforces the selected tier minimum quantity",async()=>{
  const response=await handlePos(req({items:[{product_id:"p-1",quantity:4,tier_code:"wholesale"}]}),{DB:makeDb()});
  assert.equal(response.status,409);
 });
-test("POS rejects mixed-currency quotes",async()=>{
+test("POS keeps legacy manual catalog prices when automatic pricing is off",async()=>{
  const database=makeDb({product:{id:"p-1",name:"Service",sku:null,base_price:10,currency:"SYP",track_inventory:0,stock_quantity:0,status:"active"},settings:{pricing_mode:"manual",rounding_increment_minor_units:1}});
  const response=await handlePos(req({items:[{product_id:"p-1",quantity:1}]}),{DB:database});
  assert.equal(response.status,200);
 });
-test("POS requires authentication and POS access permission",async()=>{
+test("POS requires authentication",async()=>{
  const noSession=makeDb();
  noSession.prepare=(sql)=>({sql,bind(){return {async first(){return null;},async all(){return {results:[]};},async run(){return {meta:{changes:1}};}};}});
  const denied=await handlePos(req({items:[{product_id:"p-1",quantity:1}]}),{DB:noSession});
  assert.equal(denied.status,401);
+});
+
+test("POS blocks staff without POS access",async()=>{
+ const database=makeDb({access:{id:"store-1",store_status:"active",account_status:"active",account_role:"member",permissions:"catalog.read"}});
+ const response=await handlePos(req({items:[{product_id:"p-1",quantity:1}]}),{DB:database});
+ assert.equal(response.status,403);
+});
+test("POS refuses automatic pricing for non-USD products",async()=>{
+ const database=makeDb({product:{id:"p-1",name:"Item",sku:null,base_price:10,currency:"SYP",track_inventory:0,stock_quantity:0,status:"active"}});
+ const response=await handlePos(req({items:[{product_id:"p-1",quantity:1}]}),{DB:database});
+ assert.equal(response.status,409);
 });
