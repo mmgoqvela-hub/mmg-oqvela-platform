@@ -250,6 +250,11 @@
       function cartLinePrice(item) {
         const product = findCartProduct(item.productId);
         const variant = product?.variants?.find(option => option.id === item.variantId);
+        const tiers = variant?.public_tier_prices?.length ? variant.public_tier_prices : product?.public_tier_prices;
+        if (Array.isArray(tiers) && tiers.length) {
+          const selected = tiers.filter(tier => item.quantity >= tier.min_quantity).sort((a,b)=>b.min_quantity-a.min_quantity)[0];
+          if (selected) return Number(selected.unit_price);
+        }
         return Number(variant?.price ?? product?.base_price ?? 0);
       }
 
@@ -505,6 +510,21 @@
           const priceLine = document.createElement("div");
           priceLine.className = "price";
           priceLine.textContent = money(product.base_price,product.currency);
+          const tierList = document.createElement("div");
+          tierList.className = "pricing-tiers";
+          const appendTierPrices = (tiers) => {
+            tierList.replaceChildren();
+            for (const tier of tiers || []) {
+              const tierLine = document.createElement("small");
+              const tierLabel = tier.tier_code === "bulk_wholesale" ? (language === "ar" ? "جملة الجملة" : "Bulk wholesale") :
+                tier.tier_code === "wholesale" ? (language === "ar" ? "الجملة" : "Wholesale") :
+                (language === "ar" ? "المفرق" : "Retail");
+              tierLine.textContent = tierLabel + " · " + (language === "ar" ? "ابتداءً من " : "From ") +
+                tier.min_quantity + " · " + money(tier.unit_price,product.currency);
+              tierList.append(tierLine);
+            }
+          };
+          appendTierPrices(product.public_tier_prices);
           if (product.compare_at_price && product.compare_at_price > product.base_price) {
             const compare = document.createElement("span");
             compare.className = "compare";
@@ -519,12 +539,15 @@
           }
           if (description.textContent) body.append(description);
           body.append(priceLine);
+          if (tierList.childElementCount) body.append(tierList);
           if (product.variants?.length) {
             const variants = document.createElement("div");
             variants.className = "variants";
             for (const variant of product.variants) {
               const line = document.createElement("span");
-              line.textContent = variant.name + " · " + money(variant.price,product.currency) +
+              const variantTiers = variant.public_tier_prices?.length ? variant.public_tier_prices : product.public_tier_prices;
+              const variantStartingPrice = variantTiers?.[0]?.unit_price ?? variant.price;
+              line.textContent = variant.name + " · " + money(variantStartingPrice,product.currency) +
                 (product.track_inventory ? " · " + t("stock") + ": " + variant.stock_quantity : "");
               variants.append(line);
             }
@@ -542,7 +565,8 @@
             for (const variant of product.variants) {
               const option = document.createElement("option");
               option.value = variant.id;
-              option.textContent = variant.name + " · " + money(variant.price,product.currency);
+              const optionTiers = variant.public_tier_prices?.length ? variant.public_tier_prices : product.public_tier_prices;
+              option.textContent = variant.name + " · " + money(optionTiers?.[0]?.unit_price ?? variant.price,product.currency);
               option.disabled = product.track_inventory && Number(variant.stock_quantity) <= 0;
               variantSelect.append(option);
             }
@@ -568,6 +592,19 @@
             }
             addToCart(product,variant,amount);
           });
+          const updateDisplayedPrice = () => {
+            const amount = Math.max(1,Number(quantity.value)||1);
+            const selectedVariant = variantSelect ? product.variants.find(option => option.id === variantSelect.value) : null;
+            const tiers = selectedVariant?.public_tier_prices?.length ? selectedVariant.public_tier_prices : product.public_tier_prices;
+            if (Array.isArray(tiers) && tiers.length) {
+              const selectedTier = tiers.filter(tier => amount >= tier.min_quantity).sort((a,b)=>b.min_quantity-a.min_quantity)[0];
+              const unitPrice = selectedTier?.unit_price ?? (selectedVariant?.price ?? product.base_price);
+              priceLine.textContent = money(unitPrice,product.currency) + (selectedTier ? " · " + selectedTier.min_quantity + "+" : "");
+            }
+          };
+          quantity.addEventListener("input",updateDisplayedPrice);
+          if (variantSelect) variantSelect.addEventListener("change",updateDisplayedPrice);
+          updateDisplayedPrice();
           buy.append(add);
           body.append(buy);
           card.append(art,body);
