@@ -21,7 +21,7 @@ function workflowDb(options={}){
     if(sql.includes("FROM product_variants"))return options.variant??null;
     if(sql.includes("FROM inventory_warehouses"))return options.warehouse??{id:"wh-1"};
     if(sql.includes("SELECT id,currency,opening_cash_amount"))return options.sessionToClose??{id:"cs-1",currency:"USD",opening_cash_amount:20};
-    if(sql.includes("AS cash_received"))return options.cashTotals??{cash_received:15};
+    if(sql.includes("AS cash_received"))return options.cashTotals??{cash_received:15,cash_refunded:4};
     if(sql.includes("FROM pos_cash_sessions cs JOIN inventory_warehouses"))return options.currentSession??{id:"cs-1",store_id:"store-1",warehouse_id:"wh-1",currency:"USD",status:"open",opening_cash_amount:20,warehouse_name:"Main"};
     return null;
    },
@@ -114,6 +114,15 @@ test("POS cash session close reports expected cash and difference",async()=>{
  const response=await handlePos(req("cash-sessions/cs-1",{closing_cash_amount:38}),{DB:db});
  const result=await response.json();
  assert.equal(response.status,200);
- assert.equal(result.session.expected_cash_amount,35);
- assert.equal(result.session.cash_difference,3);
+ assert.equal(result.session.expected_cash_amount,31);
+ assert.equal(result.session.cash_difference,7);
+});
+
+test("POS cash session reconciliation subtracts cash refunds from posted returns",async()=>{
+ const db=workflowDb({cashTotals:{cash_received:120,cash_refunded:25}});
+ const response=await handlePos(req("cash-sessions/cs-1",{closing_cash_amount:110}),{DB:db});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.session.expected_cash_amount,115);
+ assert.equal(result.session.cash_difference,-5);
 });
