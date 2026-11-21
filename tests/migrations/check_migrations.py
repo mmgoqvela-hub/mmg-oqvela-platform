@@ -536,7 +536,46 @@ def main():
         "unverified SYP cannot become the cost currency"
     )
 
-    print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
+    # Verify the Omaya demo catalog migration seeds only the intended store.
+    connection.execute(
+        "INSERT INTO stores (id, account_id, name, slug) VALUES (?, ?, ?, ?)",
+        ("omaya-demo-store", "account-1", "معجنات أمية", "store-omaya-demo")
+    )
+    connection.executescript(
+        (MIGRATIONS / "0042_omaya_bakery_demo_catalog.sql").read_text(encoding="utf-8")
+    )
+    omaya_slug = connection.execute(
+        "SELECT slug FROM stores WHERE id='omaya-demo-store'"
+    ).fetchone()
+    if omaya_slug != ("omaya-pastries",):
+        raise SystemExit(f"Omaya public slug was not assigned: {omaya_slug}")
+    omaya_products = connection.execute(
+        "SELECT name, sale_unit, base_price, currency, status, track_inventory "
+        "FROM products WHERE store_id='omaya-demo-store' ORDER BY sku"
+    ).fetchall()
+    expected_omaya_products = [
+        ("منقوشة زعتر", "piece", 5000, "SYP", "active", 0),
+        ("فطيرة جبنة", "piece", 8000, "SYP", "active", 0),
+        ("كرواسون شوكولاتة", "piece", 10000, "SYP", "active", 0),
+        ("معجنات مشكلة", "kg", 40000, "SYP", "active", 0),
+    ]
+    if omaya_products != expected_omaya_products:
+        raise SystemExit(f"Unexpected Omaya demo catalog: {omaya_products}")
+    image_count = connection.execute(
+        "SELECT COUNT(*) FROM product_images WHERE store_id='omaya-demo-store'"
+    ).fetchone()[0]
+    if image_count != 4:
+        raise SystemExit(f"Expected four demo product images, got {image_count}")
+    customization = connection.execute(
+        "SELECT json_extract(customization_json,'$.logo'), "
+        "json_extract(customization_json,'$.heroImage'), "
+        "json_extract(customization_json,'$.texts.heroTitle') "
+        "FROM stores WHERE id='omaya-demo-store'"
+    ).fetchone()
+    if not customization or not all(customization):
+        raise SystemExit(f"Omaya storefront branding was not seeded: {customization}")
+
+    print(f"PASS: {len(files)} migrations applied; tenant, finance, and Omaya demo catalog checks valid.")
     connection.close()
 
 if __name__ == "__main__":
