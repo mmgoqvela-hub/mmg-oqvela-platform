@@ -10,7 +10,7 @@ function json(data,status=200){
 
 async function activeStore(db,slug){
   return db.prepare(`
-    SELECT s.id,s.name,s.slug FROM stores s
+    SELECT s.id,s.name,s.slug,s.whatsapp_phone FROM stores s
     JOIN accounts a ON a.id=s.account_id
     WHERE s.slug=? AND s.status='active' AND a.status='active'
       AND EXISTS (
@@ -53,8 +53,8 @@ export async function handlePublicCustomerPortal(request,env){
     if(resource==="orders"){
       if(request.method!=="GET")return json({error:"Method not allowed"},405);
       const rows=await env.DB.prepare(`
-        SELECT id,order_number,customer_name,customer_phone,shipping_address,
-          payment_method,customer_payment_method,payment_status,order_status,
+        SELECT id,order_number,customer_name,customer_phone,customer_email,customer_notes,shipping_address,
+          store_phone_snapshot,payment_method,customer_payment_method,payment_status,order_status,
           customer_decision,rejection_reason,subtotal,delivery_fee,total,currency,
           fulfillment_method,created_at,updated_at,accepted_at,rejected_at,
           delivered_at,payment_collected_at
