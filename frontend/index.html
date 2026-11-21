@@ -2350,9 +2350,20 @@ footer{
             option.dataset.noTranslate = "true";
             category.append(option);
           }
+          const productStatus = document.createElement("select");
+          for (const [value,label] of [["active","منشور ويظهر للزبائن"],["draft","مسودة غير منشورة"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            productStatus.append(option);
+          }
+          productStatus.value = "active";
           const tracking = document.createElement("input");
           tracking.type = "checkbox";
-          tracking.checked = true;
+          tracking.checked = false;
+          const trackingHint = document.createElement("p");
+          trackingHint.className = "muted";
+          trackingHint.textContent = "اتركه غير محدد للمنتجات التي تُحضّر حسب الطلب؛ عند تفعيله لن يظهر المنتج للزبائن إذا نفدت الكمية.";
           const fields = [
             ["اسم المنتج",productName],
             ["وصف المنتج",description],
@@ -2360,6 +2371,7 @@ footer{
             ["السعر الأساسي",price],
             ["العملة (رمز من 3 أحرف)",currency],
             ["الكمية الافتتاحية",stock],
+            ["حالة العرض",productStatus],
             ["روابط صور المنتج (اختياري، رابط في كل سطر)",productImageUrls],
             ["رفع صور المنتج من الجهاز (حتى 5 صور)",productImageFiles],
             ["التصنيف",category]
@@ -2377,7 +2389,7 @@ footer{
           const trackingLabel = document.createElement("label");
           trackingLabel.className = "toggle-row";
           trackingLabel.append(tracking,"تتبع المخزون");
-          trackingField.append(trackingLabel);
+          trackingField.append(trackingLabel,trackingHint);
           productForm.append(trackingField);
           const productSubmit = document.createElement("button");
           productSubmit.type = "submit";
@@ -2409,7 +2421,7 @@ footer{
                   stock_quantity:Number(stock.value),
                   track_inventory:tracking.checked,
                   category_id:category.value || null,
-                  status:"draft"
+                  status:productStatus.value
                 })
               });
               const productImagesEndpoint = "/api/stores/" + encodeURIComponent(store.id) + "/products/" + encodeURIComponent(created.product.id) + "/images";
