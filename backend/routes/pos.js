@@ -133,7 +133,7 @@ async function quoteItems(db,storeId,access,items){
   let currency=null,total=0;
   for(const input of items){
     const key=String(input?.product_id||"")+":"+(input?.variant_id||"");
-    if(seen.has(key))return {error:"Duplicate product lines must be combined before quoting"},status:400;
+    if(seen.has(key))return {error:"Duplicate product lines must be combined before quoting",status:400};
     seen.add(key);
     const result=await quoteLine(db,storeId,access,settings,tiers,input);
     if(result.error)return result;
