@@ -26,6 +26,7 @@ function db(options={}) {
             async first() {
               if(sql.includes("FROM store_orders WHERE id=? AND store_id=?")||sql.includes("INSERT INTO public_checkout_rate_limits")) calls.push({sql,values});
               if(sql.includes("SELECT COUNT(*) AS total_orders")) return options.reportTotals??{total_orders:0,completed_orders:0,open_orders:0,cancelled_orders:0};
+              if(sql.includes("AS estimated_gross_profit")) return options.reportProfit??{costed_lines:0,costed_orders:0,uncosted_lines:0,costed_revenue:0,estimated_gross_profit:0};
               if(sql.includes("INSERT INTO public_checkout_rate_limits")) return options.rateLimit===undefined?{request_count:1}:options.rateLimit;
               if(sql.includes("store_order_settings")) return options.settings??null;
               if(sql.includes("SELECT id,order_status,payment_status")) return options.order??null;
@@ -72,6 +73,7 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
   reportTotals:{total_orders:12,completed_orders:5,open_orders:4,cancelled_orders:3},
   reportRevenue:[{currency:"USD",paid_orders:4,paid_revenue:250}],
   reportDailyRevenue:[{report_date:"2026-11-21",currency:"USD",paid_orders:2,paid_revenue:100}],
+  reportProfit:{costed_lines:2,costed_orders:2,uncosted_lines:1,costed_revenue:200,estimated_gross_profit:65},
   reportTopProducts:[{product_id:"p1",product_name:"Product A",sale_unit:"kg",quantity_base_units:10000,display_quantity:10,paid_sales:160}]
  });
  const response=await handleOrders(request("/api/stores/store-1/reports?period=7d","GET",undefined,true),{DB:database});
@@ -82,12 +84,18 @@ test("Store reports return tenant-scoped order counts and paid revenue only",asy
  assert.equal(result.report.paid_revenue[0].paid_revenue,250);
  assert.equal(result.report.daily_revenue[0].report_date,"2026-11-21");
  assert.equal(result.report.daily_revenue[0].paid_revenue,100);
+ assert.equal(result.report.profit.estimated_gross_profit,65);
+ assert.equal(result.report.profit.uncosted_lines,1);
  assert.equal(result.report.top_products[0].sale_unit,"kg");
  assert.equal(result.report.top_products[0].display_quantity,10);
  const revenueQuery=database.calls.find(call=>call.sql.includes("paid_revenue"));
  assert.ok(revenueQuery.sql.includes("payment_status='paid'"));
  assert.ok(revenueQuery.sql.includes("store_id=?"));
  assert.equal(revenueQuery.values[1],"-7 days");
+ const profitQuery=database.calls.find(call=>call.sql.includes("AS estimated_gross_profit"));
+ assert.ok(profitQuery.sql.includes("pricing_mode"));
+ assert.ok(profitQuery.sql.includes("payment_status"));
+ assert.equal(profitQuery.values[0],"store-1");
  const dailyQuery=database.calls.find(call=>call.sql.includes("AS report_date"));
  assert.ok(dailyQuery.sql.includes("GROUP BY date(created_at),currency"));
  assert.ok(dailyQuery.sql.includes("store_id=?"));
