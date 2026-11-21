@@ -1,3 +1,4 @@
+import { calculateTierPriceMinorUnits } from "../finance/tier_pricing.js";
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -135,6 +136,55 @@ export async function handlePublicStorefront(request, env) {
       variantsByProduct.set(variant.product_id,list);
     }
 
+    // Publish customer-facing tier prices only; never expose internal costs or margin percentages.
+    let publicPricing = null;
+    const pricingSettings = await env.DB.prepare(
+      "SELECT pricing_mode,rounding_increment_minor_units FROM store_pricing_settings WHERE store_id=?"
+    ).bind(store.id).first();
+    if (pricingSettings?.pricing_mode === "cost_plus_margin") {
+      const [tierRows, costRows, overrideRows] = await Promise.all([
+        env.DB.prepare("SELECT tier_code,min_quantity,profit_margin_bps,is_enabled FROM store_pricing_tiers WHERE store_id=? ORDER BY min_quantity").bind(store.id).all(),
+        env.DB.prepare("SELECT id,product_id,variant_id,cost_minor_units FROM product_cost_versions WHERE store_id=? ORDER BY effective_at DESC,created_at DESC").bind(store.id).all(),
+        env.DB.prepare("SELECT product_id,variant_id,tier_code,profit_margin_bps,min_quantity,is_enabled FROM product_tier_margin_overrides WHERE store_id=?").bind(store.id).all()
+      ]);
+      const tiers = tierRows.results || [];
+      const costs = costRows.results || [];
+      const overrides = overrideRows.results || [];
+      const latestCost = (productId, variantId) => costs.find(row =>
+        row.product_id === productId && row.variant_id === variantId
+      ) || (variantId ? costs.find(row => row.product_id === productId && row.variant_id == null) : null);
+      const resolveTierPrices = (product, variantId = null) => {
+        if (product.currency !== "USD") return [];
+        const cost = latestCost(product.id, variantId);
+        if (!cost) return [];
+        return tiers.filter(tier => tier.is_enabled).map(tier => {
+          const override = overrides.find(row => row.product_id === product.id &&
+            row.tier_code === tier.tier_code && row.variant_id === variantId) ||
+            (variantId ? overrides.find(row => row.product_id === product.id &&
+              row.tier_code === tier.tier_code && row.variant_id == null) : null);
+          if (override && !override.is_enabled) return null;
+          const margin = override ? override.profit_margin_bps : tier.profit_margin_bps;
+          const minQuantity = override?.min_quantity ?? tier.min_quantity;
+          if (margin == null || !Number.isInteger(minQuantity) || minQuantity < 1) return null;
+          try {
+            const unitMinor = calculateTierPriceMinorUnits(cost.cost_minor_units, margin,
+              pricingSettings.rounding_increment_minor_units || 1);
+            return { tier_code:tier.tier_code,min_quantity:minQuantity,unit_price:unitMinor/100 };
+          } catch { return null; }
+        }).filter(Boolean).sort((a,b)=>a.min_quantity-b.min_quantity);
+      };
+      publicPricing = {
+        mode:"cost_plus_margin",
+        tiers:tiers.filter(tier=>tier.is_enabled).map(({tier_code,min_quantity})=>({tier_code,min_quantity}))
+      };
+      for (const product of products) {
+        product.public_tier_prices = resolveTierPrices(product);
+        for (const variant of variantsByProduct.get(product.id) || []) {
+          variant.public_tier_prices = resolveTierPrices(product,variant.id);
+        }
+      }
+    }
+
     const orderSettings = await env.DB.prepare(`
       SELECT cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions
       FROM store_order_settings WHERE store_id=? LIMIT 1
@@ -147,6 +197,7 @@ export async function handlePublicStorefront(request, env) {
       status:"ok",
       store: { ...store, customization: (() => { try { return JSON.parse(store.customization_json || "{}"); } catch { return {}; } })() },
       order_settings:orderSettings,
+      pricing:publicPricing,
       platform_footer: Object.fromEntries((platformSettings.results || []).map(item => [item.setting_key, item.setting_value])),
       platform_support_whatsapp: (platformSettings.results || []).find(item => item.setting_key === "platform_support_whatsapp")?.setting_value || "",
       announcements: announcementsResult.results || [],
