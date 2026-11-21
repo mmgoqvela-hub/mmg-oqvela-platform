@@ -14,6 +14,14 @@ async function readBody(request,max=20000){
   }catch{return {error:"Invalid JSON",status:400};}
 }
 function validText(value,min,max){return typeof value==="string"&&value.trim().length>=min&&value.trim().length<=max;}
+function normalizeCustomerPhone(value){return String(value||"").replace(/[\\s()-]/g,"");}
+async function hashCustomerToken(token){
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+}
+function createCustomerToken(){
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");
+}
 async function getAccess(db,storeId,userId){
   return db.prepare(`
     SELECT s.id,s.status AS store_status,a.status AS account_status,
@@ -48,7 +56,7 @@ async function loadSettings(db,storeId){
 }
 async function publicStore(db,slug){
   return db.prepare(`
-    SELECT s.id,s.name,s.slug FROM stores s JOIN accounts a ON a.id=s.account_id
+    SELECT s.id,s.name,s.slug,s.whatsapp_phone FROM stores s JOIN accounts a ON a.id=s.account_id
     WHERE s.slug=? AND s.status='active' AND a.status='active'
       AND EXISTS (SELECT 1 FROM store_subscriptions ss
         WHERE (ss.store_id=s.id OR (ss.is_trial=1 AND ss.trial_account_id=s.account_id))
@@ -89,6 +97,7 @@ async function createPublicOrder(request,env,slug){
   const b=parsed.body;
   const name=typeof b.customer_name==="string"?b.customer_name.trim():"";
   const phone=typeof b.customer_phone==="string"?b.customer_phone.trim():"";
+  const phoneKey=normalizeCustomerPhone(phone);
   const email=b.customer_email==null||b.customer_email===""?null:typeof b.customer_email==="string"?b.customer_email.trim():undefined;
   const address=b.shipping_address==null||b.shipping_address===""?null:typeof b.shipping_address==="string"?b.shipping_address.trim():undefined;
   const notes=b.customer_notes==null||b.customer_notes===""?null:typeof b.customer_notes==="string"?b.customer_notes.trim():undefined;
@@ -110,10 +119,33 @@ async function createPublicOrder(request,env,slug){
   if(method==="cash_on_delivery"&&!settings.cash_on_delivery_enabled)return json({error:"Cash on delivery is unavailable"},400);
   if(method==="shamcash"&&(!settings.shamcash_enabled||!validText(settings.shamcash_recipient||"",2,160)))
     return json({error:"Sham Cash is not configured for this store"},400);
-  const reference=method==="shamcash"?(typeof b.transaction_reference==="string"?b.transaction_reference.trim():""):null;
-  const sender=method==="shamcash"?(typeof b.sender_name==="string"?b.sender_name.trim():""):null;
-  if(method==="shamcash"&&(!validText(reference,3,120)||!validText(sender,2,120)))
-    return json({error:"Sham Cash transaction number and sender name are required"},400);
+  // Payment is collected only when the order is handed to the customer.
+  // The selected method is stored separately; no transfer details are requested at checkout.
+  const reference=null;
+  const sender=null;
+  if(phoneKey.length<6||phoneKey.length>30)return json({error:"Invalid customer phone number"},400);
+  const suppliedCustomerToken=typeof b.customer_access_token==="string"?b.customer_access_token.trim():"";
+  let customerIdentityId=null,customerAccessToken=suppliedCustomerToken,customerIdentityInsert=null;
+  if(suppliedCustomerToken){
+    if(!/^[a-f0-9]{64}$/i.test(suppliedCustomerToken))return json({error:"Invalid customer QR code"},401);
+    const tokenHash=await hashCustomerToken(suppliedCustomerToken);
+    const identity=await env.DB.prepare(`
+      SELECT id,customer_phone_key FROM store_customer_identities
+      WHERE store_id=? AND access_token_hash=? AND revoked_at IS NULL LIMIT 1
+    `).bind(store.id,tokenHash).first();
+    if(!identity||identity.customer_phone_key!==phoneKey)
+      return json({error:"The saved customer QR does not match this phone number. Use the correct QR or start a new guest identity."},401);
+    customerIdentityId=identity.id;
+  }else{
+    customerAccessToken=createCustomerToken();
+    customerIdentityId=crypto.randomUUID();
+    const tokenHash=await hashCustomerToken(customerAccessToken);
+    customerIdentityInsert=env.DB.prepare(`
+      INSERT INTO store_customer_identities
+        (id,store_id,customer_phone_key,customer_name,access_token_hash)
+      VALUES (?,?,?,?,?)
+    `).bind(customerIdentityId,store.id,phoneKey,name,tokenHash);
+  }
 
   const pricingSettings=await env.DB.prepare("SELECT pricing_mode,rounding_increment_minor_units FROM store_pricing_settings WHERE store_id=?").bind(store.id).first();
   const pricingMode=pricingSettings?.pricing_mode||"manual";
@@ -200,16 +232,20 @@ async function createPublicOrder(request,env,slug){
   }
   const orderId=crypto.randomUUID();
   const orderNumber="MMG-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,5).toUpperCase();
-  const paymentStatus=method==="shamcash"?"pending":"unpaid";
+  const paymentStatus="unpaid";
   const deliveryFee=fulfillment==="delivery"?Math.max(0,Number(settings.delivery_fee)||0):0;
   const total=Math.round((subtotal+deliveryFee)*100)/100;
-  const statements=[env.DB.prepare(`
+  const statements=[];
+  if(customerIdentityInsert)statements.push(customerIdentityInsert);
+  else statements.push(env.DB.prepare("UPDATE store_customer_identities SET last_seen_at=CURRENT_TIMESTAMP,customer_name=? WHERE id=? AND store_id=?").bind(name,customerIdentityId,store.id));
+  statements.push(env.DB.prepare(`
     INSERT INTO store_orders
       (id,store_id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
        payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
-       fulfillment_method,delivery_fee)
-    VALUES (?,?,?,?,?,?,?,?,?,?, 'pending',?,?,?,?,?,?,?)
-  `).bind(orderId,store.id,orderNumber,name,phone,email,address,notes,method,paymentStatus,reference,sender,subtotal,total,currency,fulfillment,deliveryFee)];
+       fulfillment_method,delivery_fee,customer_identity_id,customer_payment_method,store_phone_snapshot)
+    VALUES (?,?,?,?,?,?,?,?,?,'unpaid','pending',NULL,NULL,?,?,?,?,?,?,?,?)
+  `).bind(orderId,store.id,orderNumber,name,phone,email,address,notes,"cash_on_delivery",subtotal,total,currency,
+    fulfillment,deliveryFee,customerIdentityId,method,store.whatsapp_phone||null));
   for(const item of items){
     statements.push(env.DB.prepare(`
       INSERT INTO store_order_items
@@ -223,8 +259,9 @@ async function createPublicOrder(request,env,slug){
     await env.DB.batch(statements);
     return json({status:"ok",message:"Order received",order:{
       id:orderId,order_number:orderNumber,store_name:store.name,payment_method:method,
-      payment_status:paymentStatus,order_status:"pending",subtotal,delivery_fee:deliveryFee,total,currency,
-      fulfillment_method:fulfillment,
+      payment_status:paymentStatus,order_status:"pending",customer_decision:"pending",
+      subtotal,delivery_fee:deliveryFee,total,currency,fulfillment_method:fulfillment,
+      customer_access_token:customerAccessToken,
       shamcash:method==="shamcash"?{recipient:settings.shamcash_recipient,instructions:settings.shamcash_instructions||null}:null
     }},201);
   }catch(error){
