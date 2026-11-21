@@ -67,7 +67,7 @@ export async function handlePosVoids(request,env){
     .bind(saleId,storeId).first();
   if(existingReturn)return json({error:"A sale with posted returns cannot be voided. Continue using the return workflow."},409);
   const items=await env.DB.prepare(`
-    SELECT id,product_id,variant_id,quantity,currency FROM pos_sale_items
+    SELECT id,product_id,variant_id,quantity,currency,sale_unit FROM pos_sale_items
     WHERE sale_id=? AND store_id=? ORDER BY rowid
   `).bind(saleId,storeId).all();
   if(!items.results?.length)return json({error:"Sale items are missing; this sale cannot be safely voided"},409);
@@ -93,9 +93,9 @@ export async function handlePosVoids(request,env){
   for(const item of items.results){
     const voidItemId=crypto.randomUUID();
     statements.push(env.DB.prepare(`
-      INSERT INTO pos_sale_void_items(id,void_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,currency)
-      VALUES(?,?,?,?,?,?,?,?,?)
-    `).bind(voidItemId,voidId,saleId,storeId,item.id,item.product_id,item.variant_id,item.quantity,item.currency));
+      INSERT INTO pos_sale_void_items(id,void_id,sale_id,store_id,sale_item_id,product_id,variant_id,quantity,currency,sale_unit)
+      VALUES(?,?,?,?,?,?,?,?,?,?)
+    `).bind(voidItemId,voidId,saleId,storeId,item.id,item.product_id,item.variant_id,item.quantity,item.currency,item.sale_unit||\"piece\"));
     const product=await env.DB.prepare("SELECT track_inventory FROM products WHERE id=? AND store_id=?")
       .bind(item.product_id,storeId).first();
     if(product?.track_inventory){
@@ -106,16 +106,16 @@ export async function handlePosVoids(request,env){
         INSERT INTO inventory_movements(id,store_id,product_id,variant_id,movement_type,quantity_change,
           reference_id,notes,created_by,warehouse_id,unit_code,movement_reason,source_type,source_id,
           idempotency_key,effective_at,posted_at,reversal_of_id)
-        VALUES(?,?,?,?,'return',?,?,?,?,?,'unit','pos_void','pos_void',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)
-      `).bind(crypto.randomUUID(),storeId,item.product_id,item.variant_id,item.quantity,saleId,
-        "POS void "+voidNumber,session.user_id,original.warehouse_id,voidId,
+        VALUES(?,?,?,?,'return',?,?,?,?,?,?,'pos_void','pos_void',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)
+      `).bind(crypto.randomUUID(),storeId,item.product_id,item.variant_id,item.quantity*(item.sale_unit==="kg"?50:1),saleId,
+        "POS void "+voidNumber,session.user_id,original.warehouse_id,item.sale_unit==="kg"?"g":"piece",voidId,
         "pos-void:"+voidId+":"+item.id,original.id));
       if(item.variant_id){
         statements.push(env.DB.prepare("UPDATE product_variants SET stock_quantity=stock_quantity+? WHERE id=? AND product_id=? AND store_id=?")
-          .bind(item.quantity,item.variant_id,item.product_id,storeId));
+          .bind(item.quantity*(item.sale_unit==="kg"?50:1),item.variant_id,item.product_id,storeId));
       }else{
         statements.push(env.DB.prepare("UPDATE products SET stock_quantity=stock_quantity+? WHERE id=? AND store_id=?")
-          .bind(item.quantity,item.product_id,storeId));
+          .bind(item.quantity*(item.sale_unit==="kg"?50:1),item.product_id,storeId));
       }
     }
   }
