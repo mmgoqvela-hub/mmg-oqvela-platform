@@ -37,7 +37,8 @@ function allowed(access,code){
 }
 async function loadSettings(db,storeId){
   return await db.prepare(`
-    SELECT cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions
+    SELECT cash_on_delivery_enabled,shamcash_enabled,shamcash_recipient,shamcash_instructions,
+      pickup_enabled,delivery_enabled,delivery_fee
     FROM store_order_settings WHERE store_id=? LIMIT 1
   `).bind(storeId).first() || {
     cash_on_delivery_enabled:1,shamcash_enabled:0,
