@@ -254,7 +254,7 @@ async function loadStoreReport(db,storeId,period){
     db.prepare(`
       SELECT i.product_id,i.product_name,i.sale_unit,
         SUM(i.quantity) AS quantity_base_units,
-        CASE WHEN i.sale_unit='kg' THEN ROUND(SUM(i.quantity)*0.05,2)
+        CASE WHEN i.sale_unit='kg' THEN ROUND(SUM(i.quantity)/1000.0,3)
           ELSE SUM(i.quantity) END AS display_quantity,
         ROUND(SUM(i.line_total),2) AS paid_sales
       FROM store_order_items i
