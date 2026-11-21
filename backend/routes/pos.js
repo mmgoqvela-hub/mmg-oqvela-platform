@@ -331,7 +331,7 @@ async function getSale(env,storeId,saleId){
   `).bind(saleId,storeId).first();
   if(!sale)return json({error:"Sale not found"},404);
   const [items,payments,events]=await Promise.all([
-    env.DB.prepare(`SELECT product_id,variant_id,product_name,variant_name,sku,quantity,
+    env.DB.prepare(`SELECT id,product_id,variant_id,product_name,variant_name,sku,quantity,
       unit_price,line_total,currency,pricing_mode,pricing_tier_code
       FROM pos_sale_items WHERE sale_id=? AND store_id=? ORDER BY rowid`).bind(saleId,storeId).all(),
     env.DB.prepare(`SELECT payment_method,amount,currency,transaction_reference,sender_name,created_at
