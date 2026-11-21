@@ -12,6 +12,7 @@ import { handleSubscriptions } from "./routes/subscriptions.js";
 import { handleNotifications } from "./routes/notifications.js";
 import { handleOrders } from "./routes/orders.js";
 import { handlePos } from "./routes/pos.js";
+import { handlePosReturns } from "./routes/pos_returns.js";
 import { handlePublicServiceRequests } from "./routes/service_requests.js";
 import { handleStoreMedia } from "./routes/store_media.js";
 
@@ -107,6 +108,9 @@ export default {
 
     const serviceRequestsResponse = await handlePublicServiceRequests(request, env);
     if (serviceRequestsResponse) return markNoStore(serviceRequestsResponse);
+
+    const posReturnsResponse = await handlePosReturns(request, env);
+    if (posReturnsResponse) return markNoStore(posReturnsResponse);
 
     const posResponse = await handlePos(request, env);
     if (posResponse) return markNoStore(posResponse);
