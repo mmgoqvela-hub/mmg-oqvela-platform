@@ -281,3 +281,14 @@ test("Merchant portal is a separate store-only interface", async () => {
     assert.doesNotThrow(() => new vm.Script(match[1]), "merchant JavaScript must parse");
   }
 });
+
+test("Logout invalidates stale session checks and never treats server errors as missing admin rights", async () => {
+  const html = await readFile(new URL("../../frontend/index.html", import.meta.url), "utf8");
+  assert.match(html, /let authFlowVersion = 0/);
+  assert.match(html, /const flowVersion = \+\+authFlowVersion/);
+  assert.match(html, /if \(flowVersion !== authFlowVersion\) return/);
+  assert.match(html, /error\.status = response\.status/);
+  assert.match(html, /if \(error\.status === 403\) return false/);
+  assert.match(html, /const logoutFlowVersion = \+\+authFlowVersion/);
+  assert.match(html, /window\.location\.replace\(merchantMode \? "\/merchant\/omaya" : "\/"\)/);
+});
