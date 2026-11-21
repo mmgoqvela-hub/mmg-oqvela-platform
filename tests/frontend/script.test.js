@@ -250,6 +250,9 @@ test("Merchant portal is a separate store-only interface", async () => {
   assert.doesNotMatch(html, /\/api\/admin\//);
   assert.match(html, /data-decision="accepted"/);
   assert.match(html, /data-decision="rejected"/);
+  assert.match(html, /manageRejectionReasons/);
+  assert.match(html, /loadRejectionReasons/);
+  assert.match(html, /order-rejection-reasons/);
   assert.match(html, /complete_delivery:true/);
   assert.match(html, /data-complete-delivery/);
   assert.match(html, /setInterval\(\(\)=>\{if\(activeStore\)\{loadOrders\(\);loadNotifications\(\);\}\},10000\)/);
