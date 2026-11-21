@@ -384,7 +384,7 @@ footer{
     <hr><h3>نظرة عامة على المنصة</h3><div id="adminOverviewCards" class="account-grid"></div>
     <hr><h3>إدارة المستخدمين</h3><div id="adminUsers" class="account-grid"></div>
     <hr><h3>إدارة الحسابات</h3><div id="adminAccounts" class="account-grid"></div>
-    <hr><h3>إدارة المتاجر</h3><div id="adminStores" class="account-grid"></div>
+    <hr><h3>إدارة المتاجر</h3><p class="muted">يمكنك معاينة بيانات كل متجر قبل تجهيزه للتسليم. المعاينة لا تحذف ولا تنقل أي بيانات.</p><div id="adminStores" class="account-grid"></div>
     <hr><h3>مديرو المنصة والدعم</h3>
     <form id="platformAdminForm" class="admin-form">
       <div class="field"><label for="platformAdminEmail">البريد الإلكتروني</label><input id="platformAdminEmail" type="email" required maxlength="254"></div>
@@ -4690,7 +4690,37 @@ footer{
             save.disabled = false;
           }
         });
-        card.append(title,details,status,save);
+        const previewButton = document.createElement("button");
+        previewButton.type = "button";
+        previewButton.className = "secondary";
+        previewButton.textContent = currentLanguage === "ar" ? "معاينة تجهيز التسليم" : "Preview handover";
+        const preview = document.createElement("div");
+        preview.className = "muted";
+        preview.setAttribute("aria-live","polite");
+        previewButton.addEventListener("click",async () => {
+          previewButton.disabled = true;
+          preview.textContent = currentLanguage === "ar" ? "جارٍ فحص بيانات المتجر..." : "Inspecting store data...";
+          try {
+            const result = await api("/api/admin/stores/" + encodeURIComponent(store.id) + "/handover-preview");
+            const item = result.preview;
+            const ownerLabel = currentLanguage === "ar" ? "المالك الحالي" : "Current owner";
+            const totalLabel = currentLanguage === "ar" ? "إجمالي السجلات المرتبطة بالمتجر" : "Store-scoped records";
+            const safeLabel = currentLanguage === "ar"
+              ? "هذه معاينة فقط. لم يتم حذف أو نقل أي بيانات."
+              : "Read-only preview. No data has been deleted or transferred.";
+            const lines = (item.records || []).filter(row => row.count > 0)
+              .map(row => row.table + ": " + formatNumber(row.count));
+            preview.textContent = ownerLabel + ": " + (item.store.owner_name || "—") + " (" + (item.store.owner_email || "—") + ") · " +
+              totalLabel + ": " + formatNumber(item.total_store_scoped_records) + " · " +
+              ((item.subscriptions || []).length) + " " + (currentLanguage === "ar" ? "اشتراكات" : "subscriptions") +
+              (lines.length ? " · " + lines.join("، ") : "") + " · " + safeLabel;
+          } catch(error) {
+            preview.textContent = error.message;
+          } finally {
+            previewButton.disabled = false;
+          }
+        });
+        card.append(title,details,status,save,previewButton,preview);
         container.append(card);
       }
     } catch(error) {
