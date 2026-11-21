@@ -212,9 +212,11 @@ async function closeCashSession(request,env,storeId,session,access,sessionId){
         JOIN pos_sale_returns r ON r.id=rp.return_id AND r.store_id=rp.store_id
         JOIN pos_sales s ON s.id=r.sale_id AND s.store_id=r.store_id
         WHERE s.cash_session_id=? AND s.store_id=? AND rp.payment_method='cash'
-          AND r.status='posted'),0) AS cash_refunded
-  `).bind(sessionId,storeId,sessionId,storeId,sessionId,storeId).first();
-  const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0)-Number(totals?.cash_refunded||0)-Number(totals?.cash_void_refunded||0))*100)/100;
+          AND r.status='posted'),0) AS cash_refunded,
+       COALESCE((SELECT SUM(CASE WHEN direction='in' THEN amount ELSE -amount END)
+         FROM pos_cash_movements WHERE cash_session_id=? AND store_id=?),0) AS cashbox_net
+  `).bind(sessionId,storeId,sessionId,storeId,sessionId,storeId,sessionId,storeId).first();
+  const expected=Math.round((Number(row.opening_cash_amount)+Number(totals?.cash_received||0)-Number(totals?.cash_refunded||0)-Number(totals?.cash_void_refunded||0)+Number(totals?.cashbox_net||0))*100)/100;
   const difference=Math.round((counted-expected)*100)/100;
   const result=await env.DB.prepare(`
     UPDATE pos_cash_sessions SET status='closed',closing_cash_amount=?,expected_cash_amount=?,
