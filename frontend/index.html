@@ -2382,7 +2382,7 @@ footer{
             ["وحدة البيع",saleUnit],
             ["السعر الأساسي (للوحدة المختارة)",price],
             ["العملة (رمز من 3 أحرف)",currency],
-            ["الكمية الافتتاحية",stock],
+            ["الكمية الافتتاحية (لمنتج الكيلو أدخل الغرامات)",stock],
             ["حالة العرض",productStatus],
             ["روابط صور المنتج (اختياري، رابط في كل سطر)",productImageUrls],
             ["رفع صور المنتج من الجهاز (حتى 5 صور)",productImageFiles],
@@ -3314,7 +3314,7 @@ footer{
           box.append(title,details);
           for(const item of order.items||[]){
             const line=document.createElement("p"); line.className="muted";
-            line.textContent=item.product_name+(item.variant_name?" / "+item.variant_name:"")+" × "+item.quantity+" — "+formatNumber(item.line_total)+" "+item.currency;
+            line.textContent=item.product_name+(item.variant_name?" / "+item.variant_name:"")+" × "+(item.sale_unit==="kg"?(Number(item.quantity)/1000).toLocaleString("ar")+" كغ":item.quantity+" قطعة")+" — "+formatNumber(item.line_total)+" "+item.currency;
             box.append(line);
           }
           for(const event of order.events||[]){
