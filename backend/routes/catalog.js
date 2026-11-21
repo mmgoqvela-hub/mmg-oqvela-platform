@@ -457,7 +457,8 @@ async function handleVariants(request, env, storeId, userId, access, productId, 
   }
 }
 
-async function handleProductImages(request, env, storeId, access, productId, imageId) {\n  const mediaStorage = createStoreMediaStorage(env);
+async function handleProductImages(request, env, storeId, access, productId, imageId) {
+  const mediaStorage = createStoreMediaStorage(env);
   const product = await env.DB.prepare(
     "SELECT id FROM products WHERE id = ? AND store_id = ? LIMIT 1"
   ).bind(productId, storeId).first();
