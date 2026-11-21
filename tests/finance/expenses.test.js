@@ -71,6 +71,14 @@ test("Expense idempotency returns the original record",async()=>{
  assert.equal(result.replayed,true);
  assert.equal(result.expense.id,"e1");
 });
+test("Finance panel can retrieve open cash sessions",async()=>{
+ const database=makeDb({rows:[{id:"cs1",currency:"USD",opening_cash_amount:50}]});
+ const response=await handleFinance(req(base+"/cashbox/sessions","GET"),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.sessions[0].id,"cs1");
+ assert.ok(database.calls.some(call=>call.sql.includes("FROM pos_cash_sessions")&&call.sql.includes("status='open'")));
+});
 test("Cashbox movement requires an open session and is appended",async()=>{
  const database=makeDb();
  const response=await handleFinance(req(base+"/cashbox/movements","POST",{
