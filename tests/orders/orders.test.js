@@ -169,15 +169,21 @@ test("Public checkout rate-limits each store and hashed client address",async()=
  assert.equal(blockedDb.calls.some(call=>call.sql.includes("INSERT INTO store_orders")),false);
 });
 
-test("Sham Cash checkout requires a configured recipient, sender and transaction reference",async()=>{
- const noRecipient=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash",sender_name:"Sender Name",transaction_reference:"TX123"}),{DB:db()});
+test("Sham Cash checkout requires a configured recipient but collects no transfer details before handover",async()=>{
+ const noRecipient=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash"}),{DB:db()});
  assert.equal(noRecipient.status,400);
- const configured=db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:1,pickup_enabled:1,delivery_enabled:1,delivery_fee:0,shamcash_recipient:"recipient-123",shamcash_instructions:"Send exact amount"}});
- const valid=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash",sender_name:"Sender Name",transaction_reference:"TX123"}),{DB:configured});
+ const configured=db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:1,pickup_enabled:1,delivery_enabled:1,delivery_fee:0,shamcash_recipient:"recipient-123",shamcash_instructions:"Pay after handover"}});
+ const valid=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash"}),{DB:configured});
  const result=await valid.json();
  assert.equal(valid.status,201);
- assert.equal(result.order.payment_status,"pending");
+ assert.equal(result.order.payment_status,"unpaid");
+ assert.equal(result.order.payment_method,"shamcash");
+ assert.equal(result.order.customer_access_token.length,64);
  assert.equal(result.order.shamcash.recipient,"recipient-123");
+ const insert=configured.calls.find(call=>call.sql.includes("INSERT INTO store_orders"));
+ assert.ok(insert.sql.includes("customer_payment_method"));
+ assert.equal(insert.values[8],"cash_on_delivery");
+ assert.equal(insert.values.at(-2),"shamcash");
 });
 
 test("Checkout rejects client price tampering and out-of-stock quantities",async()=>{
@@ -254,30 +260,52 @@ test("Store owner can configure both checkout methods and Sham Cash recipient",a
  assert.ok(database.calls.some(call=>call.sql.includes("INSERT INTO store_order_settings")));
 });
 
-test("Sham Cash orders cannot be fulfilled before manual payment approval",async()=>{
- const database=db({order:{id:"order-1",order_status:"pending",payment_status:"pending",payment_method:"shamcash"}});
+test("Sham Cash order acceptance does not require payment before handover",async()=>{
+ const database=db({order:{id:"order-1",order_status:"pending",payment_status:"unpaid",payment_method:"cash_on_delivery",customer_payment_method:"shamcash",customer_decision:"pending"}});
  const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
-  order_status:"confirmed"
- },true),{DB:database});
- assert.equal(response.status,409);
- assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_orders")),false);
-});
-
-test("Store owner can approve Sham Cash payment and confirm the order together",async()=>{
- const database=db({order:{id:"order-1",order_status:"pending",payment_status:"pending",payment_method:"shamcash"}});
- const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
-  order_status:"confirmed",payment_status:"paid"
+  customer_decision:"accepted"
  },true),{DB:database});
  assert.equal(response.status,200);
- assert.ok(database.calls.some(call=>call.sql.includes("UPDATE store_orders")));
+ const update=database.calls.find(call=>call.sql.includes("UPDATE store_orders"));
+ assert.ok(update.sql.includes("customer_decision"));
+ assert.equal(update.values[0],"accepted");
 });
 
-test("An unpaid order cannot be marked completed",async()=>{
- const database=db({order:{id:"order-1",order_status:"processing",payment_status:"unpaid",payment_method:"cash_on_delivery"}});
- const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
-  order_status:"completed"
+test("Store owner rejection requires a reason and records the decision",async()=>{
+ const database=db({order:{id:"order-1",order_status:"pending",payment_status:"unpaid",payment_method:"cash_on_delivery",customer_payment_method:"cash_on_delivery",customer_decision:"pending"}});
+ const missing=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  customer_decision:"rejected"
  },true),{DB:database});
- assert.equal(response.status,409);
+ assert.equal(missing.status,400);
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  customer_decision:"rejected",rejection_reason:"المحل مغلق حالياً"
+ },true),{DB:database});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).order.rejection_reason,"المحل مغلق حالياً");
+});
+
+test("Delivery completion records collection immediately using the selected payment method",async()=>{
+ const database=db({order:{id:"order-1",order_status:"confirmed",payment_status:"unpaid",payment_method:"cash_on_delivery",customer_payment_method:"cash_on_delivery",customer_decision:"accepted"}});
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  complete_delivery:true
+ },true),{DB:database});
+ assert.equal(response.status,200);
+ const update=database.calls.find(call=>call.sql.includes("UPDATE store_orders"));
+ assert.ok(update.sql.includes("payment_collected_at=CURRENT_TIMESTAMP"));
+ assert.ok(update.sql.includes("delivered_at=CURRENT_TIMESTAMP"));
+ assert.equal((await response.json()).order.payment_status,"paid");
+});
+
+test("Sham Cash collection requires transaction evidence at handover, not at checkout",async()=>{
+ const database=db({order:{id:"order-1",order_status:"confirmed",payment_status:"unpaid",payment_method:"cash_on_delivery",customer_payment_method:"shamcash",customer_decision:"accepted"}});
+ const missing=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  complete_delivery:true
+ },true),{DB:database});
+ assert.equal(missing.status,400);
+ const response=await handleOrders(request("/api/stores/store-1/orders/order-1","PATCH",{
+  complete_delivery:true,payment_reference:"TX-123",payment_sender_name:"Sender Name"
+ },true),{DB:database});
+ assert.equal(response.status,200);
 });
 
 
