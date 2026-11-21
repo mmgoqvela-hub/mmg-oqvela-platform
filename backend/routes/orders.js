@@ -309,16 +309,62 @@ export async function handleOrders(request,env){
   if(publicMatch)return createPublicOrder(request,env,publicMatch[1]);
   const settingsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/settings$/);
   const reportsMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/reports$/);
+  const customersMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/customers(?:\/([^/]+))?$/);
   const orderMatch=url.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([^/]+))?$/);
-  if(!settingsMatch&&!orderMatch&&!reportsMatch)return null;
+  if(!settingsMatch&&!orderMatch&&!reportsMatch&&!customersMatch)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   const session=await getAuthenticatedSession(request,env.DB);
   if(!session)return json({error:"Authentication required"},401);
   let storeId;
-  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
+  try{storeId=decodeURIComponent((settingsMatch||orderMatch||reportsMatch||customersMatch)[1]);}catch{return json({error:"Invalid store ID"},400);}
   const access=await getAccess(env.DB,storeId,session.user_id);
   if(!access)return json({error:"Store not found"},404);
   if(access.store_status!=="active"||access.account_status!=="active")return json({error:"Store is unavailable"},403);
+
+  if(customersMatch){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405);
+    if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
+    const normalizePhone=value=>String(value||"").replace(/[\\s()\\-]/g,"");
+    if(!customersMatch[2]){
+      const result=await env.DB.prepare(`
+        SELECT MIN(customer_name) AS customer_name,
+          MIN(customer_phone) AS customer_phone,
+          REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','') AS phone_key,
+          COUNT(*) AS orders_count,
+          ROUND(SUM(total),2) AS total_orders_value,
+          MAX(created_at) AS last_order_at,
+          SUM(CASE WHEN order_status IN ('pending','confirmed','processing','shipped') THEN 1 ELSE 0 END) AS open_orders
+        FROM store_orders WHERE store_id=?
+        GROUP BY REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','')
+        ORDER BY last_order_at DESC LIMIT 300
+      `).bind(storeId).all();
+      return json({status:"ok",customers:(result.results||[]).map(row=>({...row,phone_key:normalizePhone(row.phone_key)}))});
+    }
+    let phoneKey;
+    try{phoneKey=normalizePhone(decodeURIComponent(customersMatch[2]));}catch{return json({error:"Invalid phone"},400);}
+    if(phoneKey.length<6||phoneKey.length>30)return json({error:"Invalid phone"},400);
+    const result=await env.DB.prepare(`
+      SELECT id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
+        payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
+        fulfillment_method,delivery_fee,created_at,updated_at
+      FROM store_orders WHERE store_id=?
+        AND REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','')=?
+      ORDER BY created_at DESC LIMIT 300
+    `).bind(storeId,phoneKey).all();
+    const orders=result.results||[];
+    if(!orders.length)return json({status:"ok",orders:[]});
+    const ids=orders.map(order=>order.id),placeholders=ids.map(()=>"?").join(",");
+    const [lines,events]=await Promise.all([
+      env.DB.prepare(`SELECT order_id,id,product_name,variant_name,quantity,unit_price,line_total,currency,sale_unit
+        FROM store_order_items WHERE store_id=? AND order_id IN (${placeholders}) ORDER BY created_at ASC`).bind(storeId,...ids).all(),
+      env.DB.prepare(`SELECT order_id,event_type,from_value,to_value,created_at
+        FROM store_order_events WHERE store_id=? AND order_id IN (${placeholders}) ORDER BY created_at ASC`).bind(storeId,...ids).all()
+    ]);
+    const byOrder=new Map(),byEvent=new Map();
+    for(const line of lines.results||[]){const list=byOrder.get(line.order_id)||[];list.push(line);byOrder.set(line.order_id,list);}
+    for(const event of events.results||[]){const list=byEvent.get(event.order_id)||[];list.push(event);byEvent.set(event.order_id,list);}
+    return json({status:"ok",orders:orders.map(order=>({...order,items:byOrder.get(order.id)||[],events:byEvent.get(order.id)||[]}))});
+  }
 
   if(reportsMatch){
     if(request.method!=="GET")return json({error:"Method not allowed"},405);
