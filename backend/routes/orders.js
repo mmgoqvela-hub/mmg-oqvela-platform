@@ -382,8 +382,10 @@ export async function handleOrders(request,env){
     if(phoneKey.length<6||phoneKey.length>30)return json({error:"Invalid phone"},400);
     const result=await env.DB.prepare(`
       SELECT id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
-        payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
-        fulfillment_method,delivery_fee,created_at,updated_at
+        payment_method,customer_payment_method,payment_status,order_status,customer_decision,rejection_reason,
+        transaction_reference,payment_reference,payment_sender_name,sender_name,subtotal,total,currency,
+        fulfillment_method,delivery_fee,store_phone_snapshot,created_at,updated_at,accepted_at,rejected_at,
+        delivered_at,payment_collected_at
       FROM store_orders WHERE store_id=?
         AND REPLACE(REPLACE(REPLACE(REPLACE(customer_phone,' ',''),'-',''),'(',''),')','')=?
       ORDER BY created_at DESC LIMIT 300
@@ -453,9 +455,10 @@ export async function handleOrders(request,env){
     if(!allowed(access,"orders.read"))return json({error:"Orders read permission required"},403);
     const result=await env.DB.prepare(`
       SELECT id,order_number,customer_name,customer_phone,customer_email,shipping_address,customer_notes,
-        payment_method,payment_status,order_status,transaction_reference,sender_name,subtotal,total,currency,
-        fulfillment_method,delivery_fee,
-        created_at,updated_at
+        payment_method,customer_payment_method,payment_status,order_status,customer_decision,rejection_reason,
+        transaction_reference,payment_reference,payment_sender_name,sender_name,subtotal,total,currency,
+        fulfillment_method,delivery_fee,store_phone_snapshot,
+        created_at,updated_at,accepted_at,rejected_at,delivered_at,payment_collected_at
       FROM store_orders WHERE store_id=? ORDER BY created_at DESC LIMIT 100
     `).bind(storeId).all();
     const orders=result.results||[];
