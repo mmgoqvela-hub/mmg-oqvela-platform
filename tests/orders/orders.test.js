@@ -305,3 +305,17 @@ test("D1 enforces order and payment transitions even outside the HTTP route",()=
  assert.match(lifecycleMigration,/NEW\.order_status = 'completed' AND NEW\.payment_status != 'paid'/);
  assert.match(lifecycleMigration,/NEW\.payment_method = 'shamcash'[\s\S]*?NEW\.payment_status != 'paid'/);
 });
+
+test("Kilogram checkout stores grams and charges the proportional kilogram price",async()=>{
+ const database=db({product:{...PRODUCT,sale_unit:"kg",stock_quantity:1000}});
+ const response=await handleOrders(request("/api/public/stores/test-store/orders","POST",{
+  ...checkout,items:[{product_id:"product-1",quantity:250}]
+ }),{DB:database});
+ const result=await response.json();
+ assert.equal(response.status,201);
+ assert.equal(result.order.subtotal,3.13);
+ const line=database.calls.find(call=>call.sql.includes("INSERT INTO store_order_items"));
+ assert.equal(line.values[8],250);
+ assert.equal(line.values[9],12.5);
+ assert.equal(line.values.at(-1),"kg");
+});
