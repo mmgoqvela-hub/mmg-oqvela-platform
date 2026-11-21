@@ -53,7 +53,10 @@ export async function handlePosVoids(request,env){
     SELECT id,void_number,sale_id,refund_total,currency,status FROM pos_sale_voids
     WHERE store_id=? AND idempotency_key=?
   `).bind(storeId,key).first();
-  if(replay)return json({status:"ok",void:replay,replayed:true});
+  if(replay){
+    if(replay.sale_id!==saleId)return json({error:"This idempotency key was already used for another sale"},409);
+    return json({status:"ok",void:replay,replayed:true});
+  }
   const sale=await env.DB.prepare(`
     SELECT id,sale_number,cash_session_id,warehouse_id,currency,total,status
     FROM pos_sales WHERE id=? AND store_id=?
