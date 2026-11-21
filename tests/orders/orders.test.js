@@ -63,7 +63,7 @@ function request(path,method="POST",body,authenticated=false){
  return new Request("https://example.com"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
 }
 const checkout={
- customer_name:"Customer Name",customer_phone:"+963 900 000 000",
+ customer_name:"Customer Name",customer_phone:"+963 900 000 000",shipping_address:"Damascus, Syria",
  payment_method:"cash_on_delivery",fulfillment_method:"pickup",
  items:[{product_id:"product-1",quantity:2}]
 };
