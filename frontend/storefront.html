@@ -531,13 +531,19 @@
           const card=document.createElement("article");card.className="customer-order";
           const title=document.createElement("strong");title.textContent=t("orderNumber")+" "+order.order_number+" — "+decisionLabel(order);
           const detail=document.createElement("small");
-          detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"))+" · هاتف المحل: "+(order.store_phone_snapshot||ordersData.store?.whatsapp_phone||"غير محدد")+" · العنوان: "+(order.shipping_address||"");
+          detail.textContent=(order.created_at||"")+" · "+money(order.total,order.currency)+" · "+(order.customer_payment_method==="shamcash"?"شام كاش":t("cod"))+" · "+(order.payment_status==="paid"?(language==="ar"?"تم التحصيل":"Collected"):(language==="ar"?"لم يتم التحصيل بعد":"Not collected yet"))+" · هاتف المحل: "+(order.store_phone_snapshot||ordersData.store?.whatsapp_phone||"غير محدد")+" · العنوان: "+(order.shipping_address||"");
           card.append(title,document.createElement("br"),detail);
           if(order.customer_decision==="rejected"&&order.rejection_reason){
             const reason=document.createElement("p");reason.textContent=t("rejectionReason")+": "+order.rejection_reason;card.append(reason);
           }
           const lines=document.createElement("p");lines.textContent=(order.items||[]).map(item=>item.product_name+" × "+item.quantity+(item.sale_unit==="kg"?" غ":"")).join("، ");
-          card.append(lines);list.append(card);
+          card.append(lines);
+          if((order.decision_history||[]).length){
+            const history=document.createElement("small");
+            history.textContent=(language==="ar"?"سجل القرارات: ":"Decision history: ")+(order.decision_history||[]).map(event=>(event.created_at||"")+" · "+(event.to_decision==="accepted"?(language==="ar"?"مقبول":"Accepted"):(language==="ar"?"مرفوض":"Rejected"))+(event.rejection_reason?" — "+event.rejection_reason:"")).join(" | ");
+            card.append(history);
+          }
+          list.append(card);
         }
         const notices=$("customerNotifications");notices.replaceChildren();
         const heading=document.createElement("strong");heading.textContent=t("notifications")+" ("+(notificationsData.unread_count||0)+")";notices.append(heading);
