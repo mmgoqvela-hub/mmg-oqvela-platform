@@ -276,14 +276,14 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
     if (stock > 0) {
       statements.push(env.DB.prepare(`
         INSERT INTO inventory_movements (
-          id, store_id, product_id, movement_type, quantity_change, notes, created_by
+          id, store_id, product_id, movement_type, quantity_change, notes, created_by, unit_code
         )
-        SELECT ?, ?, ?, 'initial', ?, 'Initial stock on product creation', ?
+        SELECT ?, ?, ?, 'initial', ?, 'Initial stock on product creation', ?, ?
         WHERE EXISTS (
           SELECT 1 FROM products
           WHERE id = ? AND store_id = ? AND stock_quantity = ?
         )
-      `).bind(crypto.randomUUID(), storeId, id, stock, userId, id, storeId, stock));
+      `).bind(crypto.randomUUID(), storeId, id, stock, userId, body.sale_unit === "kg" ? "g" : "piece", id, storeId, stock));
     }
     try {
       const results = await env.DB.batch(statements);
@@ -563,8 +563,8 @@ async function handleInventory(request, env, storeId, userId, access) {
   if (request.method === "GET") {
     if (!canRead(access, "inventory.read")) return json({ error: "Store read permission required" }, 403);
     const result = await env.DB.prepare(`
-      SELECT im.id, im.product_id, p.name AS product_name, im.variant_id,
-             v.name AS variant_name, im.movement_type, im.quantity_change, im.reference_id,
+      SELECT im.id, im.product_id, p.name AS product_name, p.sale_unit, im.variant_id,
+             v.name AS variant_name, im.movement_type, im.quantity_change, im.unit_code, im.reference_id,
              im.notes, im.created_at, u.full_name AS created_by_name
       FROM inventory_movements im
       JOIN products p ON p.id = im.product_id AND p.store_id = im.store_id
@@ -601,7 +601,7 @@ async function handleInventory(request, env, storeId, userId, access) {
     return json({ error: "This movement type requires a negative quantity" }, 400);
   }
   const product = await env.DB.prepare(
-    "SELECT id, track_inventory, stock_quantity FROM products WHERE id = ? AND store_id = ? LIMIT 1"
+    "SELECT id, track_inventory, stock_quantity, sale_unit FROM products WHERE id = ? AND store_id = ? LIMIT 1"
   ).bind(productId, storeId).first();
   if (!product) return json({ error: "Product not found" }, 404);
   if (!product.track_inventory) return json({ error: "Inventory tracking is disabled for this product" }, 409);
@@ -642,14 +642,14 @@ async function handleInventory(request, env, storeId, userId, access) {
       env.DB.prepare(`
         INSERT INTO inventory_movements (
           id, store_id, product_id, variant_id, movement_type,
-          quantity_change, reference_id, notes, created_by
+          quantity_change, reference_id, notes, created_by, unit_code
         )
-        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         WHERE EXISTS (${stockCheck})
       `).bind(
         crypto.randomUUID(), storeId, productId, variantId, movementType,
         quantityChange, referenceId || null, notes || null, userId,
-        ...stockValues
+        product.sale_unit === "kg" ? "g" : "piece", ...stockValues
       )
     ]);
     if (!results[0]?.meta?.changes || !results[1]?.meta?.changes) {
