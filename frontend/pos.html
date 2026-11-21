@@ -133,7 +133,7 @@
    for(const item of data.items||[]){
     const row=document.createElement("div");row.className="total-row";
     const name=document.createElement("span");const returned=returnedByItem[item.id]||0;
-    name.textContent=item.product_name+(item.variant_name?" · "+item.variant_name:"")+" × "+item.quantity+(returned?" · "+t("returned")+": "+returned:"");
+    name.textContent=item.product_name+(item.variant_name?" · "+item.variant_name:"")+" × "+(item.sale_unit==="kg"?(item.quantity*0.05).toFixed(2)+" kg":item.quantity+" قطعة")+(returned?" · "+t("returned")+": "+(item.sale_unit==="kg"?(returned*0.05).toFixed(2)+" kg":returned):"");
     const amount=document.createElement("strong");amount.textContent=money(item.line_total,sale.currency);row.append(name,amount);$("historicalItems").append(row);
    }
    for(const payment of data.payments||[]){const row=document.createElement("div");row.className="total-row";const method=document.createElement("span");method.textContent=payment.payment_method;const amount=document.createElement("strong");amount.textContent=money(payment.amount,payment.currency||sale.currency);row.append(method,amount);$("historicalPayments").append(row);}
@@ -143,7 +143,7 @@
     const wrap=document.createElement("div");wrap.className="history-row";wrap.style.gridTemplateColumns="1fr";
     const head=document.createElement("strong");head.textContent=ret.return_number+" · "+money(ret.refund_total,ret.currency);
     const meta=document.createElement("div");meta.className="history-meta";meta.textContent=[ret.created_at,ret.reason].filter(Boolean).join(" · ");wrap.append(head,meta);
-    for(const item of ret.items||[]){const line=document.createElement("div");line.className="history-meta";line.textContent=item.product_name+(item.variant_name?" · "+item.variant_name:"")+" × "+item.quantity+(item.restock?" · "+t("restock"):"");wrap.append(line);}
+    for(const item of ret.items||[]){const line=document.createElement("div");line.className="history-meta";line.textContent=item.product_name+(item.variant_name?" · "+item.variant_name:"")+" × "+(item.sale_unit==="kg"?(item.quantity*0.05).toFixed(2)+" kg":item.quantity+" قطعة")+(item.restock?" · "+t("restock"):"");wrap.append(line);}
     for(const payment of ret.payments||[]){const line=document.createElement("div");line.className="history-meta";line.textContent=t("returnPayments")+": "+payment.payment_method+" · "+money(payment.amount,payment.currency||ret.currency);wrap.append(line);}
     returnRoot.append(wrap);
    }
@@ -173,11 +173,11 @@
  }
  function openReturnDialog(sale,items,returnedByItem={}){
   const eligible=items.map(item=>({...item,remaining:Number(item.quantity)-(returnedByItem[item.id]||0)})).filter(item=>item.remaining>0);
-  const rows=eligible.map(item=>'<div class="history-row" style="grid-template-columns:minmax(0,1fr) 95px;align-items:center"><div><strong>'+escapeHtml(item.product_name+(item.variant_name?" · "+item.variant_name:""))+'</strong><div class="history-meta">'+t("remaining")+': '+item.remaining+' / '+item.quantity+'</div></div><input class="return-line-qty" data-item-id="'+escapeHtml(item.id)+'" data-line-total="'+Number(item.line_total)+'" data-line-qty="'+Number(item.quantity)+'" type="number" min="0" max="'+item.remaining+'" step="1" value="0" aria-label="'+t("returnQty")+'"></div>').join("");
+  const rows=eligible.map(item=>'<div class="history-row" style="grid-template-columns:minmax(0,1fr) 95px;align-items:center"><div><strong>'+escapeHtml(item.product_name+(item.variant_name?" · "+item.variant_name:""))+'</strong><div class="history-meta">'+t("remaining")+': '+(item.sale_unit==="kg"?(item.remaining*0.05).toFixed(2)+" kg":item.remaining)+ ' / '+(item.sale_unit==="kg"?(item.quantity*0.05).toFixed(2)+" kg":item.quantity)+'</div></div><input class="return-line-qty" data-item-id="'+escapeHtml(item.id)+'" data-sale-unit="'+(item.sale_unit||"piece")+'" data-line-total="'+Number(item.line_total)+'" data-line-qty="'+Number(item.quantity)+'" type="number" min="0" max="'+(item.sale_unit==="kg"?(item.remaining*0.05).toFixed(2):item.remaining)+'" step="'+(item.sale_unit==="kg"?"0.05":"1")+'" value="0" aria-label="'+t("returnQty")+'"></div>').join("");
   modal('<div class="receipt"><div class="section-head"><h2>'+t("returnSale")+'</h2><button class="quiet small-button" id="returnClose">'+t("close")+'</button></div><div class="history-list">'+rows+'</div><div class="field"><label>'+t("returnReason")+'</label><input id="returnReasonInput" maxlength="500"></div><div class="field"><label>'+t("refundAmount")+' ('+escapeHtml(sale.currency)+')</label><input id="refundAmountInput" type="number" min="0.01" step="0.01" value="0"></div><div class="field"><label>'+t("refundMethod")+'</label><select id="refundMethodInput"><option value="cash">'+t("cash")+'</option><option value="card">'+t("card")+'</option><option value="digital">'+t("digital")+'</option></select></div><div id="returnError" class="error"></div><div class="actions"><button id="returnSubmit">'+t("submitReturn")+'</button></div></div>');
   $("returnClose").addEventListener("click",()=>openHistoricalSale(sale.id));
   $("returnSubmit").addEventListener("click",async()=>{
-   const selected=[...document.querySelectorAll(".return-line-qty")].map(input=>({sale_item_id:input.dataset.itemId,quantity:Number(input.value),restock:true})).filter(item=>Number.isInteger(item.quantity)&&item.quantity>0);
+   const selected=[...document.querySelectorAll(".return-line-qty")].map(input=>({sale_item_id:input.dataset.itemId,quantity:input.dataset.saleUnit==="kg"?Math.round(Number(input.value)/0.05):Number(input.value),restock:true})).filter(item=>Number.isInteger(item.quantity)&&item.quantity>0);
    const refund=Number($("refundAmountInput").value),reason=$("returnReasonInput").value.trim();
    if(!selected.length){showError("returnError",new Error(t("selectReturnItems")));return;}
    if(!reason||!Number.isFinite(refund)||refund<=0){showError("returnError",new Error(t("refundRequired")));return;}
