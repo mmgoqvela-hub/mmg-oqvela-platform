@@ -25,6 +25,15 @@ INSERT INTO inventory_warehouses (id, store_id, code, name, is_default)
 SELECT 'wh-default-' || lower(hex(randomblob(12))), id, 'MAIN', 'Main warehouse', 1
 FROM stores;
 
+
+-- Every store created after this migration receives its own default warehouse.
+CREATE TRIGGER trg_store_create_default_inventory_warehouse
+AFTER INSERT ON stores
+BEGIN
+    INSERT INTO inventory_warehouses (id, store_id, code, name, is_default)
+    VALUES ('wh-' || lower(hex(randomblob(12))), NEW.id, 'MAIN', 'Main warehouse', 1);
+END;
+
 ALTER TABLE inventory_movements
     ADD COLUMN warehouse_id TEXT REFERENCES inventory_warehouses(id) ON DELETE RESTRICT;
 
