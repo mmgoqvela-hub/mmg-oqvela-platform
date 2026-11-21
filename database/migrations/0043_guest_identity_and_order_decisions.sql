@@ -80,14 +80,68 @@ CREATE UNIQUE INDEX idx_store_orders_unique_payment_reference
   ON store_orders(store_id,payment_reference)
   WHERE payment_reference IS NOT NULL;
 
--- Stock is no longer reserved when a customer merely submits an order.
--- It is reserved only after the store accepts it.
+-- Preserve reservations created by the previous checkout workflow.
+-- Existing open orders already reduced stock at checkout, so carry those reservations
+-- forward instead of reserving them a second time when they are accepted.
+CREATE TABLE store_order_stock_reservations (
+  id TEXT PRIMARY KEY,
+  store_id TEXT NOT NULL,
+  order_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  variant_id TEXT,
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  released_at TEXT,
+  FOREIGN KEY (order_id,store_id) REFERENCES store_orders(id,store_id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id,store_id) REFERENCES products(id,store_id) ON DELETE RESTRICT,
+  FOREIGN KEY (variant_id,store_id) REFERENCES product_variants(id,store_id) ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_store_order_stock_reservations_active
+  ON store_order_stock_reservations(store_id,order_id,is_active);
+
+UPDATE store_orders
+SET customer_decision=CASE
+      WHEN order_status IN ('confirmed','processing','shipped','completed') THEN 'accepted'
+      WHEN order_status='cancelled' THEN 'rejected'
+      ELSE 'pending' END,
+    rejection_reason=CASE WHEN order_status='cancelled'
+      THEN COALESCE(rejection_reason,'طلب سابق ملغي') ELSE rejection_reason END,
+    accepted_at=CASE WHEN order_status IN ('confirmed','processing','shipped','completed')
+      THEN COALESCE(accepted_at,updated_at) ELSE accepted_at END,
+    rejected_at=CASE WHEN order_status='cancelled'
+      THEN COALESCE(rejected_at,updated_at) ELSE rejected_at END,
+    customer_payment_method=CASE WHEN payment_method='shamcash'
+      THEN 'shamcash' ELSE customer_payment_method END,
+    payment_reference=COALESCE(payment_reference,transaction_reference),
+    payment_sender_name=COALESCE(payment_sender_name,sender_name),
+    store_phone_snapshot=COALESCE(store_phone_snapshot,
+      (SELECT whatsapp_phone FROM stores WHERE stores.id=store_orders.store_id));
+
+INSERT INTO store_order_stock_reservations
+  (id,store_id,order_id,product_id,variant_id,quantity,is_active,created_at)
+SELECT lower(hex(randomblob(16))),o.store_id,oi.order_id,oi.product_id,oi.variant_id,
+  oi.quantity,1,o.created_at
+FROM store_orders o
+JOIN store_order_items oi ON oi.order_id=o.id AND oi.store_id=o.store_id
+JOIN products p ON p.id=oi.product_id AND p.store_id=oi.store_id
+WHERE p.track_inventory=1
+  AND o.order_status IN ('pending','confirmed','processing','shipped');
+
+-- New orders do not reserve stock until the store accepts them.
+-- A legacy open order already has an active reservation and is therefore skipped.
 DROP TRIGGER IF EXISTS trg_order_item_reserve_variant_stock;
 DROP TRIGGER IF EXISTS trg_order_item_reserve_product_stock;
 
 CREATE TRIGGER trg_order_decision_reserve_stock
 AFTER UPDATE OF customer_decision ON store_orders
-WHEN OLD.customer_decision != 'accepted' AND NEW.customer_decision = 'accepted'
+WHEN OLD.customer_decision != 'accepted'
+ AND NEW.customer_decision = 'accepted'
+ AND NOT EXISTS (
+   SELECT 1 FROM store_order_stock_reservations
+   WHERE order_id=NEW.id AND store_id=NEW.store_id AND is_active=1
+ )
 BEGIN
   SELECT CASE WHEN EXISTS (
     SELECT 1
@@ -101,26 +155,25 @@ BEGIN
 
   UPDATE product_variants
   SET stock_quantity = stock_quantity - (
-    SELECT oi.quantity FROM store_order_items oi
+    SELECT SUM(oi.quantity) FROM store_order_items oi
     WHERE oi.order_id=NEW.id AND oi.store_id=NEW.store_id
       AND oi.variant_id=product_variants.id
   )
   WHERE store_id=NEW.store_id
-    AND id IN (SELECT variant_id FROM store_order_items
-      WHERE order_id=NEW.id AND store_id=NEW.store_id AND variant_id IS NOT NULL)
-    AND EXISTS (SELECT 1 FROM products p
-      WHERE p.id=product_variants.product_id AND p.store_id=NEW.store_id AND p.track_inventory=1);
+    AND id IN (SELECT oi.variant_id FROM store_order_items oi
+      JOIN products p ON p.id=oi.product_id AND p.store_id=oi.store_id
+      WHERE oi.order_id=NEW.id AND oi.store_id=NEW.store_id
+        AND oi.variant_id IS NOT NULL AND p.track_inventory=1);
 
   UPDATE products
   SET stock_quantity = stock_quantity - (
-    SELECT oi.quantity FROM store_order_items oi
+    SELECT SUM(oi.quantity) FROM store_order_items oi
     WHERE oi.order_id=NEW.id AND oi.store_id=NEW.store_id
       AND oi.product_id=products.id AND oi.variant_id IS NULL
   )
-  WHERE store_id=NEW.store_id
+  WHERE store_id=NEW.store_id AND track_inventory=1
     AND id IN (SELECT product_id FROM store_order_items
-      WHERE order_id=NEW.id AND store_id=NEW.store_id AND variant_id IS NULL)
-    AND track_inventory=1;
+      WHERE order_id=NEW.id AND store_id=NEW.store_id AND variant_id IS NULL);
 
   INSERT INTO inventory_movements
     (id,store_id,product_id,variant_id,movement_type,quantity_change,reference_id,notes)
@@ -129,64 +182,65 @@ BEGIN
   FROM store_order_items oi
   JOIN products p ON p.id=oi.product_id AND p.store_id=oi.store_id
   WHERE oi.order_id=NEW.id AND oi.store_id=NEW.store_id AND p.track_inventory=1;
+
+  INSERT INTO store_order_stock_reservations
+    (id,store_id,order_id,product_id,variant_id,quantity,is_active)
+  SELECT lower(hex(randomblob(16))),NEW.store_id,oi.order_id,oi.product_id,oi.variant_id,
+    oi.quantity,1
+  FROM store_order_items oi
+  JOIN products p ON p.id=oi.product_id AND p.store_id=oi.store_id
+  WHERE oi.order_id=NEW.id AND oi.store_id=NEW.store_id AND p.track_inventory=1;
 END;
 
+-- Rejecting a previously reserved order restores exactly its active reservation.
+-- This also safely releases reservations made by the legacy checkout workflow.
 CREATE TRIGGER trg_order_decision_restore_stock
 AFTER UPDATE OF customer_decision ON store_orders
-WHEN OLD.customer_decision='accepted' AND NEW.customer_decision='rejected'
+WHEN OLD.customer_decision != 'rejected'
+ AND NEW.customer_decision = 'rejected'
+ AND EXISTS (
+   SELECT 1 FROM store_order_stock_reservations
+   WHERE order_id=NEW.id AND store_id=NEW.store_id AND is_active=1
+ )
 BEGIN
   UPDATE product_variants
   SET stock_quantity = stock_quantity + (
-    SELECT COALESCE(-SUM(im.quantity_change),0)
-    FROM inventory_movements im
-    WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type IN ('sale','return') AND im.product_id=product_variants.product_id
-      AND im.variant_id=product_variants.id
+    SELECT COALESCE(SUM(r.quantity),0)
+    FROM store_order_stock_reservations r
+    WHERE r.order_id=NEW.id AND r.store_id=NEW.store_id
+      AND r.product_id=product_variants.product_id
+      AND r.variant_id=product_variants.id AND r.is_active=1
   )
   WHERE store_id=NEW.store_id AND EXISTS (
-    SELECT 1 FROM inventory_movements im
-    WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type IN ('sale','return') AND im.product_id=product_variants.product_id
-      AND im.variant_id=product_variants.id
+    SELECT 1 FROM store_order_stock_reservations r
+    WHERE r.order_id=NEW.id AND r.store_id=NEW.store_id
+      AND r.product_id=product_variants.product_id
+      AND r.variant_id=product_variants.id AND r.is_active=1
   );
 
   UPDATE products
   SET stock_quantity = stock_quantity + (
-    SELECT COALESCE(-SUM(im.quantity_change),0)
-    FROM inventory_movements im
-    WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type IN ('sale','return') AND im.product_id=products.id AND im.variant_id IS NULL
+    SELECT COALESCE(SUM(r.quantity),0)
+    FROM store_order_stock_reservations r
+    WHERE r.order_id=NEW.id AND r.store_id=NEW.store_id
+      AND r.product_id=products.id AND r.variant_id IS NULL AND r.is_active=1
   )
   WHERE store_id=NEW.store_id AND EXISTS (
-    SELECT 1 FROM inventory_movements im
-    WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-      AND im.movement_type IN ('sale','return') AND im.product_id=products.id AND im.variant_id IS NULL
+    SELECT 1 FROM store_order_stock_reservations r
+    WHERE r.order_id=NEW.id AND r.store_id=NEW.store_id
+      AND r.product_id=products.id AND r.variant_id IS NULL AND r.is_active=1
   );
 
   INSERT INTO inventory_movements
     (id,store_id,product_id,variant_id,movement_type,quantity_change,reference_id,notes)
-  SELECT lower(hex(randomblob(16))),NEW.store_id,im.product_id,im.variant_id,
-    'return',-SUM(im.quantity_change),NEW.id,'Rejected accepted customer order stock restoration'
-  FROM inventory_movements im
-  WHERE im.store_id=NEW.store_id AND im.reference_id=NEW.id
-    AND im.movement_type IN ('sale','return')
-  GROUP BY im.product_id,im.variant_id
-  HAVING SUM(im.quantity_change)<0;
-END;
+  SELECT lower(hex(randomblob(16))),NEW.store_id,r.product_id,r.variant_id,
+    'return',r.quantity,NEW.id,'Rejected customer order stock restoration'
+  FROM store_order_stock_reservations r
+  WHERE r.order_id=NEW.id AND r.store_id=NEW.store_id AND r.is_active=1;
 
--- Replace the legacy pre-payment notification with the accepted decision-only workflow.
-DROP TRIGGER IF EXISTS trg_notify_store_order_created;
-CREATE TRIGGER trg_notify_store_order_created
-AFTER INSERT ON store_orders
-BEGIN
-  INSERT OR IGNORE INTO user_notifications
-    (id,user_id,notification_type,title,message,entity_type,entity_id,dedupe_key)
-  SELECT lower(hex(randomblob(16))),a.owner_user_id,'store_order',
-    'طلب جديد في متجرك',
-    'تم استلام طلب جديد ويحتاج إلى قرار قبول أو رفض. يتم تحصيل المبلغ عند تسليم الطلب.',
-    'store_order',NEW.id,'store-order-created:' || NEW.id
-  FROM stores s JOIN accounts a ON a.id=s.account_id
-  WHERE s.id=NEW.store_id;
+  UPDATE store_order_stock_reservations
+  SET is_active=0,released_at=CURRENT_TIMESTAMP
+  WHERE order_id=NEW.id AND store_id=NEW.store_id AND is_active=1;
 END;
 
 -- Preserve the full decision history; never overwrite earlier decisions.
