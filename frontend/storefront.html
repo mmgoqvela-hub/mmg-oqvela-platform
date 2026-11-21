@@ -618,6 +618,11 @@
             renderCustomerQr();
             loadCustomerPortal();
             startCustomerPortalPolling();
+            if(customerMode()!=="account"){
+              $("customerOrdersPanel").hidden=false;
+              $("customerOrdersToggle").textContent=t("hideOrders");
+              $("customerOrdersSection").scrollIntoView({behavior:"smooth",block:"center"});
+            }
           }
           if (data.order.shamcash) {
             const pay = document.createElement("p");
