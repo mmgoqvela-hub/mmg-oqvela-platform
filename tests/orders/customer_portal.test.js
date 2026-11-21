@@ -154,3 +154,21 @@ test("Registered customer sessions cannot be rotated as guest QR codes",async()=
   assert.equal(response.status,409);
   assert.equal(database.calls.some(call=>call.sql.includes("SET access_token_hash")),false);
 });
+
+
+test("Customer account login issues a persistent session for a valid password",async()=>{
+  const password="correct-horse-123";
+  const salt="b".repeat(32);
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new Uint8Array(salt.match(/.{2}/g).map(v=>parseInt(v,16))),iterations:210000,hash:"SHA-256"},key,256);
+  const hash=Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,"0")).join("");
+  const database=db({account:{id:"account-1",customer_identity_id:"identity-1",password_salt:salt,password_hash:hash}});
+  const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/account/login","POST",{
+    customer_phone:"+963 900 000 000",password
+  },null),{DB:database});
+  const result=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(result.customer_mode,"account");
+  assert.equal(result.customer_access_token.length,64);
+  assert.ok(database.calls.some(call=>call.sql.includes("INSERT INTO store_customer_account_sessions")));
+});
