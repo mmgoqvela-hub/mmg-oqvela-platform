@@ -170,3 +170,38 @@ Migration \`0027_inventory_warehouse_ledger.sql\` implements the first compatibl
 ### Migration test coverage
 
 The migration test suite now checks default warehouse creation, stock projection updates, store-scoped idempotency, cross-store warehouse rejection, update/delete protection, valid partial reversal, and rejection of excessive reversal. Full D1 deployment validation and operational rollout remain separate from the SQLite migration test.
+
+## 13. Supplier directory and purchase-order foundation (migration 0028)
+
+Migration \`0028_suppliers_purchase_orders.sql\` adds a tenant-scoped supplier directory and purchase-order workflow.
+
+### Supplier records
+- Supplier records belong to exactly one store and cannot be referenced cross-tenant.
+- Store owners/admins and staff with \`inventory.manage\` can create and update supplier records.
+- Deleting a supplier that has purchase-order history deactivates it instead of erasing the relationship.
+- Supplier records hold contact and reference details only; no supplier balance or payable is implied.
+
+### Purchase orders
+- Purchase orders are created as drafts and contain product/variant snapshots, integer quantities and exact USD unit costs in integer cents.
+- USD is the only enabled purchase-order currency in this first increment. No SYP precision or redenomination assumption is introduced.
+- Amounts are accepted by the API as plain decimal strings with exactly up to two fractional digits. JavaScript floating-point values are rejected. Unit cost × quantity and document totals are calculated with integer/BigInt arithmetic and checked against the safe integer limit.
+- The database recalculates the draft total from its lines and rejects line totals inconsistent with quantity × unit cost.
+- State transitions are draft → submitted → approved, with cancellation from draft/submitted/approved. A draft cannot skip submission; terminal states cannot be reopened.
+- Once submitted, order header details and line items are frozen. Submitted/approved documents cannot be deleted.
+- Supplier and product references are constrained to the same store.
+
+### Important accounting and stock boundaries
+- Creating, submitting or approving a purchase order does not change stock.
+- A purchase order is a commitment/request, not proof that goods were delivered, invoiced or paid.
+- This increment does not create supplier invoices, supplier payables, payments, landed-cost allocation, taxes, customs or accounting journal entries.
+- Goods receipt documents and their posting rules are the next separate increment. Only a validated, posted receipt may create positive inventory movements.
+- No stock quantity or warehouse balance is changed by purchase-order approval.
+
+### API endpoints
+- \`GET/POST /api/stores/:storeId/suppliers\`
+- \`PUT/DELETE /api/stores/:storeId/suppliers/:supplierId\`
+- \`GET/POST /api/stores/:storeId/purchase-orders\`
+- \`GET /api/stores/:storeId/purchase-orders/:purchaseOrderId\`
+- \`POST /api/stores/:storeId/purchase-orders/:purchaseOrderId\` with \`action: submit | approve | cancel\`
+
+All endpoints require an authenticated session, valid origin, active store membership and the existing \`inventory.read\` or \`inventory.manage\` permission.
