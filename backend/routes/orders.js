@@ -559,7 +559,7 @@ export async function handleOrders(request,env){
     if(!["accepted","rejected"].includes(decision))return json({error:"Invalid customer decision"},400);
     if(decision==="rejected"&&!validText(reason,3,1000))
       return json({error:"Choose or enter a reason for rejecting the order"},400);
-    if(existing.order_status==="completed")return json({error:"A completed order cannot be changed"},409);
+    if(["completed","cancelled"].includes(existing.order_status))return json({error:"A closed order cannot be changed"},409);
     if(existing.customer_decision===decision&&
       (decision!=="rejected"||reason===String(b.rejection_reason||"").trim()))
       return json({status:"ok",order:{id:orderId,customer_decision:decision,order_status:existing.order_status}});
