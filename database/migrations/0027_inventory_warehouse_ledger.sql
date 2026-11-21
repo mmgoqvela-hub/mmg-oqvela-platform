@@ -41,6 +41,9 @@ ALTER TABLE inventory_movements
     ADD COLUMN unit_code TEXT NOT NULL DEFAULT 'unit';
 
 ALTER TABLE inventory_movements
+    ADD COLUMN movement_reason TEXT;
+
+ALTER TABLE inventory_movements
     ADD COLUMN source_type TEXT NOT NULL DEFAULT 'legacy';
 
 ALTER TABLE inventory_movements
@@ -67,6 +70,7 @@ SET warehouse_id = (
       LIMIT 1
     ),
     source_id = reference_id,
+    movement_reason = movement_type,
     effective_at = created_at,
     posted_at = created_at
 WHERE warehouse_id IS NULL;
@@ -272,6 +276,7 @@ WHEN NOT (
     AND NEW.created_at IS OLD.created_at
     AND NEW.unit_code IS OLD.unit_code
     AND NEW.source_type IS OLD.source_type
+    AND NEW.movement_reason IS OLD.movement_reason
     AND NEW.source_id IS OLD.source_id
     AND NEW.idempotency_key IS OLD.idempotency_key
     AND NEW.effective_at IS OLD.effective_at
