@@ -596,3 +596,15 @@ test("Kilogram products store opening stock in grams and label the ledger unit",
   assert.equal(movement.values[3],2500);
   assert.equal(movement.values[5],"g");
 });
+
+test("Kilogram inventory movements keep gram base units in the append-only ledger", async () => {
+  const db = createDb({product:{id:"product-1",track_inventory:1,stock_quantity:2500,sale_unit:"kg"}});
+  const response = await handleCatalog(makeRequest("inventory","POST",{
+    product_id:"product-1",movement_type:"purchase",quantity_change:500
+  }),{DB:db});
+  assert.equal(response.status,200);
+  const movement=db.calls.find(call=>call.sql.includes("INSERT INTO inventory_movements"));
+  assert.ok(movement);
+  assert.equal(movement.values[5],500);
+  assert.equal(movement.values[9],"g");
+});
