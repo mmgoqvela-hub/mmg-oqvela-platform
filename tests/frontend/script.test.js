@@ -147,7 +147,12 @@ test("Public storefront supports persistent cart, variant selection, stock limit
     'id="customerOrdersSection"',
     'function renderCustomerQr()',
     'customerPortalTimer=setInterval',
-    'X-Customer-Token'
+    'X-Customer-Token',
+    'id="customerAccountForm"',
+    'customer/account/register',
+    'customer/account/login',
+    'customerModeStorageKey',
+    'customerQrDownload'
   ]) assert.ok(html.includes(marker), "missing checkout behavior: " + marker);
   assert.ok(!html.includes('id="transactionReference"'), "Sham Cash transfer details must not be requested before handover");
 });
