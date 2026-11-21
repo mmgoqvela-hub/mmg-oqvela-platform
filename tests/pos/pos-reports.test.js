@@ -8,6 +8,7 @@ const TOKEN="r".repeat(43);
 function dbMock(){
  const queries=[];
  return {queries,prepare(sql){return {sql,values:[],bind(...values){this.values=values;queries.push({sql,values});return this;},
+  async run(){return {meta:{changes:1}};},
   async first(){
    if(sql.includes("FROM auth_sessions"))return {session_id:"s1",user_id:"u1",user_status:"active"};
    if(sql.includes("GROUP_CONCAT"))return {id:"store-1",store_status:"active",account_status:"active",account_role:"owner",permissions:""};
