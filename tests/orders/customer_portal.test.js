@@ -23,7 +23,7 @@ function db(options={}){
         async first(){
           calls.push({sql,values});
           if(sql.includes("FROM stores s"))return options.store??{id:"store-1",name:"Bakery",slug:"bakery",whatsapp_phone:"+963900000000"};
-          if(sql.includes("FROM store_customer_identities"))return Object.hasOwn(options,"identity")?options.identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer"};
+          if(sql.includes("FROM store_customer_identities"))return Object.hasOwn(options,"identity")?options.identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"963900000000",customer_name:"Customer"};
           if(sql.includes("FROM store_customer_account_sessions"))return options.accountSessionIdentity??null;
           if(sql.includes("RETURNING attempt_count"))return {attempt_count:1};
           if(sql.includes("SELECT id FROM store_customer_accounts"))return options.existingAccount??null;
@@ -121,7 +121,7 @@ test("Customer account login rejects incorrect passwords without issuing a sessi
 test("Account sessions can retrieve the same private order history without a QR code",async()=>{
   const database=db({
     identity:null,
-    accountSessionIdentity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer",is_account:1}
+    accountSessionIdentity:{id:"identity-1",store_id:"store-1",customer_phone_key:"963900000000",customer_name:"Customer",is_account:1}
   });
   const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/orders"),{DB:database});
   const result=await response.json();
@@ -149,7 +149,7 @@ test("Guest can rotate a lost QR code and the previous token is replaced",async(
 });
 
 test("Registered customer sessions cannot be rotated as guest QR codes",async()=>{
-  const database=db({identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer",is_account:1}});
+  const database=db({identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"963900000000",customer_name:"Customer",is_account:1}});
   const response=await handlePublicCustomerPortal(request("/api/public/stores/bakery/customer/qr/rotate","POST",{}),{DB:database});
   assert.equal(response.status,409);
   assert.equal(database.calls.some(call=>call.sql.includes("UPDATE store_customer_identities SET access_token_hash")),false);
