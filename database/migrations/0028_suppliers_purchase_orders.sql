@@ -125,6 +125,7 @@ END;
 CREATE TRIGGER trg_purchase_order_no_reopen
 BEFORE UPDATE OF status ON purchase_orders
 WHEN OLD.status IN ('approved', 'cancelled') AND NEW.status != OLD.status
+ AND NOT (OLD.status = 'approved' AND NEW.status = 'cancelled')
 BEGIN
   SELECT RAISE(ABORT, 'Approved or cancelled purchase orders cannot be reopened');
 END;
