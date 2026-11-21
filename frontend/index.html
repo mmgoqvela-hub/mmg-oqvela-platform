@@ -3345,40 +3345,57 @@ footer{
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "secondary";
-    toggle.textContent = "إنشاء متجر إضافي";
+    toggle.textContent = "إنشاء متجر جديد";
     const form = document.createElement("form");
     form.className = "admin-form";
     form.hidden = true;
+
     const name = document.createElement("input");
-    name.required = true;
-    name.minLength = 2;
-    name.maxLength = 100;
-    const label = document.createElement("label");
-    label.textContent = "اسم المتجر الجديد";
-    const field = document.createElement("div");
-    field.className = "field wide";
-    field.append(label, name);
+    name.required = true; name.minLength = 2; name.maxLength = 100;
+    const nameLabel = document.createElement("label"); nameLabel.textContent = "اسم متجر المعجنات";
+    const nameField = document.createElement("div"); nameField.className = "field";
+    nameField.append(nameLabel,name);
+
+    const type = document.createElement("input");
+    type.required = true; type.maxLength = 80; type.value = "معجنات ومخبوزات";
+    const typeLabel = document.createElement("label"); typeLabel.textContent = "نوع النشاط";
+    const typeField = document.createElement("div"); typeField.className = "field";
+    typeField.append(typeLabel,type);
+
+    const description = document.createElement("textarea");
+    description.maxLength = 1000; description.rows = 3;
+    description.placeholder = "وصف مختصر يظهر للزبائن";
+    const descriptionLabel = document.createElement("label"); descriptionLabel.textContent = "وصف المتجر (اختياري)";
+    const descriptionField = document.createElement("div"); descriptionField.className = "field wide";
+    descriptionField.append(descriptionLabel,description);
+
+    const template = document.createElement("select");
+    for (const [value,labelText] of [["classic","كلاسيكي دافئ — مناسب للمعجنات"],["modern","عصري"],["minimal","بسيط"]]) {
+      const option=document.createElement("option");option.value=value;option.textContent=labelText;template.append(option);
+    }
+    template.value="classic";
+    const templateLabel=document.createElement("label");templateLabel.textContent="تصميم المتجر";
+    const templateField=document.createElement("div");templateField.className="field";
+    templateField.append(templateLabel,template);
+
     const submit = document.createElement("button");
-    submit.type = "submit";
-    submit.className = "primary";
-    submit.textContent = "إنشاء المتجر";
+    submit.type = "submit"; submit.className = "primary"; submit.textContent = "إنشاء متجر المعجنات";
     const note = document.createElement("p");
     note.className = "muted";
-    note.textContent = "المتجر الإضافي لا يحصل على فترة تجريبية جديدة؛ يلزم اختيار باقة مدفوعة.";
-    form.append(field, note, submit);
+    note.textContent = "سيُنشأ المتجر داخل حسابك الحالي دون إنشاء حساب أو منصة جديدة. يمكنك تعديل بياناته لاحقاً.";
+    form.append(nameField,typeField,descriptionField,templateField,note,submit);
     toggle.addEventListener("click", () => { form.hidden = !form.hidden; });
     form.addEventListener("submit", async event => {
-      event.preventDefault();
-      submit.disabled = true;
+      event.preventDefault(); submit.disabled = true;
       try {
-        await api("/api/stores", {method:"POST",body:JSON.stringify({account_id:account.id,name:name.value.trim()})});
+        await api("/api/stores", {method:"POST",body:JSON.stringify({
+          account_id:account.id,name:name.value.trim(),business_type:type.value.trim(),
+          description:description.value.trim(),template_key:template.value
+        })});
         await checkSession();
-      } catch (error) {
-        note.textContent = error.message;
-        submit.disabled = false;
-      }
+      } catch (error) { note.textContent = error.message; submit.disabled = false; }
     });
-    card.append(toggle, form);
+    card.append(toggle,form);
   }
 
   function renderStoreEditor(store, card) {
