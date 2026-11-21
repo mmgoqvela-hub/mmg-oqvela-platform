@@ -156,7 +156,7 @@ test("Public checkout rate-limits each store and hashed client address",async()=
 test("Sham Cash checkout requires a configured recipient, sender and transaction reference",async()=>{
  const noRecipient=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash",sender_name:"Sender Name",transaction_reference:"TX123"}),{DB:db()});
  assert.equal(noRecipient.status,400);
- const configured=db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:1,shamcash_recipient:"recipient-123",shamcash_instructions:"Send exact amount"}});
+ const configured=db({settings:{cash_on_delivery_enabled:1,shamcash_enabled:1,pickup_enabled:1,delivery_enabled:1,delivery_fee:0,shamcash_recipient:"recipient-123",shamcash_instructions:"Send exact amount"}});
  const valid=await handleOrders(request("/api/public/stores/test-store/orders","POST",{...checkout,payment_method:"shamcash",sender_name:"Sender Name",transaction_reference:"TX123"}),{DB:configured});
  const result=await valid.json();
  assert.equal(valid.status,201);
