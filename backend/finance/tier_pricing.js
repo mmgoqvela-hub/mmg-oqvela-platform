@@ -1,7 +1,7 @@
 // Exact cost-plus pricing helpers. Margins are markups on cost, in basis points.
 
 export function parseProfitPercentToBps(value) {
-  if (typeof value !== "string" || !/^(?:0|[1-9]\\d{0,3}|10000)(?:\\.\\d{1,2})?$/.test(value)) {
+  if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,3}|10000)(?:\.\d{1,2})?$/.test(value)) {
     throw new TypeError("Profit percentage must be a decimal string with up to two fractional digits");
   }
   const [whole, fraction = ""] = value.split(".");
