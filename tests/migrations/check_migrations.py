@@ -490,6 +490,52 @@ def main():
         "currency precision versions must not skip a version"
     )
 
+    # Three-tier pricing defaults remain manual and unconfigured.
+    tier_rows = connection.execute(
+        "SELECT tier_code,min_quantity,profit_margin_bps,is_enabled FROM store_pricing_tiers WHERE store_id='template-default-store' ORDER BY min_quantity"
+    ).fetchall()
+    if tier_rows != [
+        ("retail",1,None,0),
+        ("wholesale",2,None,0),
+        ("bulk_wholesale",10,None,0)
+    ]:
+        raise SystemExit(f"Unexpected initial pricing tiers: {tier_rows}")
+    pricing_mode = connection.execute(
+        "SELECT pricing_mode,cost_currency FROM store_pricing_settings WHERE store_id='template-default-store'"
+    ).fetchone()
+    if pricing_mode != ("manual","USD"):
+        raise SystemExit(f"Unexpected default pricing settings: {pricing_mode}")
+
+    connection.execute(
+        "INSERT INTO product_cost_versions (id,store_id,product_id,cost_minor_units,cost_source,effective_at,idempotency_key) VALUES (?,?,?,?,?,?,?)",
+        ("cost-a-1","tenant-store-a","tenant-product-a",4200,"manual","2026-11-21T00:00:00Z","cost-a-1")
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE product_cost_versions SET cost_minor_units=4300 WHERE id='cost-a-1'"
+        ),
+        "product cost history must be immutable"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO product_cost_versions (id,store_id,product_id,cost_minor_units,cost_source,effective_at,idempotency_key) VALUES (?,?,?,?,?,?,?)",
+            ("cost-a-duplicate","tenant-store-a","tenant-product-a",4400,"manual","2026-11-22T00:00:00Z","cost-a-1")
+        ),
+        "product cost idempotency must be store-scoped"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "INSERT INTO store_pricing_tiers (store_id,tier_code,min_quantity,profit_margin_bps,is_enabled) VALUES ('tenant-store-a','retail',1,1000,1)"
+        ),
+        "a store cannot define duplicate tier rows"
+    )
+    expect_integrity_error(
+        lambda: connection.execute(
+            "UPDATE store_pricing_settings SET cost_currency='SYP' WHERE store_id='tenant-store-a'"
+        ),
+        "unverified SYP cannot become the cost currency"
+    )
+
     print(f"PASS: {len(files)} migrations applied; foreign keys, tenant isolation, approval, and rejection flows valid.")
     connection.close()
 
