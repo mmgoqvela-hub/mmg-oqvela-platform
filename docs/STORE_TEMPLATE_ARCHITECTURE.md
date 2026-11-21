@@ -120,3 +120,17 @@ This document records the approved direction; it does not claim these features a
 - Treat a CDN cache as permanent storage.
 - Put customer uploads or frequently changing tenant data into Git commits.
 - Assume clinic, pharmacy or other regulated workflows without separately specifying and approving their operational, privacy and compliance requirements.
+
+## 10. Future template expansion and backward compatibility
+
+This is a confirmed platform requirement:
+- The template catalog must remain extensible after the platform launches. The initial catalog size (including the current eleven template directions) is not a permanent limit.
+- New templates and industry-specific variants can be added later without rebuilding the platform or creating a separate application/codebase for each template.
+- A new template must be independently versioned, validated and tested before it is made available in the operator workspace.
+- Platform operators may choose whether a newly added template is available only for newly onboarded stores or is also offered to selected existing stores.
+- Adding, updating, deprecating or removing a catalog template must never silently change an existing store's published design.
+- Each store must retain its own pinned template identity/version and design configuration. Existing storefronts continue rendering against their selected compatible version until an operator deliberately migrates that store.
+- Template upgrades or migrations for existing stores must be explicit, previewable, reversible where practical, and must not modify products, orders, customers, subscriptions or other business records.
+- Shared components and design tokens should be versioned with compatibility rules so new templates can reuse them without breaking older templates.
+- The operator workspace should support catalog lifecycle states such as draft, tested, published and retired. Retiring a template prevents new selections but does not break stores already using it.
+- Automated regression tests must verify that publishing a new template does not alter existing stores' selected template versions or rendered configuration.
