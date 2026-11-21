@@ -571,3 +571,13 @@ test("Product image registration rejects non-HTTPS external URLs", async () => {
   assert.equal(response.status,400);
   assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO product_images")),false);
 });
+
+test("Product creation rejects unsupported sale units", async () => {
+  const db = createDb();
+  const response = await handleCatalog(makeRequest("products","POST",{
+    name:"Bakery item",product_type:"physical",status:"active",
+    base_price:10,currency:"USD",sale_unit:"tray"
+  }),{DB:db});
+  assert.equal(response.status,400);
+  assert.equal(db.calls.some(call=>call.sql.includes("INSERT INTO products")),false);
+});
