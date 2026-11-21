@@ -530,7 +530,7 @@
           description.textContent = product.description || "";
           const priceLine = document.createElement("div");
           priceLine.className = "price";
-          priceLine.textContent = money(product.base_price,product.currency);
+          priceLine.textContent = money(product.base_price,product.currency) + (product.sale_unit === "kg" ? (language === "ar" ? " / كغ" : " / kg") : (language === "ar" ? " / قطعة" : " / piece"));
           const tierList = document.createElement("div");
           tierList.className = "pricing-tiers";
           const appendTierPrices = (tiers) => {
