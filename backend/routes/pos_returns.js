@@ -58,7 +58,7 @@ export async function handlePosReturns(request,env){
     for(const row of rows.results||[]){
       const [items,payments]=await Promise.all([
         env.DB.prepare(`
-          SELECT ri.sale_item_id,ri.quantity,ri.restock,si.product_name,si.variant_name
+          SELECT ri.sale_item_id,ri.quantity,ri.sale_unit,ri.restock,si.product_name,si.variant_name
           FROM pos_sale_return_items ri JOIN pos_sale_items si
             ON si.id=ri.sale_item_id AND si.sale_id=ri.sale_id AND si.store_id=ri.store_id
           WHERE ri.return_id=? AND ri.store_id=? ORDER BY ri.rowid
