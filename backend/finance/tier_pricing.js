@@ -1,4 +1,17 @@
 // Exact cost-plus pricing helpers. Margins are markups on cost, in basis points.
+
+export function parseProfitPercentToBps(value) {
+  if (typeof value !== "string" || !/^(?:0|[1-9]\\d{0,3})(?:\\.\\d{1,2})?$/.test(value)) {
+    throw new TypeError("Profit percentage must be a decimal string with up to two fractional digits");
+  }
+  const [whole, fraction = ""] = value.split(".");
+  const bps = Number(whole) * 100 + Number((fraction + "00").slice(0, 2));
+  if (!Number.isSafeInteger(bps) || bps > 1000000) {
+    throw new RangeError("Profit percentage cannot exceed 10000%");
+  }
+  return bps;
+}
+
 export function calculateTierPriceMinorUnits(costMinorUnits, profitMarginBps, roundingIncrementMinorUnits = 1) {
   const cost = typeof costMinorUnits === "bigint" ? costMinorUnits : BigInt(costMinorUnits);
   const margin = typeof profitMarginBps === "bigint" ? profitMarginBps : BigInt(profitMarginBps);
