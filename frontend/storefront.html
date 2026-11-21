@@ -159,7 +159,7 @@
         <div class="checkout-result" id="checkoutResult" role="status" hidden></div>
       </section>
       <section class="customer-orders-panel" id="customerOrdersSection">
-          <div class="section-head"><h3 id="customerOrdersHeading">طلباتي</h3><button class="lang" id="customerOrdersToggle" type="button">عرض طلباتي</button></div>
+          <div class="section-head"><h3 id="customerOrdersHeading">طلباتي</h3><button class="lang" id="customerOrdersToggle" type="button"><span id="customerOrdersToggleLabel">عرض طلباتي</span> <span id="customerNotificationCount"></span></button></div>
           <div id="customerOrdersPanel" hidden>
             <p class="cart-note" id="customerQrHint">احتفظ برمز QR لاستعادة سجل طلباتك عند تغيير الهاتف أو مسح بيانات المتصفح.</p>
             <div id="customerQr" class="customer-qr" aria-label="رمز استعادة سجل الزبون"></div>
@@ -263,7 +263,7 @@
         $("customerNotesLabel").textContent = t("customerNotes");
         $("placeOrder").textContent = t("placeOrder");
         $("customerOrdersHeading").textContent=t("customerOrders");
-        $("customerOrdersToggle").textContent=$("customerOrdersPanel").hidden?t("showOrders"):t("hideOrders");
+        $("customerOrdersToggleLabel").textContent=$("customerOrdersPanel").hidden?t("showOrders"):t("hideOrders");
         $("customerQrHint").textContent=t("qrHint");
         $("customerRefreshOrders").textContent=t("refreshOrders");
         $("customerQrRotate").textContent=language==="ar"?"تجديد رمز QR":"Rotate QR code";
@@ -507,7 +507,7 @@
         $("customerLogout").hidden=customerMode()!=="account";
         $("customerRegisterOpen").hidden=customerMode()==="account";
         $("customerLoginOpen").hidden=customerMode()==="account";
-        if(!token){renderCustomerQr();$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
+        if(!token){renderCustomerQr();$("customerNotificationCount").textContent="";$("customerOrdersList").textContent=language==="ar"?"لا توجد جلسة زبون. يمكنك الطلب كضيف أو تسجيل الدخول إلى حسابك.":"No customer session. You can order as a guest or sign in to your account.";$("customerNotifications").replaceChildren();$("customerQr").replaceChildren();return;}
         const headers={"X-Customer-Token":token,"Accept":"application/json"};
         const base="/api/public/stores/"+encodeURIComponent(slug)+"/customer/";
         const [ordersResponse,notificationsResponse]=await Promise.all([
@@ -552,6 +552,7 @@
           }
           list.append(card);
         }
+        $("customerNotificationCount").textContent=notificationsData.unread_count?("("+notificationsData.unread_count+")"):"";
         const notices=$("customerNotifications");notices.replaceChildren();
         const heading=document.createElement("strong");heading.textContent=t("notifications")+" ("+(notificationsData.unread_count||0)+")";notices.append(heading);
         const notifications=notificationsData.notifications||[];
@@ -625,7 +626,7 @@
             startCustomerPortalPolling();
             if(customerMode()!=="account"){
               $("customerOrdersPanel").hidden=false;
-              $("customerOrdersToggle").textContent=t("hideOrders");
+              $("customerOrdersToggleLabel").textContent=t("hideOrders");
               $("customerOrdersSection").scrollIntoView({behavior:"smooth",block:"center"});
             }
           }
@@ -957,7 +958,7 @@
       $("customerOrdersToggle").addEventListener("click",()=>{
         const panel=$("customerOrdersPanel");
         panel.hidden=!panel.hidden;
-        $("customerOrdersToggle").textContent=panel.hidden?t("showOrders"):t("hideOrders");
+        $("customerOrdersToggleLabel").textContent=panel.hidden?t("showOrders"):t("hideOrders");
         if(!panel.hidden)loadCustomerPortal().catch(()=>{});
       });
       $("customerRefreshOrders").addEventListener("click",()=>loadCustomerPortal().catch(()=>{}));
@@ -992,7 +993,7 @@
       $("customerOrdersHeading").textContent=t("customerOrders");
       $("customerQrHint").textContent=t("qrHint");
       $("customerRefreshOrders").textContent=t("refreshOrders");
-      $("customerOrdersToggle").textContent=t("showOrders");
+      $("customerOrdersToggleLabel").textContent=t("showOrders");
       $("storeName").textContent = t("loading");
       load();
       startCustomerPortalPolling();
