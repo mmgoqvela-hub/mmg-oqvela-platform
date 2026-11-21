@@ -36,7 +36,7 @@ async function accessFor(db,storeId,userId){
 function dateValue(value){return typeof value==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+"T00:00:00Z"));}
 export async function handleFinance(request,env){
   const url=new URL(request.url);
-  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/finance\/(expenses|cashbox(?:\/movements)?)$/);
+  const match=url.pathname.match(/^\/api\/stores\/([^/]+)\/finance\/(expenses|cashbox(?:\/(?:movements|sessions))?)$/);
   if(!match)return null;
   if(!validOrigin(request))return json({error:"Invalid origin"},403);
   let storeId;try{storeId=decodeURIComponent(match[1]);}catch{return json({error:"Invalid store ID"},400);}
