@@ -157,6 +157,7 @@ BEFORE UPDATE OF status ON purchase_orders
 WHEN NEW.status != OLD.status AND NOT (
   (OLD.status = 'draft' AND NEW.status IN ('submitted', 'cancelled'))
   OR (OLD.status = 'submitted' AND NEW.status IN ('approved', 'cancelled'))
+  OR (OLD.status = 'approved' AND NEW.status = 'cancelled')
 )
 BEGIN
   SELECT RAISE(ABORT, 'Invalid purchase order status transition');
