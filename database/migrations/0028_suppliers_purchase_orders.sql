@@ -64,7 +64,7 @@ CREATE TABLE purchase_order_items (
     unit_cost_minor_units INTEGER NOT NULL
       CHECK (unit_cost_minor_units >= 0),
     line_total_minor_units INTEGER NOT NULL
-      CHECK (line_total_minor_units >= 0),
+      CHECK (line_total_minor_units >= 0 AND line_total_minor_units = unit_cost_minor_units * quantity),
     currency TEXT NOT NULL DEFAULT 'USD' CHECK (currency = 'USD'),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (purchase_order_id, store_id)
@@ -149,4 +149,72 @@ WHEN EXISTS (
 )
 BEGIN
   SELECT RAISE(ABORT, 'Submitted or approved purchase order items are immutable');
+END;
+
+
+CREATE TRIGGER trg_purchase_order_valid_status_transition
+BEFORE UPDATE OF status ON purchase_orders
+WHEN NEW.status != OLD.status AND NOT (
+  (OLD.status = 'draft' AND NEW.status IN ('submitted', 'cancelled'))
+  OR (OLD.status = 'submitted' AND NEW.status IN ('approved', 'cancelled'))
+)
+BEGIN
+  SELECT RAISE(ABORT, 'Invalid purchase order status transition');
+END;
+
+CREATE TRIGGER trg_purchase_order_freeze_after_submission
+BEFORE UPDATE ON purchase_orders
+WHEN OLD.status != 'draft' AND (
+  NEW.supplier_id IS NOT OLD.supplier_id
+  OR NEW.order_number IS NOT OLD.order_number
+  OR NEW.currency IS NOT OLD.currency
+  OR NEW.total_minor_units IS NOT OLD.total_minor_units
+  OR NEW.notes IS NOT OLD.notes
+  OR NEW.expected_at IS NOT OLD.expected_at
+)
+BEGIN
+  SELECT RAISE(ABORT, 'Submitted purchase order details are immutable');
+END;
+
+CREATE TRIGGER trg_purchase_order_no_delete_after_submission
+BEFORE DELETE ON purchase_orders
+WHEN OLD.status != 'draft'
+BEGIN
+  SELECT RAISE(ABORT, 'Submitted purchase orders cannot be deleted');
+END;
+
+CREATE TRIGGER trg_purchase_order_recalculate_after_item_insert
+AFTER INSERT ON purchase_order_items
+BEGIN
+  UPDATE purchase_orders
+  SET total_minor_units = (
+    SELECT COALESCE(SUM(line_total_minor_units), 0)
+    FROM purchase_order_items
+    WHERE purchase_order_id = NEW.purchase_order_id AND store_id = NEW.store_id
+  ), updated_at = CURRENT_TIMESTAMP
+  WHERE id = NEW.purchase_order_id AND store_id = NEW.store_id AND status = 'draft';
+END;
+
+CREATE TRIGGER trg_purchase_order_recalculate_after_item_update
+AFTER UPDATE ON purchase_order_items
+BEGIN
+  UPDATE purchase_orders
+  SET total_minor_units = (
+    SELECT COALESCE(SUM(line_total_minor_units), 0)
+    FROM purchase_order_items
+    WHERE purchase_order_id = NEW.purchase_order_id AND store_id = NEW.store_id
+  ), updated_at = CURRENT_TIMESTAMP
+  WHERE id = NEW.purchase_order_id AND store_id = NEW.store_id AND status = 'draft';
+END;
+
+CREATE TRIGGER trg_purchase_order_recalculate_after_item_delete
+AFTER DELETE ON purchase_order_items
+BEGIN
+  UPDATE purchase_orders
+  SET total_minor_units = (
+    SELECT COALESCE(SUM(line_total_minor_units), 0)
+    FROM purchase_order_items
+    WHERE purchase_order_id = OLD.purchase_order_id AND store_id = OLD.store_id
+  ), updated_at = CURRENT_TIMESTAMP
+  WHERE id = OLD.purchase_order_id AND store_id = OLD.store_id AND status = 'draft';
 END;
