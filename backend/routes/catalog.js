@@ -194,6 +194,7 @@ function validProduct(body) {
   return validName(body?.name, 160) &&
     (body.description == null || (typeof body.description === "string" && body.description.length <= 10000)) &&
     ["physical", "digital", "service"].includes(body.product_type || "physical") &&
+    ["piece", "kg"].includes(body.sale_unit || "piece") &&
     ["draft", "active", "archived"].includes(body.status || "draft") &&
     typeof body.base_price === "number" && Number.isFinite(body.base_price) && body.base_price >= 0 &&
     (body.compare_at_price == null || (typeof body.compare_at_price === "number" && Number.isFinite(body.compare_at_price) && body.compare_at_price >= 0)) &&
@@ -223,7 +224,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
       }
       const result = await env.DB.prepare(`
         SELECT p.id, p.category_id, c.name AS category_name, p.name, p.slug,
-               p.description, p.product_type, p.status, p.base_price,
+               p.description, p.product_type, p.sale_unit, p.status, p.base_price,
                p.compare_at_price, p.currency, p.sku, p.track_inventory,
                p.stock_quantity, p.is_featured, p.created_at, p.updated_at
         FROM products p
@@ -262,14 +263,14 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
         INSERT INTO products (
           id, store_id, category_id, name, slug, description, product_type,
           status, base_price, compare_at_price, currency, sku,
-          track_inventory, stock_quantity
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          track_inventory, stock_quantity, sale_unit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         id, storeId, categoryId, body.name.trim(), slug,
         body.description?.trim() || null, body.product_type || "physical",
         body.status || "draft", body.base_price, body.compare_at_price ?? null,
         body.currency || "USD", body.sku?.trim() || null,
-        trackInventory ? 1 : 0, stock
+        trackInventory ? 1 : 0, stock, body.sale_unit || "piece"
       )
     ];
     if (stock > 0) {
@@ -297,7 +298,7 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
 
   if (!["GET", "PUT", "DELETE"].includes(method)) return json({ error: "Method not allowed" }, 405);
   const product = await env.DB.prepare(
-    "SELECT id, store_id, category_id, name, slug, description, product_type, status, base_price, compare_at_price, currency, sku, track_inventory, stock_quantity, is_featured FROM products WHERE id = ? AND store_id = ? LIMIT 1"
+    "SELECT id, store_id, category_id, name, slug, description, product_type, sale_unit, status, base_price, compare_at_price, currency, sku, track_inventory, stock_quantity, is_featured FROM products WHERE id = ? AND store_id = ? LIMIT 1"
   ).bind(productId, storeId).first();
   if (!product) return json({ error: "Product not found" }, 404);
   if (method === "GET") {
@@ -338,14 +339,14 @@ async function handleProducts(request, env, storeId, userId, access, productId) 
     UPDATE products
     SET category_id = ?, name = ?, description = ?, product_type = ?,
         status = ?, base_price = ?, compare_at_price = ?, currency = ?,
-        sku = ?, track_inventory = ?, is_featured = ?, updated_at = CURRENT_TIMESTAMP
+        sku = ?, track_inventory = ?, is_featured = ?, sale_unit = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND store_id = ?
   `).bind(
     categoryId, body.name.trim(), body.description?.trim() || null,
     body.product_type || "physical", body.status || "draft",
     body.base_price, body.compare_at_price ?? null, body.currency || "USD",
     body.sku?.trim() || null, body.track_inventory === false ? 0 : 1,
-    body.is_featured === true ? 1 : 0, productId, storeId
+    body.is_featured === true ? 1 : 0, body.sale_unit || product.sale_unit || "piece", productId, storeId
   ).run();
   return json({ status: "ok" });
 }
