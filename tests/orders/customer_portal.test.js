@@ -21,7 +21,7 @@ function db(options={}){
         async first(){
           calls.push({sql,values});
           if(sql.includes("FROM stores s"))return options.store??{id:"store-1",name:"Bakery",slug:"bakery",whatsapp_phone:"+963900000000"};
-          if(sql.includes("FROM store_customer_identities"))return options.identity??{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer"};
+          if(sql.includes("FROM store_customer_identities"))return Object.hasOwn(options,"identity")?options.identity:{id:"identity-1",store_id:"store-1",customer_phone_key:"+963900000000",customer_name:"Customer"};
           if(sql.includes("COUNT(*) AS unread_count"))return {unread_count:options.unreadCount??1};
           if(sql.includes("SELECT n.id"))return options.existingNotification??{id:"notice-1"};
           return null;
