@@ -2342,6 +2342,10 @@ footer{
           stock.min = "0";
           stock.step = "1";
           stock.value = "0";
+          saleUnit.addEventListener("change",() => {
+            stock.step = saleUnit.value === "kg" ? "0.05" : "1";
+            stock.placeholder = saleUnit.value === "kg" ? "مثال: 5.25 كغ" : "مثال: 12 قطعة";
+          });
           const productImageUrls = document.createElement("textarea");
           productImageUrls.maxLength = 10000;
           productImageUrls.placeholder = "https://example.com/product-image.webp\nhttps://example.com/another-image.webp";
@@ -2382,7 +2386,7 @@ footer{
             ["وحدة البيع",saleUnit],
             ["السعر الأساسي (للوحدة المختارة)",price],
             ["العملة (رمز من 3 أحرف)",currency],
-            ["الكمية الافتتاحية (لمنتج الكيلو أدخل الغرامات؛ 5 كغ = 5000)",stock],
+            ["الكمية الافتتاحية (بالكيلو أو بالقطعة حسب الوحدة)",stock],
             ["حالة العرض",productStatus],
             ["روابط صور المنتج (اختياري، رابط في كل سطر)",productImageUrls],
             ["رفع صور المنتج من الجهاز (حتى 5 صور)",productImageFiles],
@@ -2431,7 +2435,7 @@ footer{
                   sale_unit:saleUnit.value,
                   base_price:Number(price.value),
                   currency:currency.value.trim().toUpperCase(),
-                  stock_quantity:Number(stock.value),
+                  stock_quantity: saleUnit.value === "kg" ? Math.round(Number(stock.value) * 1000) : Number(stock.value),
                   track_inventory:tracking.checked,
                   category_id:category.value || null,
                   status:productStatus.value
@@ -2477,7 +2481,7 @@ footer{
             details.className = "muted";
             details.textContent = formatMoney(product.base_price,product.currency) +
               " — " + localizeCode(product.status) +
-              (product.track_inventory ? " — " + "الكمية المتوفرة: " + formatNumber(product.stock_quantity) : " — المخزون غير متاح لهذا المنتج.");
+              (product.track_inventory ? " — " + "الكمية المتوفرة: " + (product.sale_unit === "kg" ? (Number(product.stock_quantity)/1000).toLocaleString("ar") + " كغ" : formatNumber(product.stock_quantity) + " قطعة") : " — المخزون غير متاح لهذا المنتج.");
             item.append(title,details);
             if (canInventoryManage) {
               const costPanel = document.createElement("section");
@@ -3066,8 +3070,14 @@ footer{
           }
           const quantity = document.createElement("input");
           quantity.type = "number";
-          quantity.step = "1";
+          quantity.step = products.find(item => item.id === productSelect.value)?.sale_unit === "kg" ? "0.05" : "1";
           quantity.required = true;
+          quantity.placeholder = products.find(item => item.id === productSelect.value)?.sale_unit === "kg" ? "مثال: 0.25 كغ" : "مثال: 3 قطع";
+          productSelect.addEventListener("change",() => {
+            const weightBased = products.find(item => item.id === productSelect.value)?.sale_unit === "kg";
+            quantity.step = weightBased ? "0.05" : "1";
+            quantity.placeholder = weightBased ? "مثال: 0.25 كغ" : "مثال: 3 قطع";
+          });
           const notes = document.createElement("input");
           notes.maxLength = 1000;
           const referenceId = document.createElement("input");
@@ -3108,13 +3118,15 @@ footer{
           movementForm.addEventListener("submit", async event => {
             event.preventDefault();
             const entered = Number(quantity.value);
-            if (!Number.isInteger(entered) || entered === 0) {
+            const selectedProduct = products.find(item => item.id === productSelect.value);
+            const quantityBaseUnits = selectedProduct?.sale_unit === "kg" ? Math.round(entered * 1000) : entered;
+            if (!Number.isFinite(entered) || entered === 0 || !Number.isInteger(quantityBaseUnits) || (selectedProduct?.sale_unit === "kg" && Math.abs(entered * 1000 - quantityBaseUnits) > 0.000001)) {
               movementMessage.textContent = "أدخل كمية صحيحة لا تساوي صفراً.";
               return;
             }
             const typeValue = movementType.value;
-            const signedQuantity = ["sale","damage"].includes(typeValue) ? -Math.abs(entered) :
-              ["purchase","return"].includes(typeValue) ? Math.abs(entered) : entered;
+            const signedQuantity = ["sale","damage"].includes(typeValue) ? -Math.abs(quantityBaseUnits) :
+              ["purchase","return"].includes(typeValue) ? Math.abs(quantityBaseUnits) : quantityBaseUnits;
             movementSubmit.disabled = true;
             try {
               await api("/api/stores/" + encodeURIComponent(store.id) + "/inventory", {
@@ -3148,7 +3160,7 @@ footer{
             line.className = "muted";
             line.textContent = movement.product_name + (movement.variant_name ? " / " + movement.variant_name : "") + " — " +
               localizeCode(movement.movement_type) + " — " +
-              formatNumber(movement.quantity_change) + " — " +
+              (movement.sale_unit === "kg" ? (Number(movement.quantity_change)/1000).toLocaleString("ar") + " كغ" : formatNumber(movement.quantity_change) + " قطعة") + " — " +
               formatDateTime(movement.created_at) +
               (movement.reference_id ? " — المرجع: " + movement.reference_id : "") +
               (movement.created_by_name ? " — بواسطة: " + movement.created_by_name : "") +
