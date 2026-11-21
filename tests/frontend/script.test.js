@@ -225,3 +225,21 @@ test("Language switching translates original input attributes in both directions
   assert.match(html, /const value = translateText\(originals\[attr\]\)/);
   assert.doesNotMatch(html, /currentLanguage === "en" \? translateText\(originals\[attr\]\) : originals\[attr\]/);
 });
+
+
+test("Merchant portal is a separate store-only interface", async () => {
+  const html = await readFile(new URL("../../frontend/merchant.html", import.meta.url), "utf8");
+  assert.match(html, /دخول صاحب المتجر/);
+  assert.match(html, /الطلبات/);
+  assert.match(html, /المنتجات/);
+  assert.match(html, /سجل الزبائن/);
+  assert.match(html, /\/api\/auth\/me/);
+  assert.match(html, /\/api\/stores\//);
+  assert.doesNotMatch(html, /\/api\/admin\//);
+  assert.doesNotMatch(html, /id="adminPanel"|id="accountGrid"|إدارة المنصة المركزية/);
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)];
+  assert.ok(scripts.length > 0, "merchant portal script must exist");
+  for (const match of scripts) {
+    assert.doesNotThrow(() => new vm.Script(match[1]), "merchant JavaScript must parse");
+  }
+});
