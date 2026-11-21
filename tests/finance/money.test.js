@@ -11,6 +11,7 @@ test("parses decimal strings exactly using caller-supplied precision", () => {
   assert.equal(parseAmountToMinorUnits("0.0007", 4), 7);
   assert.equal(parseAmountToMinorUnits("-4.2", 2), -420);
   assert.equal(parseAmountToMinorUnits("900", 0), 900);
+  assert.equal(parseAmountToMinorUnits("-0.00", 2), 0);
 });
 
 test("formats integer minor units deterministically", () => {
