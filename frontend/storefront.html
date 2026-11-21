@@ -515,7 +515,15 @@
         ]);
         const ordersData=await ordersResponse.json().catch(()=>({}));
         const notificationsData=await notificationsResponse.json().catch(()=>({}));
-        if(!ordersResponse.ok){$("customerOrdersList").textContent=ordersData.error||t("orderFailed");return;}
+        if(!ordersResponse.ok){
+          if(ordersResponse.status===401&&customerMode()==="account"){
+            localStorage.removeItem(customerTokenStorageKey);localStorage.removeItem(customerModeStorageKey);
+            if(customerPortalTimer)clearInterval(customerPortalTimer);
+            $("customerLogout").hidden=true;$("customerRegisterOpen").hidden=false;$("customerLoginOpen").hidden=false;
+            $("customerAccountMessage").textContent=language==="ar"?"انتهت جلسة الحساب. سجّل الدخول مجدداً لمتابعة طلباتك.":"Your account session expired. Sign in again to view your orders.";
+          }
+          $("customerOrdersList").textContent=ordersData.error||t("orderFailed");return;
+        }
         const list=$("customerOrdersList");list.replaceChildren();
         const orders=ordersData.orders||[];
         if(!orders.length){list.textContent=t("noOrders");}
