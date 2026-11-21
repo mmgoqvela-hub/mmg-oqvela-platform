@@ -3452,22 +3452,52 @@ footer{
       const option = document.createElement("option"); option.value = value; option.textContent = label; fontSelect.append(option);
     }
     const logoUrl = document.createElement("input"); logoUrl.type = "url"; logoUrl.maxLength = 500; logoUrl.placeholder = "https://example.com/logo.png";
+    const logoFile = document.createElement("input"); logoFile.type = "file"; logoFile.accept = "image/jpeg,image/png,image/webp,image/gif";
     const announcementText = document.createElement("input"); announcementText.type = "text"; announcementText.maxLength = 180; announcementText.placeholder = "رسالة ترحيبية أعلى المتجر";
     const heroImageUrl = document.createElement("input"); heroImageUrl.type = "url"; heroImageUrl.maxLength = 500; heroImageUrl.placeholder = "https://example.com/hero.jpg";
+    const heroImageFile = document.createElement("input"); heroImageFile.type = "file"; heroImageFile.accept = "image/jpeg,image/png,image/webp,image/gif";
     const heroAlignment = document.createElement("select");
     for (const [value,label] of [["right","محاذاة لليمين"],["center","توسيط"]]) {
       const option = document.createElement("option"); option.value = value; option.textContent = label; heroAlignment.append(option);
     }
     makeDesignField("الخط",fontSelect);
     makeDesignField("رابط شعار المتجر",logoUrl);
+    makeDesignField("ملف شعار المتجر",logoFile);
     makeDesignField("رابط صورة الواجهة",heroImageUrl);
+    makeDesignField("ملف صورة الواجهة",heroImageFile);
     const uploadStatus = document.createElement("p");
     uploadStatus.className = "muted";
-    uploadStatus.textContent = "للبدء مجاناً، استخدم روابط HTTPS مباشرة للصور. رفع الملفات سيُتاح عند تفعيل مساحة تخزين مناسبة لاحقاً.";
+    uploadStatus.textContent = "اختر صورة من جهازك لرفعها إلى مساحة صور المتجر.";
     uploadStatus.setAttribute("role","status");
     const uploadButtons = document.createElement("div");
     uploadButtons.className = "field wide";
-    uploadButtons.append(uploadStatus);
+    const uploadLogoButton = document.createElement("button");
+    uploadLogoButton.type = "button";
+    uploadLogoButton.className = "secondary";
+    uploadLogoButton.textContent = "رفع الشعار";
+    const uploadHeroButton = document.createElement("button");
+    uploadHeroButton.type = "button";
+    uploadHeroButton.className = "secondary";
+    uploadHeroButton.textContent = "رفع صورة الواجهة";
+    uploadButtons.append(uploadLogoButton,uploadHeroButton,uploadStatus);
+    const uploadDesignImage = async (fileInput, targetInput, button) => {
+      const file = fileInput.files?.[0];
+      if (!file) { uploadStatus.textContent = "اختر صورة أولاً."; return; }
+      button.disabled = true;
+      uploadStatus.textContent = "جارٍ رفع الصورة...";
+      try {
+        targetInput.value = await uploadStoreImage(store.id,file);
+        fileInput.value = "";
+        updatePreview();
+        uploadStatus.textContent = "تم رفع الصورة. احفظ بيانات المتجر لتطبيقها.";
+      } catch(error) {
+        uploadStatus.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    };
+    uploadLogoButton.addEventListener("click",() => uploadDesignImage(logoFile,logoUrl,uploadLogoButton));
+    uploadHeroButton.addEventListener("click",() => uploadDesignImage(heroImageFile,heroImageUrl,uploadHeroButton));
     makeDesignField("محاذاة الواجهة",heroAlignment);
     makeDesignField("شريط إعلان قصير",announcementText);
     const sectionsWrap = document.createElement("div"); sectionsWrap.className = "field wide";
