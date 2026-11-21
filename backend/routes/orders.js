@@ -405,11 +405,12 @@ export async function handleOrders(request,env){
     const reason=typeof parsed.body.reason_text==="string"?parsed.body.reason_text.trim():"";
     if(reason.length<3||reason.length>160)return json({error:"Reason must be between 3 and 160 characters"},400);
     try{
+      const id=crypto.randomUUID();
       await env.DB.prepare(`
         INSERT INTO store_order_rejection_reasons(id,store_id,reason_text,is_enabled,sort_order)
         VALUES(?,?,?,1,COALESCE((SELECT MAX(sort_order)+1 FROM store_order_rejection_reasons WHERE store_id=?),1))
-      `).bind(crypto.randomUUID(),storeId,reason,storeId).run();
-      return json({status:"ok"});
+      `).bind(id,storeId,reason,storeId).run();
+      return json({status:"ok",id},201);
     }catch(error){
       if(/unique/i.test(String(error?.message||"")))return json({error:"This rejection reason already exists"},409);
       return json({error:"Unable to add rejection reason"},409);
