@@ -239,3 +239,132 @@ A feature is complete only when:
 - Only SHA-256 IP hashes are persisted; scheduled cleanup removes expired records older than two days.
 - Automated test coverage verifies the sixth request is rejected. CI passed 176 tests and validated the full SQLite migration set.
 - Production rollout is pending a manual deployment workflow run after this commit.
+
+
+## 9. Integrated retail, purchasing, inventory, accounting and delivery requirements
+
+The store-management direction is expanded into a professional, integrated retail/ERP operations suite. This is a confirmed product direction from the owner; detailed jurisdiction-specific accounting, tax and payment rules must still be configured and verified before production use. These requirements are not a claim that the modules are already implemented.
+
+### 9.1 Product, service and master-data management
+
+- Full create, view, edit, archive/restore and permission-controlled deletion workflows for products, services, categories, brands, units, variants, barcodes, price lists and bundles/kits where enabled.
+- Preserve historical references: a product used in a posted invoice, purchase, sale or stock movement must not be hard-deleted. Use archive/deactivation; corrections must be recorded as auditable adjustments.
+- Support product types and per-product controls: stock tracked/not tracked, saleable/purchasable, tax category, unit of measure, SKU, multiple barcodes, variant attributes, minimum stock, reorder level, preferred supplier, cost and selling-price history.
+- Support unit conversions (piece, pack, box, kg, litre, etc.) only through explicit conversion definitions; prevent incompatible units from being mixed.
+- Support price lists and customer-specific/wholesale pricing only through authorized, dated rules; retain the price actually applied to every transaction.
+- Support optional batches/lots, expiry dates, serial numbers and warranty identifiers for relevant industries. Do not force these fields on every store.
+
+### 9.2 Suppliers and procurement
+
+- Supplier records: legal/display name, contacts, addresses, tax identifiers where applicable, opening balance, credit terms, payment due dates, currency, notes, documents and active status.
+- Purchase workflow: draft purchase order, approval where required, supplier order, partial/full goods receipt, supplier invoice/bill, supplier return/debit note, payment and reconciliation.
+- Allow direct receipt without a purchase order only when the store's policy permits it; capture the reason and actor.
+- Purchase order, goods receipt and supplier invoice are distinct records. Receiving goods updates stock; entering a supplier bill creates/updates the payable; paying the supplier reduces the payable and cash/bank balance. Never treat these as one ambiguous action.
+- Handle partial deliveries, backorders, damaged/short/extra quantities, price differences, freight and other landed costs with explicit allocation rules.
+- Track supplier balances, amounts due, overdue bills, advances, credit notes, payments and a full statement/ledger.
+- Supplier returns must reference the original receipt/bill where possible, record returned quantities and condition, adjust stock and supplier payable/credit correctly, and preserve the original documents.
+
+### 9.3 Warehouses and inventory control
+
+- Multiple warehouses/branches per store, with warehouse-scoped stock, permissions and reporting.
+- Stock receiving, sales issue, customer returns, supplier returns, transfers, transfer-in-transit, adjustments, damage, loss, expiry, samples/consumption and opening balances as distinct movement reasons.
+- Transfers require dispatch and receipt confirmation; stock in transit must not appear available in either warehouse. Support partial receipt and discrepancy resolution.
+- Stock counts: create a count session by warehouse/category/location, freeze or snapshot the count basis, record counted quantities, compare expected vs actual, require reason/approval for differences, then post adjustment movements. Preserve count sheets and before/after quantities.
+- Reorder thresholds, low-stock alerts, suggested purchase quantities and stock valuation reports.
+- Prevent negative stock by default; any override must be an explicit store policy, permission-gated, reasoned and auditable. Recheck stock atomically at posting.
+- Optional bin/shelf locations and stock reservations for online orders, POS and delivery orders. Reservations reduce available-to-promise quantity without prematurely treating reserved stock as sold.
+- Optional batch/expiry FEFO picking, serial tracking and recalls for relevant business types.
+- Maintain a movement ledger as the source of truth; never allow a user to edit a stock number directly without a corresponding movement record.
+- Define and document the store's inventory valuation method (for example weighted average or FIFO) before enabling accounting valuation. Cost method changes must be controlled, prospective or migrated through an auditable process; never silently rewrite historical costs.
+
+### 9.4 Sales, invoices, returns and customer balances
+
+- Sales channels include public storefront, POS touch/manual/scanner, and authorized staff-created orders. All channels use the same product, price, stock, customer, payment and accounting services.
+- Support quotations/estimates, sales orders, delivery/pick/pack, sales invoices, receipts, customer returns, credit notes, refunds and exchanges as distinct linked documents where applicable.
+- Support cash sale and approved credit sale (pay later) with customer credit limits/terms when enabled. Credit sales create receivables; they are not marked paid until payment is actually received and allocated.
+- Invoices need unique store-scoped numbers, configurable series/prefixes, issue/due dates, seller/buyer details, line items, units, discounts, taxes/fees, currency, totals, payment status, notes and print/PDF layout.
+- Support partial payments, multiple payment allocations, customer advances, on-account balances and customer statements. Do not double-count a payment across invoices.
+- Sales returns and refunds must reference the original sale/invoice, validate returnable quantities, record condition/restock decision, reverse the appropriate revenue/tax/receivable/payment effects and create auditable stock movements.
+- Preserve immutable snapshots of product description, SKU, unit, quantity, price, discount, tax and currency on posted documents so later catalog edits do not rewrite history.
+- Draft documents may be edited; posted/issued documents must be corrected through cancellation, reversal, return or credit-note workflows according to permissions and local requirements—not by destructive editing.
+
+### 9.5 Customers, debts and collections
+
+- Customer profiles with contacts, addresses, notes, optional tax data, price tier, credit limit, payment terms and opening balance.
+- Customer account ledger showing invoices, payments, advances, credit notes, returns, write-offs and adjustments with running balance.
+- Aging reports for current, 1–30, 31–60, 61–90 and older overdue receivables (configurable ranges).
+- Record collection/payment receipts, payment method/reference, received-by staff member, date/time and allocation to one or more invoices.
+- Support installment schedules and reminders only when enabled; overdue reminders must respect communication consent and configured channels.
+- Debt write-off or balance adjustment requires elevated permission, reason, supporting note/document and audit entry. Never erase debt by editing the customer balance.
+- Customer statements and printable receipts must reconcile with the underlying ledger.
+
+### 9.6 Cash, banks, expenses and financial obligations
+
+- Track cash drawers/register sessions, cash in/out, opening float, cash sales, refunds, supplier payments, expenses, transfers and counted closing balance as separate movements.
+- Support multiple cash boxes, bank accounts and payment clearing accounts with currency-specific balances. Never combine unlike currencies into one raw balance.
+- Cashier shift close: expected cash, counted cash, variance, explanation, reviewer and immutable close record. Permission-controlled corrections use adjustment entries.
+- Expense management: categories, vendor/payee, date, amount/currency, tax where applicable, payment source, recurring flag, attachment/reference, approval status, cost center/project and notes.
+- Distinguish an expense incurred (payable) from the payment of that expense. Track unpaid expenses, partial payments, due dates, advances and employee reimbursements.
+- Record other payables/receivables and due obligations with party, source document, due date, installments, status and settlement history.
+- Support transfers between cash/bank accounts with paired debit/credit movements and reconciliation references; a transfer must not be counted as income or expense.
+- Track employee advances, reimbursements and commissions only as separately permissioned sub-ledgers; full payroll, statutory deductions and employment compliance require a separate approved specification.
+- Provide daily cash flow, account balances, expense summaries and payment-method reconciliation.
+
+### 9.7 Delivery, fulfillment and drivers
+
+- Configurable delivery zones/areas, fees, free-delivery thresholds, estimated windows, pickup/click-and-collect and delivery availability per store.
+- Delivery order lifecycle: awaiting preparation, picking, packed, ready, assigned, picked up, in transit, delivered, failed, returned/cancelled. Store-specific labels may vary, but transitions must be guarded.
+- Capture delivery address/contact/instructions, fee payer, delivery fee, assigned driver/courier, assignment time, proof/status and customer notifications where enabled.
+- Support in-house drivers and manual external courier records first; external carrier integrations are separate adapters and must not be assumed.
+- Track driver cash collection, COD amount, delivery fee/commission, cash handed over, settlement date and discrepancy. Driver collections must reconcile to the sale and cash ledger without duplicate revenue.
+- Handle partial fulfillment, failed delivery, customer unavailable, reschedule, return-to-store and delivery cancellation with stock/payment effects defined.
+- Provide delivery dispatch board and filters by status, zone, driver and date. Live GPS tracking is not implied unless separately implemented and consented.
+
+### 9.8 Discounts, promotions and pricing controls
+
+- Fixed and percentage discounts at line or invoice level, coupon/promo codes, scheduled campaigns, quantity/bundle offers, customer-group pricing and authorized manual discounts.
+- Define stacking/exclusion order, eligible products/categories/customers/channels, start/end times, usage limits, minimum spend and currency rules.
+- Enforce role-based maximum discount limits and approval for overrides; record original price, discount, approver, reason and final price.
+- Prevent negative totals and unintended discount/tax compounding. Calculate all authoritative values server-side and store immutable transaction snapshots.
+- Keep promotion configuration separate from posted transaction history; editing a promotion must not alter past invoices.
+
+### 9.9 Accounting foundation and financial reporting
+
+- Build an integrated, auditable accounting layer rather than deriving financial truth from dashboard totals. Posted business events should create balanced journal entries through a controlled posting service.
+- Use a configurable chart of accounts and double-entry ledger, with journal date, reference/source document, currency, debit/credit, account, party/cost center and posting actor.
+- Map sales, cost of goods sold, inventory, customer receivables, supplier payables, tax liabilities, cash/bank, expenses, returns, discounts and payment clearing to accounting entries.
+- Enforce balanced journal entries, idempotent posting, period controls and immutable posted entries. Corrections use reversing/adjusting entries with references.
+- Support fiscal periods, period close/reopen permissions and audit history. Multi-currency requires explicit exchange-rate source/date, functional currency and realized/unrealized gain/loss policy before activation.
+- Reports: sales by period/channel/product/category/cashier; purchases by supplier/product; gross profit and margin; cost of goods sold; stock on hand/valuation/aging; inventory movement; receivables/payables aging; customer/supplier statements; expenses; cash flow; trial balance; profit and loss; balance sheet; tax summaries where configured.
+- Separate cash received, revenue recognized, outstanding receivables and gross profit. Do not label sales totals as profit.
+- Tax rates, invoice numbering, fiscal documents and accounting policies must be configurable and validated for each target jurisdiction. Do not claim statutory/fiscal compliance by default.
+
+### 9.10 Documents, approvals, audit and permissions
+
+- Unified document center for quotations, purchase orders, goods receipts, supplier bills, sales invoices, receipts, credit/debit notes, returns, expenses, delivery manifests, stock counts and payment proofs.
+- Numbering must be unique within store/document type/series and concurrency-safe. Voided numbers remain traceable; never reuse posted invoice numbers.
+- Role/permission matrix at action level: view, create, edit draft, submit, approve, post, pay, refund, void, export and manage settings. Sensitive permissions may be separated (for example cashier can sell but cannot refund or edit cost).
+- Approval limits for purchases, expenses, discounts, stock adjustments, credit limits, write-offs, refunds and cash variances.
+- Immutable audit history for create/edit/approve/post/cancel/return/refund/payment/stock movement and permission changes, including actor, timestamp, before/after or event payload, reason and linked document.
+- Exports and document access must be tenant-scoped, permission-checked, rate-limited and logged. Uploaded documents require durable private storage and access controls before being offered as operational.
+
+### 9.11 Cross-module integrity and platform architecture
+
+- Each store is an isolated legal/operational ledger boundary. Every record, query, file, report, number series, stock location and idempotency key is scoped to the owning store/tenant.
+- Use one authoritative transaction/posting service for storefront orders, POS, purchases, inventory, payments, receivables/payables and accounting. Do not maintain disconnected duplicate balances.
+- Posting workflows must be atomic: document state, stock movements/reservations, account ledger, payment allocation and audit events either commit together or fail together.
+- Use integer minor units or a safe decimal strategy for money; never binary floating-point arithmetic for financial totals. Store currency codes and precision explicitly.
+- Use idempotency keys, concurrency checks, database constraints and server-side recalculation for all financial/stock-changing commands.
+- Draft, approved, posted, partially paid, paid, partially fulfilled, completed, cancelled and reversed states must have explicit allowed transitions. Never permit arbitrary status mutation.
+- Support data export and backups appropriate to the platform's operational capabilities; define retention and restore procedures before production launch.
+- Keep optional capabilities modular by industry and plan, but do not let plan restrictions bypass data integrity, security or audit controls.
+
+### 9.12 Delivery phases and open accounting decisions
+
+Implement in dependency order: (1) product/unit/warehouse foundations and movement ledger; (2) suppliers, purchase orders, receipts and supplier bills; (3) sales invoices, customer accounts, receipts and returns; (4) cash/bank/expenses and payables/receivables; (5) delivery and driver settlements; (6) discounts/promotions; (7) accounting journal and financial statements; (8) advanced costing, batch/serial/expiry, reconciliation and integrations.
+
+Before implementing accounting postings or fiscal documents, obtain the store's target country/jurisdiction, functional currency, tax setup, inventory valuation method, fiscal-year rules and document-numbering policy. Defaults may be provided as drafts but must not be silently treated as legal/accounting advice or compliance.
+
+### 9.13 Current implementation status
+
+The repository currently has catalog, variants, basic stock movements, storefront orders/checkout, order lifecycle guards and basic paid-sales reports as described in earlier sections. It does not yet provide the integrated purchasing, supplier, multi-warehouse, customer debt, expense, cash/bank, delivery dispatch, full invoicing/returns or double-entry accounting suite described above. Existing tables or basic order totals must not be represented as completion of these modules.
