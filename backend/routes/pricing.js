@@ -1,5 +1,6 @@
 import { getAuthenticatedSession, validOrigin } from "../security/authentication.js";
 import { parseAmountToMinorUnits, formatMinorUnits } from "../finance/money.js";
+import { parseProfitPercentToBps } from "../finance/tier_pricing.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -43,15 +44,6 @@ function permitted(access, code) {
     String(access?.permissions || "").split(",").includes(code);
 }
 
-function parsePercentBps(value) {
-  if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,3})(?:\.\d{1,2})?$/.test(value)) {
-    throw new Error("Profit percentage must be a decimal string with up to two fractional digits");
-  }
-  const [whole, fraction = ""] = value.split(".");
-  const bps = Number(whole) * 100 + Number((fraction + "00").slice(0, 2));
-  if (!Number.isSafeInteger(bps) || bps > 1000000) throw new Error("Profit percentage cannot exceed 10000%");
-  return bps;
-}
 
 function percentText(bps) {
   if (bps == null) return null;
@@ -92,7 +84,7 @@ async function pricingSettings(request, env, storeId, userId, access) {
           typeof tier.is_enabled !== "boolean") throw new Error("Invalid tier configuration");
       if (tier.tier_code === "retail" && tier.min_quantity !== 1) throw new Error("Retail must start at quantity 1");
       const margin = tier.profit_margin_percent == null || tier.profit_margin_percent === ""
-        ? null : parsePercentBps(tier.profit_margin_percent);
+        ? null : parseProfitPercentToBps(tier.profit_margin_percent);
       if (tier.is_enabled && margin === null) throw new Error("Every enabled tier needs a profit percentage");
       byCode.set(tier.tier_code, { ...tier, profit_margin_bps: margin });
     }
@@ -221,7 +213,7 @@ async function productOverrides(request, env, storeId, access, productId) {
     if (!variant) return json({ error: "Variant not found for this product" }, 404);
   }
   let margin;
-  try { margin = parsePercentBps(b.profit_margin_percent); }
+  try { margin = parseProfitPercentToBps(b.profit_margin_percent); }
   catch (error) { return json({ error: error.message }, 400); }
   const minQuantity = b.min_quantity == null ? null : b.min_quantity;
   if (minQuantity !== null && (!Number.isInteger(minQuantity) || minQuantity < 1 || minQuantity > 1000000000)) {
