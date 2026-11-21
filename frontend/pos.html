@@ -70,8 +70,8 @@
  "use strict";
  const $=id=>document.getElementById(id);
  const translations={
-  ar:{pos:"نقطة البيع",back:"رجوع",session:"جلسة الصندوق",needSession:"يجب فتح جلسة قبل اعتماد أي عملية بيع",currency:"عملة البيع",openSession:"فتح جلسة",closeSession:"إغلاق الجلسة",openingCash:"رصيد بداية الصندوق",open:"فتح",products:"المنتجات",allProducts:"كل المنتجات",search:"ابحث بالاسم أو SKU أو امسح الباركود",cart:"سلة البيع",clear:"إفراغ",empty:"السلة فارغة",subtotal:"المجموع",discount:"الخصم (اختياري)",discountReason:"سبب الخصم",total:"الإجمالي",payment:"الدفع",split:"+ تقسيم الدفع",cash:"نقدي",card:"بطاقة",digital:"دفع رقمي",shamcash:"شام كاش",complete:"اعتماد البيع",add:"إضافة",stock:"المتاح",loading:"جارٍ التحميل...",noProducts:"لا توجد منتجات مطابقة",close:"إغلاق",countedCash:"النقد الفعلي في الصندوق",expectedCash:"النقد المتوقع",difference:"الفرق",confirmClose:"تأكيد الإغلاق",cancel:"إلغاء",transaction:"رقم العملية",sender:"اسم المرسل",saleDone:"تم اعتماد البيع بنجاح",print:"طباعة الإيصال",newSale:"بيع جديد",variant:"اختر المتغير",noSession:"لا توجد جلسة مفتوحة لهذه العملة",openFirst:"افتح جلسة الصندوق أولاً",quoteFailed:"تعذر تحديث السعر",requiredPayment:"يجب أن يساوي مجموع الدفعات إجمالي الفاتورة",remove:"حذف",quantity:"الكمية",unitPrice:"سعر الوحدة",lineTotal:"الإجمالي",currencyMismatch:"لا يمكن جمع عملات مختلفة في سلة واحدة",searchEmpty:"أدخل اسم المنتج أو SKU أو امسح الباركود",sessionOpened:"تم فتح جلسة الصندوق",sessionClosed:"تم إغلاق جلسة الصندوق",failed:"حدث خطأ",shamHelp:"للدفع عبر شام كاش، أدخل رقم العملية واسم المرسل.",footer:"الأسعار والمخزون يعاد التحقق منهما على الخادم عند اعتماد البيع.",closeNotes:"ملاحظات الإغلاق",openNotes:"ملاحظات الافتتاح",discountPermission:"لا تملك صلاحية الخصم أو لم تذكر سبباً صالحاً."},
-  en:{pos:"Point of Sale",back:"Back",session:"Cash session",needSession:"Open a cash session before completing a sale",currency:"Sale currency",openSession:"Open session",closeSession:"Close session",openingCash:"Opening cash",open:"Open",products:"Products",allProducts:"All products",search:"Search name / SKU or scan barcode",cart:"Sale cart",clear:"Clear",empty:"Cart is empty",subtotal:"Subtotal",discount:"Discount (optional)",discountReason:"Discount reason",total:"Total",payment:"Payment",split:"+ Split tender",cash:"Cash",card:"Card",digital:"Digital",shamcash:"Sham Cash",complete:"Complete sale",add:"Add",stock:"Available",loading:"Loading...",noProducts:"No matching products",close:"Close",countedCash:"Counted cash",expectedCash:"Expected cash",difference:"Difference",confirmClose:"Confirm close",cancel:"Cancel",transaction:"Transaction number",sender:"Sender name",saleDone:"Sale posted successfully",print:"Print receipt",newSale:"New sale",variant:"Choose variant",noSession:"No open session for this currency",openFirst:"Open a cash session first",quoteFailed:"Unable to refresh prices",requiredPayment:"Payment lines must equal the invoice total",remove:"Remove",quantity:"Qty",unitPrice:"Unit price",lineTotal:"Line total",currencyMismatch:"A cart cannot contain multiple currencies",searchEmpty:"Enter a product name, SKU or scan a barcode",sessionOpened:"Cash session opened",sessionClosed:"Cash session closed",failed:"Something went wrong",shamHelp:"For Sham Cash, enter the transaction number and sender name.",footer:"Prices and stock are revalidated by the server when posting a sale.",closeNotes:"Closing notes",openNotes:"Opening notes",discountPermission:"Discount permission is missing or a valid reason was not provided."}
+  ar:{pos:"نقطة البيع",back:"رجوع",session:"جلسة الصندوق",needSession:"يجب فتح جلسة قبل اعتماد أي عملية بيع",currency:"عملة البيع",openSession:"فتح جلسة",closeSession:"إغلاق الجلسة",openingCash:"رصيد بداية الصندوق",open:"فتح",products:"المنتجات",allProducts:"كل المنتجات",search:"ابحث بالاسم أو SKU أو امسح الباركود",cart:"سلة البيع",clear:"إفراغ",empty:"السلة فارغة",subtotal:"المجموع",discount:"الخصم (اختياري)",discountReason:"سبب الخصم",total:"الإجمالي",payment:"الدفع",split:"+ تقسيم الدفع",cash:"نقدي",card:"بطاقة",digital:"دفع رقمي",shamcash:"شام كاش",complete:"اعتماد البيع",add:"إضافة",stock:"المتاح",loading:"جارٍ التحميل...",noProducts:"لا توجد منتجات مطابقة",close:"إغلاق",countedCash:"النقد الفعلي في الصندوق",expectedCash:"النقد المتوقع",difference:"الفرق",confirmClose:"تأكيد الإغلاق",cancel:"إلغاء",transaction:"رقم العملية",sender:"اسم المرسل",saleDone:"تم اعتماد البيع بنجاح",print:"طباعة الإيصال",newSale:"بيع جديد",variant:"اختر المتغير",noSession:"لا توجد جلسة مفتوحة لهذه العملة",openFirst:"افتح جلسة الصندوق أولاً",quoteFailed:"تعذر تحديث السعر",requiredPayment:"يجب أن يساوي مجموع الدفعات إجمالي الفاتورة",remove:"حذف",quantity:"الكمية",unitPrice:"سعر الوحدة",lineTotal:"الإجمالي",currencyMismatch:"تغيير العملة سيؤدي إلى إفراغ السلة الحالية. هل تريد المتابعة؟",searchEmpty:"أدخل اسم المنتج أو SKU أو امسح الباركود",sessionOpened:"تم فتح جلسة الصندوق",sessionClosed:"تم إغلاق جلسة الصندوق",failed:"حدث خطأ",shamHelp:"للدفع عبر شام كاش، أدخل رقم العملية واسم المرسل.",footer:"الأسعار والمخزون يعاد التحقق منهما على الخادم عند اعتماد البيع.",closeNotes:"ملاحظات الإغلاق",openNotes:"ملاحظات الافتتاح",discountPermission:"لا تملك صلاحية الخصم أو لم تذكر سبباً صالحاً."},
+  en:{pos:"Point of Sale",back:"Back",session:"Cash session",needSession:"Open a cash session before completing a sale",currency:"Sale currency",openSession:"Open session",closeSession:"Close session",openingCash:"Opening cash",open:"Open",products:"Products",allProducts:"All products",search:"Search name / SKU or scan barcode",cart:"Sale cart",clear:"Clear",empty:"Cart is empty",subtotal:"Subtotal",discount:"Discount (optional)",discountReason:"Discount reason",total:"Total",payment:"Payment",split:"+ Split tender",cash:"Cash",card:"Card",digital:"Digital",shamcash:"Sham Cash",complete:"Complete sale",add:"Add",stock:"Available",loading:"Loading...",noProducts:"No matching products",close:"Close",countedCash:"Counted cash",expectedCash:"Expected cash",difference:"Difference",confirmClose:"Confirm close",cancel:"Cancel",transaction:"Transaction number",sender:"Sender name",saleDone:"Sale posted successfully",print:"Print receipt",newSale:"New sale",variant:"Choose variant",noSession:"No open session for this currency",openFirst:"Open a cash session first",quoteFailed:"Unable to refresh prices",requiredPayment:"Payment lines must equal the invoice total",remove:"Remove",quantity:"Qty",unitPrice:"Unit price",lineTotal:"Line total",currencyMismatch:"Changing currency will clear the current cart. Continue?",searchEmpty:"Enter a product name, SKU or scan a barcode",sessionOpened:"Cash session opened",sessionClosed:"Cash session closed",failed:"Something went wrong",shamHelp:"For Sham Cash, enter the transaction number and sender name.",footer:"Prices and stock are revalidated by the server when posting a sale.",closeNotes:"Closing notes",openNotes:"Opening notes",discountPermission:"Discount permission is missing or a valid reason was not provided."}
  };
  let lang="ar",storeId="",store=null,products=[],variants={},cart=[],session=null,pricingMode="manual",tiers=[],quoteBusy=false,pendingKey=null,paymentLines=[{payment_method:"cash",amount:0,transaction_reference:"",sender_name:""}];
  const t=key=>translations[lang][key]||translations.en[key]||key;
@@ -140,7 +140,7 @@
    let select=null;
    if(productVariants.length){
     select=document.createElement("select");
-    for(const v of productVariants){const o=document.createElement("option");o.value=v.id;o.textContent=v.name+" · "+money(v.price,product.currency);select.append(o);}
+    for(const v of productVariants){const o=document.createElement("option");o.value=v.id;o.textContent=v.name+" · "+money(v.price,product.currency)+(product.track_inventory?" · "+t("stock")+": "+v.stock_quantity:"");select.append(o);}
     select.addEventListener("change",()=>{const v=productVariants.find(x=>x.id===select.value);price.textContent=money(v?.price??product.base_price,product.currency);});
     const variantLabel=document.createElement("small");variantLabel.className="muted";variantLabel.textContent=t("variant");bottom.append(variantLabel,select);
    }
@@ -161,7 +161,7 @@
   return tiers.map(x=>({tier_code:x.tier_code,min_quantity:x.min_quantity}));
  }
  async function refreshQuote(){
-  if(!cart.length){quoteBusy=false;renderCart();return;}
+  if(!cart.length){quoteBusy=false;showError("quoteError","");renderCart();return;}
   quoteBusy=true;$("completeSaleBtn").disabled=true;showError("quoteError","");
   try{
    const data=await api(storePath("/pos/quote"),{method:"POST",body:JSON.stringify({items:cart.map(x=>({product_id:x.product_id,variant_id:x.variant_id,quantity:x.quantity,tier_code:x.tier_code}))})});
@@ -206,22 +206,22 @@
    const row=document.createElement("div");row.className="payment-line";
    const method=document.createElement("select");
    for(const [value,key] of [["cash","cash"],["card","card"],["digital","digital"],["shamcash","shamcash"]]){const o=document.createElement("option");o.value=value;o.textContent=t(key);o.selected=value===payment.payment_method;method.append(o);}
-   method.addEventListener("change",()=>{payment.payment_method=method.value;renderPayments();});
+   method.addEventListener("change",()=>{payment.payment_method=method.value;pendingKey=null;renderPayments();});
    const amount=document.createElement("input");amount.type="number";amount.min="0";amount.step="0.01";amount.value=payment.amount;amount.setAttribute("aria-label",t("payment"));
-   amount.addEventListener("change",()=>{payment.amount=Math.max(0,Number(amount.value)||0);renderCart();});
+   amount.addEventListener("change",()=>{payment.amount=Math.max(0,Number(amount.value)||0);pendingKey=null;renderCart();});
    const remove=document.createElement("button");remove.className="remove";remove.textContent="×";remove.disabled=paymentLines.length===1;remove.addEventListener("click",()=>{paymentLines.splice(index,1);renderPayments();renderCart();});
    row.append(method,amount,remove);
    if(payment.payment_method==="shamcash"){
     const extra=document.createElement("div");extra.className="payment-extra";
-    const ref=document.createElement("input");ref.placeholder=t("transaction");ref.maxLength=120;ref.value=payment.transaction_reference||"";ref.addEventListener("input",()=>payment.transaction_reference=ref.value);
-    const sender=document.createElement("input");sender.placeholder=t("sender");sender.maxLength=120;sender.value=payment.sender_name||"";sender.addEventListener("input",()=>payment.sender_name=sender.value);
+    const ref=document.createElement("input");ref.placeholder=t("transaction");ref.maxLength=120;ref.value=payment.transaction_reference||"";ref.addEventListener("input",()=>{payment.transaction_reference=ref.value;pendingKey=null;});
+    const sender=document.createElement("input");sender.placeholder=t("sender");sender.maxLength=120;sender.value=payment.sender_name||"";sender.addEventListener("input",()=>{payment.sender_name=sender.value;pendingKey=null;});
     extra.append(ref,sender);row.append(extra);
    }
    root.append(row);
   });
   $("shamcashHelp").classList.toggle("hidden",!paymentLines.some(p=>p.payment_method==="shamcash"));
  }
- $("addPaymentBtn").addEventListener("click",()=>{
+ $("addPaymentBtn").addEventListener("click",()=>{\n  if(paymentLines.length>=5)return;pendingKey=null;
   const total=cart.reduce((sum,line)=>sum+Number(line.line_total||0),0)-Math.max(0,Number($("discountInput").value)||0);
   const allocated=paymentLines.reduce((sum,p)=>sum+Number(p.amount||0),0);
   paymentLines.push({payment_method:"card",amount:Math.max(0,Math.round((total-allocated)*100)/100),transaction_reference:"",sender_name:""});
@@ -278,10 +278,10 @@
   const subtotal=cart.reduce((sum,line)=>sum+Number(line.line_total||0),0);
   const discount=Math.max(0,Number($("discountInput").value)||0);
   const total=Math.max(0,Math.round((subtotal-discount)*100)/100);
-  if(!paymentsMatch(total)){showError("saleMessage",new Error(t("requiredPayment")));return;}
+  if(!paymentsMatch(total)||total<=0){showError("saleMessage",new Error(t("requiredPayment")));return;}
   const reason=$("discountReason").value.trim();
   if(discount>0&&!reason){showError("saleMessage",new Error(t("discountPermission")));return;}
-  const button=$("completeSaleBtn");button.disabled=true;showError("saleMessage","");
+  if(discount>=subtotal&&discount>0){showError("saleMessage",new Error(t("requiredPayment")));return;}\n  const button=$("completeSaleBtn");button.disabled=true;showError("saleMessage","");
   pendingKey=pendingKey||crypto.randomUUID();
   try{
    const result=await api(storePath("/pos/sales"),{method:"POST",body:JSON.stringify({
