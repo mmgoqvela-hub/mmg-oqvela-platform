@@ -35,7 +35,7 @@
     .cart-actions button,.add-cart{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 11px;cursor:pointer}
     .cart-actions button:disabled{opacity:.4;cursor:not-allowed}
     .cart-total{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);margin-top:14px;padding-top:14px;font-weight:800}
-    .product-buy{display:grid;gap:9px;margin-top:14px}
+    .product-buy{display:grid;gap:9px;margin-top:14px}.quantity-stepper{display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface)}.quantity-stepper button{width:38px;height:36px;border:0;border-radius:8px;background:var(--bg);color:var(--ink);font-size:22px;font-weight:800;cursor:pointer}.quantity-stepper input{width:76px;min-width:0;text-align:center;border:0!important;padding:6px!important;font-weight:800;background:transparent!important;color:var(--ink)}.quantity-stepper input:focus{outline:2px solid var(--accent);border-radius:6px}
     .product-buy select,.product-buy input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
     .add-cart{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
     .add-cart:disabled{opacity:.45;cursor:not-allowed}
@@ -141,7 +141,7 @@
           <label><span id="customerNameLabel">الاسم الكامل</span><input id="customerName" name="customer_name" required minlength="2" maxlength="120" autocomplete="name"></label>
           <label><span id="customerPhoneLabel">رقم الهاتف</span><input id="customerPhone" name="customer_phone" required minlength="6" maxlength="30" autocomplete="tel"></label>
           <label><span id="customerEmailLabel">البريد الإلكتروني (اختياري)</span><input id="customerEmail" name="customer_email" type="email" maxlength="254" autocomplete="email"></label>
-          <label><span id="addressLabel">عنوان التسليم (اختياري)</span><textarea id="shippingAddress" name="shipping_address" maxlength="1000" autocomplete="street-address"></textarea></label>
+          <label><span id="addressLabel">العنوان / الموقع (إجباري)</span><textarea id="shippingAddress" name="shipping_address" required minlength="5" maxlength="1000" autocomplete="street-address" placeholder="اكتب عنوانك بالتفصيل أو أرسل موقعك"></textarea></label>
           <label><span id="fulfillmentLabel">طريقة الاستلام</span><select id="fulfillmentMethod" name="fulfillment_method" required></select></label>
           <label><span id="paymentMethodLabel">طريقة الدفع</span><select id="paymentMethod" name="payment_method" required></select></label>
           <div id="shamcashFields" hidden>
@@ -166,8 +166,8 @@
   <script>
     (() => {
       const messages = {
-        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",platformSupport:"تواصل مع دعم المنصة",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"عنوان التسليم (اختياري)",fulfillment:"طريقة الاستلام",pickup:"استلام من المحل",delivery:"توصيل إلى العنوان",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد."},
-        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",platformSupport:"Contact platform support",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Delivery address",fulfillment:"Fulfillment method",pickup:"Pickup from store",delivery:"Delivery to address",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order."}
+        ar:{loading:"جارٍ تحميل المتجر...",products:"المنتجات",search:"ابحث في المنتجات...",all:"الكل",empty:"لم يتم نشر منتجات بعد.",unavailable:"هذا المتجر غير متاح حالياً.",failed:"تعذر تحميل المتجر. حاول تحديث الصفحة.",featured:"منتج مميز",contact:"اتصل بنا عبر واتساب",platformSupport:"تواصل مع دعم المنصة",back:"العودة إلى الصفحة الرئيسية",footer:"© 2026 MMG OQVELA — جميع الحقوق محفوظة",cart:"سلة المشتريات",total:"الإجمالي",emptyCart:"سلتك فارغة حالياً.",add:"أضف إلى السلة",added:"تمت إضافة المنتج إلى السلة.",variant:"اختر الخيار",quantity:"الكمية",remove:"إزالة",cartNote:"اختر المنتجات ثم أتمم طلبك.",checkout:"إتمام الشراء",customerName:"الاسم الكامل",customerPhone:"رقم الهاتف",customerEmail:"البريد الإلكتروني (اختياري)",address:"العنوان / الموقع (إجباري)",fulfillment:"طريقة الاستلام",pickup:"استلام من المحل",delivery:"توصيل إلى العنوان",paymentMethod:"طريقة الدفع",cod:"الدفع عند الاستلام",shamcash:"شام كاش",senderName:"اسم المرسل في شام كاش",transactionReference:"رقم عملية شام كاش",customerNotes:"ملاحظات للمتجر (اختياري)",placeOrder:"تأكيد الطلب",placing:"جارٍ إرسال الطلب...",orderSuccess:"تم استلام طلبك بنجاح",orderNumber:"رقم الطلب",orderPending:"طلبك بانتظار تأكيد المتجر",shamcashPay:"حوّل المبلغ إلى:",orderFailed:"تعذر إرسال الطلب. تحقق من البيانات وحاول مجدداً.",stock:"المتاح",outOfStock:"نفد المخزون",invalidQuantity:"الكمية المطلوبة تتجاوز المخزون المتاح.",mixedCurrency:"لا يمكن جمع منتجات بعملات مختلفة في طلب واحد."},
+        en:{loading:"Loading store...",products:"Products",search:"Search products...",all:"All",empty:"No products have been published yet.",unavailable:"This store is currently unavailable.",failed:"Unable to load this store. Please refresh the page.",featured:"Featured",contact:"Contact us on WhatsApp",platformSupport:"Contact platform support",back:"Back to home",footer:"© 2026 MMG OQVELA — All rights reserved",cart:"Shopping cart",total:"Total",emptyCart:"Your cart is empty.",add:"Add to cart",added:"Product added to cart.",variant:"Choose an option",quantity:"Quantity",remove:"Remove",cartNote:"Choose your products and place your order.",checkout:"Proceed to checkout",customerName:"Full name",customerPhone:"Phone number",customerEmail:"Email (optional)",address:"Address / location (required)",fulfillment:"Fulfillment method",pickup:"Pickup from store",delivery:"Delivery to address",paymentMethod:"Payment method",cod:"Cash on delivery",shamcash:"Sham Cash",senderName:"Sender name in Sham Cash",transactionReference:"Sham Cash transaction number",customerNotes:"Notes for the store (optional)",placeOrder:"Place order",placing:"Submitting order...",orderSuccess:"Your order was received",orderNumber:"Order number",orderPending:"Your order is awaiting store confirmation",shamcashPay:"Transfer payment to:",orderFailed:"Unable to place order. Check the details and try again.",stock:"Available",outOfStock:"Out of stock",invalidQuantity:"Requested quantity exceeds available stock.",mixedCurrency:"Products in different currencies cannot be combined in one order."}
       };
       let language = localStorage.getItem("mmg_language") === "en" ? "en" : "ar";
       let storeData = null;
@@ -383,7 +383,7 @@
         if(choices.some(([value])=>value===previous))select.value=previous;
         const isDelivery=select.value==="delivery";
         $("shippingAddress").required=isDelivery;
-        $("addressLabel").textContent=isDelivery?t("address"):t("address")+(language==="ar"?" (اختياري)":" (optional)");
+        $("addressLabel").textContent=t("address"); $("shippingAddress").required=true;
       }
 
       function updateShamcashFields() {
@@ -593,11 +593,35 @@
             }
             buy.append(variantSelect);
           }
+          const step = product.sale_unit === "kg" ? 0.05 : 1;
+          const quantityWrap = document.createElement("div");
+          quantityWrap.className = "quantity-stepper";
+          quantityWrap.setAttribute("role","group");
+          quantityWrap.setAttribute("aria-label",t("quantity"));
+          const decrease = document.createElement("button");
+          decrease.type = "button"; decrease.textContent = "−";
+          decrease.setAttribute("aria-label",language === "ar" ? "تقليل الكمية" : "Decrease quantity");
           const quantity = document.createElement("input");
-          quantity.type = "number"; quantity.min = product.sale_unit === "kg" ? "0.05" : "1"; quantity.step = product.sale_unit === "kg" ? "0.05" : "1"; quantity.value = product.sale_unit === "kg" ? "0.25" : "1";
+          quantity.type = "number"; quantity.min = product.sale_unit === "kg" ? "0.05" : "1"; quantity.step = String(step); quantity.value = product.sale_unit === "kg" ? "0.25" : "1";
           quantity.inputMode = "decimal"; quantity.setAttribute("aria-label",t("quantity") + (product.sale_unit === "kg" ? (language === "ar" ? " بالكيلوغرام" : " in kilograms") : ""));
-          if (product.track_inventory && !product.variants?.length) quantity.max = String(product.stock_quantity);
-          buy.append(quantity);
+          if (product.track_inventory && !product.variants?.length) quantity.max = product.sale_unit === "kg" ? String(Number(product.stock_quantity)/1000) : String(product.stock_quantity);
+          const increase = document.createElement("button");
+          increase.type = "button"; increase.textContent = "+";
+          increase.setAttribute("aria-label",language === "ar" ? "زيادة الكمية" : "Increase quantity");
+          const normalizeQuantity = () => {
+            const raw = Number(quantity.value);
+            const min = product.sale_unit === "kg" ? 0.05 : 1;
+            const max = product.track_inventory && !product.variants?.length ? (product.sale_unit === "kg" ? Number(product.stock_quantity)/1000 : Number(product.stock_quantity)) : Infinity;
+            const safe = Number.isFinite(raw) ? Math.max(min,Math.min(max,raw)) : min;
+            const snapped = Math.round(safe/step)*step;
+            quantity.value = product.sale_unit === "kg" ? snapped.toFixed(2) : String(Math.round(snapped));
+            updateDisplayedPrice();
+          };
+          decrease.addEventListener("click",() => { quantity.value = String(Math.max(Number(quantity.min),Number(quantity.value)-step)); normalizeQuantity(); });
+          increase.addEventListener("click",() => { quantity.value = String(Number(quantity.value)+step); normalizeQuantity(); });
+          quantity.addEventListener("change",normalizeQuantity);
+          quantityWrap.append(decrease,quantity,increase);
+          buy.append(quantityWrap);
           const add = document.createElement("button");
           add.type = "button"; add.className = "add-cart"; add.textContent = t("add");
           const noStock = product.track_inventory && (product.variants?.length
