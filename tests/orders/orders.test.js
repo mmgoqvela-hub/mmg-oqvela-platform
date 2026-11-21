@@ -315,7 +315,7 @@ test("A foreign-store order ID cannot be used to update an order",async()=>{
   order_status:"confirmed"
  },true),{DB:database});
  assert.equal(response.status,404);
- const lookup=database.calls.find(call=>call.sql.includes("SELECT id,order_status,payment_status,payment_method FROM store_orders"));
+ const lookup=database.calls.find(call=>call.sql.includes("SELECT id,order_status,payment_status,payment_method,customer_payment_method,customer_decision FROM store_orders"));
  assert.ok(lookup);
  assert.match(lookup.sql,/WHERE id=\? AND store_id=\?/);
  assert.deepEqual(lookup.values,["order-from-store-2","store-1"]);
